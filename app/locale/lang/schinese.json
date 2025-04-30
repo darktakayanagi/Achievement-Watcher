@@ -15,9 +15,9 @@
   "allGamesBackButton": "所有游戏",
   "removeFromList": "从列表中删除",
   "buildIconPrefetchCache": "构建用于通知的图标缓存",
-  "settings" : {
+  "settings": {
     "title": "设置",
-    "sideMenu":{
+    "sideMenu": {
       "general": "通用",
       "notification": "通知",
       "souvenir": "纪念",
@@ -39,7 +39,7 @@
     "general": {
       "language": {
         "name": "语言",
-        "description": ["帮助翻译","点击此处"]
+        "description": ["帮助翻译", "点击此处"]
       },
       "thumbnail": {
         "name": "缩略图方向",
@@ -66,25 +66,25 @@
         "name": "隐藏未解锁任何成就的游戏"
       }
     },
-    "notification" : {
+    "notification": {
       "title": {
         "common": "通用",
         "toast": "Toast 通知",
         "transport": "传输"
       },
-      "info" : {
-        "toast" : "某些功能仅 Windows 10 可用"
+      "info": {
+        "toast": "某些功能仅 Windows 10 可用"
       },
       "option": {
-        "notification" : {
+        "notification": {
           "name": "通知",
           "description": "尽可能在成就解锁时通知"
         },
-        "rumble" : {
+        "rumble": {
           "name": "手柄震动（XInput）",
           "description": "解锁成就时震动第一个手柄"
         },
-        "notifyOnProgress" : {
+        "notifyOnProgress": {
           "name": "进度报告",
           "description": "尽可能通知成就进度"
         },
@@ -92,7 +92,7 @@
           "name": "游戏时间追踪",
           "description": "在开始或结束游戏时间追踪时通知"
         },
-        "customToastAudio" : {
+        "customToastAudio": {
           "name": "通知音效",
           "description": "指定显示 Toast 通知时播放的音效",
           "value": {
@@ -100,42 +100,42 @@
             "muted": "静音"
           }
         },
-        "toastSouvenir" : {
+        "toastSouvenir": {
           "name": "显示纪念",
           "description": "在通知里显示纪念截图",
           "value": {
-            "top" : "顶部",
-            "bottom" : "底部"
+            "top": "顶部",
+            "bottom": "底部"
           }
         },
-        "groupToast" : {
+        "groupToast": {
           "name": "按游戏分组",
           "description": "将操作中心中相同游戏的 Toast 通知分为一组"
         },
-        "useToast" : {
+        "useToast": {
           "name": "Toast 通知",
           "description": "Windows 8-10 Toast 通知"
         },
-        "useWinRT" : {
+        "useWinRT": {
           "name": "WinRT API",
           "description": "使用 WinRT 代替 PowerShell 来更快地显示 Toast 通知（如果可用）"
         },
-        "useBalloon" : {
+        "useBalloon": {
           "name": "气球提示",
           "description": "在 Toast 通知不可用时使用气球提示"
         },
-        "useWS" : {
+        "useWS": {
           "description": "向所有连接的客户端广播成就"
         }
       }
     },
-    "souvenir":{
+    "souvenir": {
       "title": {
         "screenshot": "截图",
         "video": "视频"
       },
-      "option":{
-        "screenshot" : {
+      "option": {
+        "screenshot": {
           "name": "纪念",
           "description": "解锁成就时截图"
         },
@@ -175,7 +175,8 @@
       "addInfo": [
         "选择一个包含 appid 文件夹的目录。",
         "对于 ALI213、Hoodlum、RPCS3，请选择",
-        "ALI213.ini、valve.ini、hlm.ini、ds.ini 或 RPCS3.exe 文件所在的目录。"],
+        "ALI213.ini、valve.ini、hlm.ini、ds.ini 或 RPCS3.exe 文件所在的目录。"
+      ],
       "add": "添加目录"
     },
     "source": {
@@ -199,7 +200,7 @@
       },
       "lumaPlay": {
         "description": "Uplay 模拟器"
-      },  
+      },
       "importCache": {
         "name": "导入通知缓存",
         "description": "导入 Watchdog 的缓存作为成就的另一个来源"
@@ -209,6 +210,6 @@
       "blacklistTitle": "AppID 黑名单",
       "blacklistButton": "重置黑名单",
       "blacklistInfo": "右键点击一个游戏，将其添加到黑名单中。"
-    } 
-  } 
+    }
+  }
 }

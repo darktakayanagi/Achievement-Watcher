@@ -1,22 +1,22 @@
 {
-  "achievements" : "Logros",
-  "perfectGame" : "Juegos perfectos",
+  "achievements": "Logros",
+  "perfectGame": "Juegos perfectos",
   "completionRate": "Tasa media de completado de juegos",
   "emptyList": "Sin juegos",
   "loading": "Cargando",
-  "unlocked" : "Desbloqueados",
+  "unlocked": "Desbloqueados",
   "locked": "Bloqueados",
-  "globalStat" : "de jugadores tienen esto",
-  "hiddenRemain" : "logros ocultos restantes",
-  "revealedOnceUnlocked" : "Los detalles de cada logro se revelarán una vez desbloqueados",
+  "globalStat": "de jugadores tienen esto",
+  "hiddenRemain": "logros ocultos restantes",
+  "revealedOnceUnlocked": "Los detalles de cada logro se revelarán una vez desbloqueados",
   "noneUnlocked": "Ningún logro desbloqueado todavía",
   "play": "¡Empezar a jugar!",
-  "scrollUp" : "Desplazarse hacia arriba",
-  "allGamesBackButton" : "Todos los juegos",
+  "scrollUp": "Desplazarse hacia arriba",
+  "allGamesBackButton": "Todos los juegos",
   "removeFromList": "Quitar de la lista",
-  "settings" : {
+  "settings": {
     "title": "Configuraciones",
-    "sideMenu":{
+    "sideMenu": {
       "general": "General",
       "notification": "Notificación",
       "souvenir": "Souvenir",
@@ -38,7 +38,7 @@
     "general": {
       "language": {
         "name": "Idioma",
-        "description": ["Ayuda a la traducción","aquí"]
+        "description": ["Ayuda a la traducción", "aquí"]
       },
       "thumbnail": {
         "name": "Orientación de miniaturas",
@@ -65,29 +65,29 @@
         "name": "Ocultar juegos al 0%"
       }
     },
-    "notification" : {
+    "notification": {
       "title": {
         "common": "Común",
         "toast": "Notificación emergente",
         "transport": "Transporte"
       },
-      "info" : {
-        "toast" : "Algunas características solo están disponibles en Windows 10"
+      "info": {
+        "toast": "Algunas características solo están disponibles en Windows 10"
       },
       "option": {
-        "notification" : {
+        "notification": {
           "name": "Notificación",
           "description": "Notificar al desbloquear un logro si es posible"
         },
-        "rumble" : {
+        "rumble": {
           "name": "Vibración del gamepad (XInput)",
           "description": "Vibra el primer controlador al desbloquear un logro"
         },
-        "notifyOnProgress" : {
+        "notifyOnProgress": {
           "name": "Reporte de progreso",
           "description": "Notificar sobre el progreso de los logros si es posible"
         },
-        "customToastAudio" : {
+        "customToastAudio": {
           "name": "Sonido de notif. emergente",
           "description": "Especifica el sonido que se reproducirá cuando se muestra una notificación emergente",
           "value": {
@@ -95,42 +95,42 @@
             "muted": "Silenciado"
           }
         },
-        "toastSouvenir" : {
+        "toastSouvenir": {
           "name": "Souvenir emergente",
           "description": "Muestra la captura de pantalla souvenir dentro de la notif. emergente",
           "value": {
-            "top" : "Arriba",
-            "bottom" : "Abajo"
+            "top": "Arriba",
+            "bottom": "Abajo"
           }
         },
-        "groupToast" : {
+        "groupToast": {
           "name": "Agrupar por juego",
           "description": "Visualmente agrupar las notif. emergentes del mismo juego en el Centro de acciones"
         },
-        "useToast" : {
+        "useToast": {
           "name": "Notificación emergente",
           "description": "Notificación emergente de Windows 8-10"
         },
-        "useWinRT" : {
+        "useWinRT": {
           "name": "WinRT API",
           "description": "Usar WinRT si está disponible para una notificación más rápida en lugar de PowerShell"
         },
-        "useBalloon" : {
+        "useBalloon": {
           "name": "Globo descriptivo",
           "description": "Usar globo descriptivo si la notificación emergente falla"
         },
-        "useWS" : {
+        "useWS": {
           "description": "Transmitir los logros a todos los clientes conectados"
         }
       }
     },
-    "souvenir":{
+    "souvenir": {
       "title": {
         "screenshot": "Screenshot",
         "video": "Video"
       },
-      "option":{
-        "screenshot" : {
+      "option": {
+        "screenshot": {
           "name": "Souvenir",
           "description": "Tomar una captura de pantalla cuando desbloquees un logro"
         },
@@ -170,7 +170,8 @@
       "addInfo": [
         "Seleccionar una carpeta que contenga carpetas appid.",
         "Para ALI213, Hoodlum, RPCS3 por favor, seleccionar la carpeta donde",
-        "los archivos ALI213.ini, valve.ini, hlm.ini, ds.ini o RPCS3.exe se encuentran."],
+        "los archivos ALI213.ini, valve.ini, hlm.ini, ds.ini o RPCS3.exe se encuentran."
+      ],
       "add": "Agregar una carpeta"
     },
     "source": {
@@ -194,16 +195,16 @@
       },
       "lumaPlay": {
         "description": "Emulador de Uplay"
-      },  
+      },
       "importCache": {
         "name": "Importar caché de notificación",
         "description": "Importar el caché de Watchdog como otra fuente de logros"
       }
     },
     "advanced": {
-      "blacklistTitle":"Lista negra de AppIDs",
-      "blacklistButton":"Reiniciar lista negra",
-      "blacklistInfo":"Clic derecho en cualquier cajón de juegos para agregarlo a la lista negra."
-    } 
-  } 
+      "blacklistTitle": "Lista negra de AppIDs",
+      "blacklistButton": "Reiniciar lista negra",
+      "blacklistInfo": "Clic derecho en cualquier cajón de juegos para agregarlo a la lista negra."
+    }
+  }
 }

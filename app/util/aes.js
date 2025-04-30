@@ -1,8 +1,8 @@
-"use strict";
+'use strict';
 
 const crypto = require('crypto');
 
-const ENCRYPTION_KEY = "xfW!+Bn3E@Luu#^vj3$7wZRqRgACQeCu"; // Must be 256 bytes (32 characters)
+const ENCRYPTION_KEY = 'xfW!+Bn3E@Luu#^vj3$7wZRqRgACQeCu'; // Must be 256 bytes (32 characters)
 const IV_LENGTH = 16; // For AES, this is always 16
 
 module.exports = {
@@ -24,5 +24,5 @@ module.exports = {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
 
     return decrypted.toString();
-  }
+  },
 };

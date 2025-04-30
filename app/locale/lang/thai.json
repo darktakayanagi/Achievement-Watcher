@@ -1,21 +1,21 @@
 {
-  "achievements" : "รางวัลความสำเร็จ",
-  "perfectGame" : "เกมที่สมบูรณ์แบบ",
+  "achievements": "รางวัลความสำเร็จ",
+  "perfectGame": "เกมที่สมบูรณ์แบบ",
   "completionRate": "อัตราความสำเร็จต่อเกมโดยเฉลี่ย",
   "emptyList": "ไม่มีเกม",
   "loading": "กำลังโหลด",
-  "unlocked" : "ได้รับแล้ว",
+  "unlocked": "ได้รับแล้ว",
   "locked": "ยังไม่ได้รับ",
-  "globalStat" : "จากผู้เล่นทั้งหมด",
-  "hiddenRemain" : "รางวัลความสำเร็จลับที่เหลือ",
-  "revealedOnceUnlocked" : "รายละเอียดในแต่ละรางวัลความสำเร็จจะแสดงให้เห็นหลังจากปลดล็อคแล้ว",
+  "globalStat": "จากผู้เล่นทั้งหมด",
+  "hiddenRemain": "รางวัลความสำเร็จลับที่เหลือ",
+  "revealedOnceUnlocked": "รายละเอียดในแต่ละรางวัลความสำเร็จจะแสดงให้เห็นหลังจากปลดล็อคแล้ว",
   "noneUnlocked": "ยังไม่ได้รับรางวัลความสำเร็จ",
   "play": "ไปเล่น!",
-  "scrollUp" : "เลื่อนขึ้น",
-  "allGamesBackButton" : "เกมส์ทั้งหมด",
-  "settings" : {
+  "scrollUp": "เลื่อนขึ้น",
+  "allGamesBackButton": "เกมส์ทั้งหมด",
+  "settings": {
     "title": "การตั้งค่า",
-    "sideMenu":{
+    "sideMenu": {
       "general": "ทั่วไป",
       "notification": "การแจ้งเตือน",
       "folder": "โฟลเดอร์"
@@ -49,5 +49,5 @@
       "custom": "โฟลเดอร์ผู้ใช้",
       "add": "เพิ่มโฟลเดอร์"
     }
-  } 
+  }
 }

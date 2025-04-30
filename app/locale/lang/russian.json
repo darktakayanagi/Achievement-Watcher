@@ -1,30 +1,30 @@
 {
-  "achievements" : "достижений",
-  "perfectGame" : "завершенных игр",
+  "achievements": "достижений",
+  "perfectGame": "завершенных игр",
   "completionRate": "Ср. процент достижений за игру",
   "emptyList": "Нет игр",
   "loading": "Загрузка",
-  "unlocked" : "Разблокировано",
+  "unlocked": "Разблокировано",
   "locked": "Заблокировано",
-  "globalStat" : "игроков имеют это достижение",
-  "hiddenRemain" : "скрытых достижений осталось",
-  "revealedOnceUnlocked" : "Детали для каждого достижения будут раскрыты после разблокировки",
+  "globalStat": "игроков имеют это достижение",
+  "hiddenRemain": "скрытых достижений осталось",
+  "revealedOnceUnlocked": "Детали для каждого достижения будут раскрыты после разблокировки",
   "noneUnlocked": "Достижения еще не разблокированы",
   "play": "Начните играть !",
-  "scrollUp" : "Прокрутить вверх",
-  "allGamesBackButton" : "Все игры",
+  "scrollUp": "Прокрутить вверх",
+  "allGamesBackButton": "Все игры",
   "removeFromList": "Удалить из списка",
   "buildIconPrefetchCache": "Создать кэш значков уведомлений",
-  "settings" : {
+  "settings": {
     "title": "Настройки",
-    "sideMenu":{
+    "sideMenu": {
       "general": "Главные",
       "notification": "Уведомления",
       "souvenir": "Souvenir",
       "folder": "Папки",
-	    "source": "Источник",
+      "source": "Источник",
       "advanced": "Расширенные",
-	    "debug": "Отладка"
+      "debug": "Отладка"
     },
     "common": {
       "show": "Показать",
@@ -39,7 +39,7 @@
     "general": {
       "language": {
         "name": "Язык",
-		"description": ["Помощь с переводом","здесь"]
+        "description": ["Помощь с переводом", "здесь"]
       },
       "thumbnail": {
         "name": "Ориентация миниатюр",
@@ -61,34 +61,34 @@
           "recent": "Недавнее",
           "oldest": "Устаревшее"
         }
-	  },
-	  "hideZero": {
+      },
+      "hideZero": {
         "name": "Скрыть игру без достижений"
       }
     },
-    "notification" : {
+    "notification": {
       "title": {
         "common": "Общие",
         "toast": "Всплывающие уведомления",
         "transport": "Способ оповещения"
       },
-      "info" : {
-        "toast" : "Некоторые функции доступны только в Windows 10"
+      "info": {
+        "toast": "Некоторые функции доступны только в Windows 10"
       },
       "option": {
-        "notification" : {
+        "notification": {
           "name": "Уведомление",
           "description": "Уведомить о разблокировке достижения, если это возможно"
         },
-        "rumble" : {
+        "rumble": {
           "name": "Вибрация геймпада (XInput)",
           "description": "Первый контроллер будет вибрировать при получении достижения"
         },
-        "notifyOnProgress" : {
+        "notifyOnProgress": {
           "name": "Отчет о прогрессе",
           "description": "Сообщать о прогрессе достижения, если возможно"
         },
-        "customToastAudio" : {
+        "customToastAudio": {
           "name": "Звук всплывающего уведомления",
           "description": "Определяет звук для воспроизведения при отображении всплывающего уведомления",
           "value": {
@@ -96,42 +96,42 @@
             "muted": "Отключен"
           }
         },
-        "toastSouvenir" : {
+        "toastSouvenir": {
           "name": "Всплывающая иконка",
           "description": "Показывать снимок экрана иконкой внутри всплывающего уведомления",
           "value": {
-            "top" : "Вверху",
-            "bottom" : "Внизу"
+            "top": "Вверху",
+            "bottom": "Внизу"
           }
         },
-        "groupToast" : {
+        "groupToast": {
           "name": "Группировать по игре",
           "description": "Визуально группировать всплывающие уведомления из одной игры в Центре уведомлений"
         },
-        "useToast" : {
+        "useToast": {
           "name": "Всплывающее уведомление",
           "description": "Всплывающее уведомление Windows 8-10"
         },
-        "useWinRT" : {
+        "useWinRT": {
           "name": "WinRT API",
           "description": "Используйте WinRT API, если он доступен, для более быстрого всплывающего уведомления вместо PowerShell"
         },
-        "useBalloon" : {
+        "useBalloon": {
           "name": "Всплывающая подсказка-пузырь",
           "description": "Вернуться к всплывающей подсказке-пузырю при сбое всплывающего уведомления"
         },
-        "useWS" : {
+        "useWS": {
           "description": "Транслирование достижений всем подключенным клиентам"
         }
       }
     },
-    "souvenir":{
+    "souvenir": {
       "title": {
         "screenshot": "Screenshot",
         "video": "Video"
       },
-      "option":{
-        "screenshot" : {
+      "option": {
+        "screenshot": {
           "name": "Иконка",
           "description": "Сделать снимок экрана, при получении достижения"
         },
@@ -171,15 +171,16 @@
       "addInfo": [
         "Выберите папку, содержащую папки appid.",
         "Для ALI213, Hoodlum, RPCS3 выберите папку, в которой",
-        "находится файл ALI213.ini, valve.ini, hlm.ini, ds.ini или RPCS3.exe."],
+        "находится файл ALI213.ini, valve.ini, hlm.ini, ds.ini или RPCS3.exe."
+      ],
       "add": "Добавить папку"
     },
-	"source": {
+    "source": {
       "legitSteam": {
         "name": "Отобразить Steam игры",
         "description": "Необходим установленный Steam. Также Ваш профиль должен быть публичным!",
         "value": {
-		  "none": "Не установлено",
+          "none": "Не установлено",
           "installed": "Установлено",
           "owned": "Приобретено"
         }
@@ -195,16 +196,16 @@
       },
       "lumaPlay": {
         "description": "Эмулятор Uplay"
-      },  
+      },
       "importCache": {
         "name": "Импорт кэша уведомлений",
         "description": "Импортировать кеш Watchdog как еще один источник достижений"
       }
     },
     "advanced": {
-      "blacklistTitle":"Черный список AppID",
-      "blacklistButton":"Сбросить черный список",
-      "blacklistInfo":"Щелкните ПКМ по игре, чтобы добавить ее в черный список."
-    } 
-  } 
+      "blacklistTitle": "Черный список AppID",
+      "blacklistButton": "Сбросить черный список",
+      "blacklistInfo": "Щелкните ПКМ по игре, чтобы добавить ее в черный список."
+    }
+  }
 }

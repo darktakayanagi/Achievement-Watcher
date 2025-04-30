@@ -1,23 +1,23 @@
 {
-  "achievements" : "Achievements",
-  "perfectGame" : "Perfect Games",
+  "achievements": "Achievements",
+  "perfectGame": "Perfect Games",
   "completionRate": "Avg. Game Completion Rate",
   "emptyList": "No Games",
   "loading": "Loading",
-  "unlocked" : "Unlocked",
+  "unlocked": "Unlocked",
   "locked": "Locked",
-  "globalStat" : "of players have this",
-  "hiddenRemain" : "hidden achievements remaining",
-  "revealedOnceUnlocked" : "Details for each achievement will be revealed once unlocked",
+  "globalStat": "of players have this",
+  "hiddenRemain": "hidden achievements remaining",
+  "revealedOnceUnlocked": "Details for each achievement will be revealed once unlocked",
   "noneUnlocked": "No achievement unlocked yet",
   "play": "Start playing !",
-  "scrollUp" : "Scroll up",
-  "allGamesBackButton" : "All Games",
+  "scrollUp": "Scroll up",
+  "allGamesBackButton": "All Games",
   "removeFromList": "Remove from list",
   "buildIconPrefetchCache": "Build icon notification cache",
-  "settings" : {
+  "settings": {
     "title": "Settings",
-    "sideMenu":{
+    "sideMenu": {
       "general": "General",
       "notification": "Notification",
       "souvenir": "Souvenir",
@@ -39,7 +39,7 @@
     "general": {
       "language": {
         "name": "Language",
-        "description": ["Help the translation","here"]
+        "description": ["Help the translation", "here"]
       },
       "thumbnail": {
         "name": "Thumbnail orientation",
@@ -66,25 +66,25 @@
         "name": "Hide 0% Game"
       }
     },
-    "notification" : {
+    "notification": {
       "title": {
         "common": "Common",
         "toast": "Toast notification",
         "transport": "Transport"
       },
-      "info" : {
-        "toast" : "Some features are only available in Windows 10"
+      "info": {
+        "toast": "Some features are only available in Windows 10"
       },
       "option": {
-        "notification" : {
+        "notification": {
           "name": "Notification",
           "description": "Notify on achievement unlock if possible"
         },
-        "rumble" : {
+        "rumble": {
           "name": "Gamepad Vibration (XInput)",
           "description": "Vibrates first controller when unlocking an achievement"
         },
-        "notifyOnProgress" : {
+        "notifyOnProgress": {
           "name": "Progress report",
           "description": "Notify on achievement progress if possible"
         },
@@ -92,7 +92,7 @@
           "name": "Playtime tracking",
           "description": "Notify on tracking start/end"
         },
-        "customToastAudio" : {
+        "customToastAudio": {
           "name": "Toast sound",
           "description": "Specifies the sound to play when a toast is displayed",
           "value": {
@@ -100,42 +100,42 @@
             "muted": "Muted"
           }
         },
-        "toastSouvenir" : {
+        "toastSouvenir": {
           "name": "Toasted souvenir",
           "description": "Display souvenir screenshot within the toast",
           "value": {
-            "top" : "Top",
-            "bottom" : "Bottom"
+            "top": "Top",
+            "bottom": "Bottom"
           }
         },
-        "groupToast" : {
+        "groupToast": {
           "name": "Group by game",
           "description": "Visually group toast from the same game within Action Center"
         },
-        "useToast" : {
+        "useToast": {
           "name": "Toast notification",
           "description": "Windows 8-10 toast notification"
         },
-        "useWinRT" : {
+        "useWinRT": {
           "name": "WinRT API",
           "description": "Use WinRT if available for faster toast instead of PowerShell"
         },
-        "useBalloon" : {
+        "useBalloon": {
           "name": "Balloon tooltip",
           "description": "Fallback to balloon tooltip on toast notification failure"
         },
-        "useWS" : {
+        "useWS": {
           "description": "Broadcast achievement to all connected clients"
         }
       }
     },
-    "souvenir":{
+    "souvenir": {
       "title": {
         "screenshot": "Screenshot",
         "video": "Video"
       },
-      "option":{
-        "screenshot" : {
+      "option": {
+        "screenshot": {
           "name": "Souvenir",
           "description": "Take a screenshot when you unlock an achievement"
         },
@@ -175,7 +175,8 @@
       "addInfo": [
         "Select a folder which contains appid folder(s).",
         "For ALI213, Hoodlum, RPCS3 please select a folder where the",
-        "ALI213.ini, valve.ini, hlm.ini, ds.ini or RPCS3.exe file is located."],
+        "ALI213.ini, valve.ini, hlm.ini, ds.ini or RPCS3.exe file is located."
+      ],
       "add": "Add a Folder"
     },
     "source": {
@@ -199,16 +200,16 @@
       },
       "lumaPlay": {
         "description": "Uplay emulator"
-      },  
+      },
       "importCache": {
         "name": "Import notification cache",
         "description": "Import Watchdog's cache as another source of achievement"
       }
     },
     "advanced": {
-      "blacklistTitle":"AppID Blacklist",
-      "blacklistButton":"Reset blacklist",
-      "blacklistInfo":"Right click on a gamebox to add it to the blacklist."
-    } 
-  } 
+      "blacklistTitle": "AppID Blacklist",
+      "blacklistButton": "Reset blacklist",
+      "blacklistInfo": "Right click on a gamebox to add it to the blacklist."
+    }
+  }
 }

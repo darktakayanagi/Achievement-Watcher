@@ -1,23 +1,23 @@
 {
-  "achievements" : "Conquistas",
-  "perfectGame" : "Jogos Aperfeiçoados",
+  "achievements": "Conquistas",
+  "perfectGame": "Jogos Aperfeiçoados",
   "completionRate": "Média de Conclusão de Jogos",
   "emptyList": "Nenhuns Jogos",
   "loading": "A Carregar",
-  "unlocked" : "Desbloquado",
+  "unlocked": "Desbloquado",
   "locked": "Bloqueado",
-  "globalStat" : "de jogadores têm isto",
-  "hiddenRemain" : "conquistas ocultas restantes",
-  "revealedOnceUnlocked" : "Detalhes de cada conquista serão revelados quando desbloquados",
+  "globalStat": "de jogadores têm isto",
+  "hiddenRemain": "conquistas ocultas restantes",
+  "revealedOnceUnlocked": "Detalhes de cada conquista serão revelados quando desbloquados",
   "noneUnlocked": "Nenhumas conquistas ainda desbloquadas",
   "play": "Comece a jogar!",
-  "scrollUp" : "Arraste para cima",
-  "allGamesBackButton" : "Todos os Jogos",
+  "scrollUp": "Arraste para cima",
+  "allGamesBackButton": "Todos os Jogos",
   "removeFromList": "Remover da lista",
   "buildIconPrefetchCache": "Construa o cache do item de notificação",
-  "settings" : {
+  "settings": {
     "title": "Definições",
-    "sideMenu":{
+    "sideMenu": {
       "general": "Geral",
       "notification": "Notificação",
       "souvenir": "Souvenir",
@@ -39,7 +39,7 @@
     "general": {
       "language": {
         "name": "Linguagem",
-        "description": ["Ajude a tradução","aqui"]
+        "description": ["Ajude a tradução", "aqui"]
       },
       "thumbnail": {
         "name": "Orientação da miniatura",
@@ -66,25 +66,25 @@
         "name": "Esconder jogos a 0%"
       }
     },
-    "notification" : {
+    "notification": {
       "title": {
         "common": "Comum",
         "toast": "Notificação Toast",
         "transport": "Transporte"
       },
-      "info" : {
-        "toast" : "Algumas características estão disponiveis só em Windows 10"
+      "info": {
+        "toast": "Algumas características estão disponiveis só em Windows 10"
       },
       "option": {
-        "notification" : {
+        "notification": {
           "name": "Notificação",
           "description": "Notificar ao desbloquear conquistas, se possível"
         },
-        "rumble" : {
+        "rumble": {
           "name": "Vibração do Comando (XInput)",
           "description": "Vibra o primeiro comando quando desbloqueias uma conquista"
         },
-        "notifyOnProgress" : {
+        "notifyOnProgress": {
           "name": "Relatório de progresso",
           "description": "Notificar no progresso de uma conquista se possível"
         },
@@ -92,7 +92,7 @@
           "name": "Registar tempo de jogo",
           "description": "Notificar quando começa e acaba de registar"
         },
-        "customToastAudio" : {
+        "customToastAudio": {
           "name": "Som do Toast",
           "description": "Espicifica que som tocar quando um toast é mostrado",
           "value": {
@@ -100,42 +100,42 @@
             "muted": "Silencio"
           }
         },
-        "toastSouvenir" : {
+        "toastSouvenir": {
           "name": "Lembrança Toasted",
           "description": "Mostar a lembrança da captura de ecrã dentro do toast",
           "value": {
-            "top" : "Topo",
-            "bottom" : "Inferior"
+            "top": "Topo",
+            "bottom": "Inferior"
           }
         },
-        "groupToast" : {
+        "groupToast": {
           "name": "Agrupar por jogo",
           "description": "Agrupar visualmente o toast do mesmo jogo na Central de Ações"
         },
-        "useToast" : {
+        "useToast": {
           "name": "Notificações toast",
           "description": "Notificações toast do Windows 8-10"
         },
-        "useWinRT" : {
+        "useWinRT": {
           "name": "WinRT API",
           "description": "Usar WinRT se disponivel para um toast mais rápido em vez de PowerShell"
         },
-        "useBalloon" : {
+        "useBalloon": {
           "name": "Balão de dica",
           "description": "Usar balão de dica em caso da notificação toast falhar"
         },
-        "useWS" : {
+        "useWS": {
           "description": "Transmitir conquista para todos os clientes conectados"
         }
       }
     },
-    "souvenir":{
+    "souvenir": {
       "title": {
         "screenshot": "Screenshot",
         "video": "Video"
       },
-      "option":{
-        "screenshot" : {
+      "option": {
+        "screenshot": {
           "name": "Lembrança",
           "description": "Fazer uma captura de ecrã quando desbloqueias uma conquista"
         },
@@ -175,7 +175,8 @@
       "addInfo": [
         "Selecione uma pasta que contenha a(s) pasta(s) appid",
         "Para ALI213, Hoodlum, RPCS3 por favor selecione a pasta onde o",
-        "ficheiro ALI213.ini, valve.ini, hlm.ini, ds.ini or RPCS3.exe está localizado."],
+        "ficheiro ALI213.ini, valve.ini, hlm.ini, ds.ini or RPCS3.exe está localizado."
+      ],
       "add": "Adicionar pasta"
     },
     "source": {
@@ -199,16 +200,16 @@
       },
       "lumaPlay": {
         "description": "Emulador Uplay"
-      },  
+      },
       "importCache": {
         "name": "Importar cache de notificação",
         "description": "Importar cache de Watchdog's como outra fonte de conquistas"
       }
     },
     "advanced": {
-      "blacklistTitle":"Lista negra de AppID",
-      "blacklistButton":"Repor lista negra",
-      "blacklistInfo":"Clique com o botão direito numa caixa de jogos para adiciona-la á lista negra."
-    } 
-  } 
+      "blacklistTitle": "Lista negra de AppID",
+      "blacklistButton": "Repor lista negra",
+      "blacklistInfo": "Clique com o botão direito numa caixa de jogos para adiciona-la á lista negra."
+    }
+  }
 }

@@ -1,23 +1,23 @@
 {
-  "achievements" : "Erfolge",
-  "perfectGame" : "Perfekte Spiele",
+  "achievements": "Erfolge",
+  "perfectGame": "Perfekte Spiele",
   "completionRate": "Durchschnittl. Fertigstellung",
   "emptyList": "Keine Spiele",
   "loading": "Laden",
-  "unlocked" : "Freigeschaltet",
+  "unlocked": "Freigeschaltet",
   "locked": "Nicht freigeschaltet",
-  "globalStat" : " von allen Spielern",
-  "hiddenRemain" : "verbleibende versteckte Erfolge",
-  "revealedOnceUnlocked" : "Details für jeden Erfolg werden enthüllt, sobald diese freigeschaltet worden sind",
+  "globalStat": " von allen Spielern",
+  "hiddenRemain": "verbleibende versteckte Erfolge",
+  "revealedOnceUnlocked": "Details für jeden Erfolg werden enthüllt, sobald diese freigeschaltet worden sind",
   "noneUnlocked": "Kein Erfolg wurde freigeschaltet",
   "play": "Spiel starten",
-  "scrollUp" : "Hochscrollen",
-  "allGamesBackButton" : "Alle Spiele",
+  "scrollUp": "Hochscrollen",
+  "allGamesBackButton": "Alle Spiele",
   "removeFromList": "Von der Liste entfernen",
   "buildIconPrefetchCache": "Benachrichtigungscache erneuern",
-  "settings" : {
+  "settings": {
     "title": "Einstellungen",
-    "sideMenu":{
+    "sideMenu": {
       "general": "Allgemein",
       "notification": "Benachrichtigung",
       "souvenir": "Souvenir",
@@ -39,7 +39,7 @@
     "general": {
       "language": {
         "name": "Sprache",
-        "description": ["Übersetzungshilfe","hier"]
+        "description": ["Übersetzungshilfe", "hier"]
       },
       "thumbnail": {
         "name": "Vorschaubild",
@@ -66,29 +66,29 @@
         "name": "Spiele mit 0% Erfolgen verstecken"
       }
     },
-    "notification" : {
+    "notification": {
       "title": {
         "common": "Allgemein",
         "toast": "Bannerbenachrichtigung",
         "transport": "Benachrichtigungsmethode"
       },
-      "info" : {
-        "toast" : "Einige Möglichkeiten sind nur mit Windows 10 verfügbar."
+      "info": {
+        "toast": "Einige Möglichkeiten sind nur mit Windows 10 verfügbar."
       },
       "option": {
-        "notification" : {
+        "notification": {
           "name": "Benachrichtigung",
           "description": "Wenn möglich, beim Erhalten eines Erfolges benachrichtigen."
         },
-        "rumble" : {
+        "rumble": {
           "name": "Gamepad Vibration (XInput)",
           "description": "Das erste Gamepad vibrieren lassen, wenn ein Erfolg erreicht wird."
         },
-        "notifyOnProgress" : {
+        "notifyOnProgress": {
           "name": "Fortschrittsanzeige",
           "description": "Wenn möglich, bei einem Fortschritt des Erfolges benachrichtigen."
         },
-        "customToastAudio" : {
+        "customToastAudio": {
           "name": "Benachrichtigungston",
           "description": "Ton einstellen, wenn eine Benachrichtigung angezeigt wird.",
           "value": {
@@ -96,42 +96,42 @@
             "muted": "Stumm"
           }
         },
-        "toastSouvenir" : {
+        "toastSouvenir": {
           "name": "Benachrichtigungsbild",
           "description": "Bildschirmfoto innerhalb der Benachrichtigung anzeigen.",
           "value": {
-            "top" : "Oben",
-            "bottom" : "Unten"
+            "top": "Oben",
+            "bottom": "Unten"
           }
         },
-        "groupToast" : {
+        "groupToast": {
           "name": "Nach Spiel gruppieren",
           "description": "Gleiche Benachrichtigungen von einem Spiel im Action Center gruppieren."
         },
-        "useToast" : {
+        "useToast": {
           "name": "Benachrichtigung",
           "description": "Windows 8-10 Benachrichtigung"
         },
-        "useWinRT" : {
+        "useWinRT": {
           "name": "WinRT API",
           "description": "WinRT anstatt PowerShell benutzen, um Nachricht schneller anzuzeigen."
         },
-        "useBalloon" : {
+        "useBalloon": {
           "name": "Kurzinfoballon",
           "description": "Kurzinfo anzeigen, wenn Benachrichtigungsanzeige fehlschlägt."
         },
-        "useWS" : {
+        "useWS": {
           "description": "Erfolg an alle WebSocket Clients weiterleiten."
         }
       }
     },
-    "souvenir":{
+    "souvenir": {
       "title": {
         "screenshot": "Screenshot",
         "video": "Video"
       },
-      "option":{
-        "screenshot" : {
+      "option": {
+        "screenshot": {
           "name": "Bildschirmfoto",
           "description": "Bildschirmfoto erstellen, wenn ein Erfolg erreicht wird."
         },
@@ -171,7 +171,8 @@
       "addInfo": [
         "Einen Ordner auswählen, der appid Ordner enthält.",
         "Bitte für ALI213, HOODLUM, RPCS3 einen Ordner wählen, der die Dateien",
-        "ALI213.ini, valve.ini, hlm.ini, ds.ini oderr RPCS3.exe enthält."],
+        "ALI213.ini, valve.ini, hlm.ini, ds.ini oderr RPCS3.exe enthält."
+      ],
       "add": "Ordner hinzufügen"
     },
     "source": {
@@ -202,9 +203,9 @@
       }
     },
     "advanced": {
-      "blacklistTitle":"AppID Sperrliste",
-      "blacklistButton":"Sperrliste löschen",
-      "blacklistInfo":"Um ein Spiel in die Sperrliste aufzunehmen, mit der rechten Maustaste auf ein Spiel klicken."
+      "blacklistTitle": "AppID Sperrliste",
+      "blacklistButton": "Sperrliste löschen",
+      "blacklistInfo": "Um ein Spiel in die Sperrliste aufzunehmen, mit der rechten Maustaste auf ein Spiel klicken."
     }
   }
 }

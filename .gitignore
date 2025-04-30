@@ -1,6 +1,58 @@
 temp/
+service/watchdog/_wip_
+
+# Node modules
 app/node_modules/
-server/server/v2/node_modules/
+server/v2/node_modules/
 service/updater/node_modules/
 service/watchdog/node_modules/
-service/watchdog/_wip_
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# Coverage and testing
+coverage/
+.nyc_output/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Parcel cache
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Others
+*.tgz
