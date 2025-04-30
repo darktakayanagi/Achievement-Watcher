@@ -15,6 +15,7 @@
 function resetUI() {
   if ($('#achievement').is(':visible')) $('#btn-previous').trigger('click');
   $('#settings').hide();
+  $('#game-config').hide();
   $('#game-list ul').empty();
   $('#game-list .loading .progressBar').attr('data-percent', 0);
   $('#game-list .loading .progressBar > .meter').css('width', '0%');
@@ -27,6 +28,7 @@ function resetUI() {
   let elem = $('#settingNav li').first();
   $('#settingNav li').removeClass('active');
   elem.addClass('active');
+  $('#game-config .box .section.content').removeClass('active');
   $('#settings .box section.content').removeClass('active');
   $("#settings .box section.content[data-view='" + elem.data('view') + "']").addClass('active');
   $('#option_customToastAudio').off('change');

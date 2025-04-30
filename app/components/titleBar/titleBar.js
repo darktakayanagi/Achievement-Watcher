@@ -7,48 +7,11 @@ const template = `
     <link rel="stylesheet" href="../resources/css/normalize.css" type="text/css"/>
     <link rel="stylesheet" href="../resources/css/fontawesome.css" type="text/css"/>
     <link rel="stylesheet" href="../resources/css/common.css" type="text/css" />
+    <link rel="stylesheet" href="../resources/css/titlebar.css" type="text/css" />
 
-    <style>
-    
-      :host { 
-          position: relative;
-          width: 100%;
-          height: 30px;
-          z-index: 999;
-          display: flex;
-          color: #50525b;
-          -webkit-app-region: drag;
-          cursor: default;
-      }
-
-      ul { 
-          position: absolute;
-          right: 0;
-          top: 0;
-          z-index: 99;
-          direction: rtl;
-          height: 100%;
-      }
-
-      ul > li {
-          display: inline-block;
-          font-size: 12px;
-          -webkit-app-region: no-drag;
-          width: 45px;
-          height: 100%;
-          box-sizing: border-box;
-          text-align: center;
-          vertical-align: middle;
-          line-height: 30px;
-      }
-      ul > li { background-color: transparent;}
-      ul > li:hover { background-color: rgba(255,255,255,0.20); color: #dedede}
-      ul > li#btn-close{ font-size: 16px;}
-      ul > li#btn-close:hover { background-color: rgba(215,40,40,0.9);}
-      :host(.animate) ul > li#btn-settings:hover i { transform: rotate(180deg); transition: 1.0s; }
-      
-    </style>
-    
+    <div class="sf-indicator">
+    <ul id="watchdog-status" class="sf-indicator"><span class="status-dot status-orange"></span><span class="status-text">Checking watchdog status...</span></ul>
+    </div>
     <ul>
       <li id="btn-close"><i class="fas fa-times"></i></li>
       <li id="btn-maximize"><i class="far fa-window-maximize"></i></li>

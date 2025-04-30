@@ -232,6 +232,8 @@ function translateUI(lang, locale, template) {
   $("#settingNav li[data-view='debug'] span").text(clear(template.settings.sideMenu.debug));
   $('#btn-settings-cancel').text(clear(template.settings.common.cancel));
   $('#btn-settings-save').text(clear(template.settings.common.save));
+  $('#btn-game-config-cancel').text(clear(template.settings.common.cancel));
+  $('#btn-game-config-save').text(clear(template.settings.common.save));
 }
 
 function clear(str) {

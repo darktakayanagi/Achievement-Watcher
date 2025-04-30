@@ -351,6 +351,62 @@ main {
   text-align: center;
 }
 
+.play-button {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  padding: 12px 16px;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0.2;
+  transition: opacity 0.2s ease;
+}
+
+.game-box .achievement-button {
+  position: absolute;
+  top: 1%;
+  left: 1%;
+  transform: none;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  padding: 5px 5px;
+  font-size: 15px;
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+.game-box .config-button {
+  position: absolute;
+  top: 1%;
+  right: 1%;
+  transform: none;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  padding: 5px 5px;
+  font-size: 15px;
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.game-box .header:hover .play-button,
+.game-box .header:hover .config-button,
+.game-box .header:hover .achievement-button {
+  opacity: 0.8;
+}
+
 #achievement {
   display: none;
   overflow-y: scroll;
@@ -931,11 +987,13 @@ main {
   font-size: 14px;
 }
 
-#settings {
+#settings,
+#game-config {
   display: none;
 }
 
-#settings .overlay {
+#settings .overlay,
+#game-config .overlay {
   content: '';
   width: 100%;
   height: 100%;
@@ -947,7 +1005,8 @@ main {
   background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QTIyNjIyMjQwQ0Q0MTFFNEJGNTZGOTlGQTRBMTA4OTMiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QTIyNjIyMjUwQ0Q0MTFFNEJGNTZGOTlGQTRBMTA4OTMiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpBMjI2MjIyMjBDRDQxMUU0QkY1NkY5OUZBNEExMDg5MyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBMjI2MjIyMzBDRDQxMUU0QkY1NkY5OUZBNEExMDg5MyIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PjmaiJMAAAAXSURBVHjaYmZgYNgMxN+YQQQQMwAEGAAYlwKmmj71rQAAAABJRU5ErkJggg==');
 }
 
-#settings .box {
+#settings .box,
+#game-config .box {
   width: 750px;
   background: #1b2838;
   position: absolute;
@@ -960,8 +1019,13 @@ main {
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
   display: none;
 }
+#game-config .box {
+  width: 500px;
+  height: 200px;
+}
 
-#settings .box .header {
+#settings .box .header,
+#game-config .box .header {
   background: #15202d;
   padding: 10px 20px;
   width: 100%;
@@ -972,11 +1036,15 @@ main {
   margin: 0 auto auto auto;
 }
 
-#settings .box .container {
+#settings .box .container,
+#game-config .box .container {
   display: flex;
   flex-direction: row;
   padding: 15px 20px;
   background: #1f3042;
+}
+#game-config .box .container {
+  padding: 5px 10px;
 }
 
 #settingNav {
@@ -1002,7 +1070,8 @@ main {
   margin-right: 1px;
 }
 
-#settings .box .content {
+#settings .box .content,
+#game-config .box .content {
   width: 500px;
   height: 465px;
   margin: 0 auto auto 0;
@@ -1011,6 +1080,11 @@ main {
   border-radius: 0 3px 3px 0;
   display: none;
   overflow-y: scroll;
+}
+#game-config .box .content {
+  overflow-y: hidden;
+  height: auto;
+  padding: 5px 10px;
 }
 
 #settings .box .content::-webkit-scrollbar {
@@ -1026,11 +1100,13 @@ main {
   background: #415b79;
 }
 
-#settings .box .content.active {
+#settings .box .content.active,
+#game-config .box .content.active {
   display: block;
 }
 
-#settings .box .footer {
+#settings .box .footer,
+#game-config .box .footer {
   margin: auto 0 0 0;
   padding: 15px 10px 10px 10px;
   display: flex;
@@ -1053,11 +1129,13 @@ main {
   text-decoration: none;
 }
 
-#settings .box .footer .buttons {
+#settings .box .footer .buttons,
+#game-config .box .footer .buttons {
   margin: auto 0 auto auto;
 }
 
-#settings .box .footer .buttons div {
+#settings .box .footer .buttons div,
+#game-config .box .footer .buttons div {
   display: inline-block;
   padding: 10px 20px;
   border-radius: 3px;
@@ -1067,13 +1145,16 @@ main {
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 }
 
-#settings .box .footer .buttons div:hover {
+#settings .box .footer .buttons div:hover,
+#game-config .box .footer .buttons div:hover {
   background: #384a63;
 }
-#settings .box .footer .buttons div#btn-settings-cancel {
+#settings .box .footer .buttons div#btn-settings-cancel,
+#game-config .box .footer .buttons div#btn-game-config-cancel {
   background: #bd2318;
 }
-#settings .box .footer .buttons div#btn-settings-cancel:hover {
+#settings .box .footer .buttons div#btn-settings-cancel:hover,
+#game-config .box .footer .buttons div#btn-game-config-cancel:hover {
   background: #da281b;
 }
 
@@ -1226,11 +1307,19 @@ main {
   height: 22px;
 }
 
-#settings .content .title {
+#settings .content .title,
+#game-config .content .title {
   font-family: 'Raleway-bold';
   border-bottom: 1px solid white;
   padding-bottom: 5px;
   margin: 10px 0;
+}
+#game-config .content .title {
+  font-family: 'Open-sans';
+}
+
+#game-config .content .title {
+  margin: 5px 0;
 }
 
 #settings .content[data-view='folder'] .disclaimer {
@@ -1244,6 +1333,9 @@ main {
   height: 210px;
   max-height: 210px;
   font-size: 14px;
+}
+#game-config #dirlist {
+  height: auto;
 }
 
 #defaultdir::-webkit-scrollbar,
@@ -1269,6 +1361,10 @@ main {
   overflow-x: hidden;
   height: 60px;
   max-height: 60px;
+}
+
+#game-config .box .container #dirlist {
+  overflow-y: hidden;
 }
 
 #dirlist > li,
@@ -1303,12 +1399,28 @@ main {
   max-width: 350px;
   text-overflow: ellipsis;
   overflow: hidden;
+  direction: rtl;
 }
+#game-config li .path,
+#game-config li .path span {
+  width: 415px;
+  max-width: 415px;
+}
+
+#game-config .constant:empty::before {
+  content: '...Please click the EDIT button to select an executable...';
+  color: #888;
+  font-style: italic;
+}
+
 #dirlist > li .path.overflow:hover span {
   max-width: initial;
   text-overflow: initial;
   overflow: initial;
   transform: translateX(calc(350px - 100%));
+}
+#game-config .path.overflow:hover span {
+  transform: none;
 }
 
 #dirlist > li .controls,
@@ -1346,7 +1458,8 @@ main {
   color: #9ba0a5;
 }
 
-#settings .content[data-view='folder'] > .controls {
+#settings .content[data-view='folder'] > .controls,
+#game-config .content[data-view='exe-config'] > .controls {
   display: flex;
   margin-bottom: 5px;
   flex-direction: column;

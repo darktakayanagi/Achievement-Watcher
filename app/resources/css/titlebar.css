@@ -1,0 +1,113 @@
+.sf-indicator {
+  --sf-indicator-size: 8px;
+  --sf-indicator-green: #0bbf0b;
+  --sf-indicator-red: #c51b1b;
+  --sf-indicator-orange: #db8719;
+}
+.sf-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 10px;
+}
+
+.sf-indicator .status-dot {
+  width: var(--sf-indicator-size);
+  height: var(--sf-indicator-size);
+  border-radius: 50%;
+  position: relative;
+}
+
+.sf-indicator .status-dot::before,
+.sf-indicator .status-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: sf-indicator-pulse 2s infinite linear;
+  opacity: 0.3;
+}
+
+.sf-indicator .status-dot::after {
+  animation-delay: 1s;
+}
+
+@keyframes sf-indicator-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+.status-green {
+  background-color: var(--sf-indicator-green);
+}
+.status-red {
+  background-color: var(--sf-indicator-red);
+}
+.status-orange {
+  background-color: var(--sf-indicator-orange);
+}
+
+:host {
+  position: relative;
+  width: 100%;
+  height: 30px;
+  z-index: 999;
+  display: flex;
+  color: #50525b;
+  -webkit-app-region: drag;
+  cursor: default;
+}
+
+ul {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 99;
+  direction: rtl;
+  height: 100%;
+}
+ul#watchdog-status {
+  right: auto;
+  left: 0;
+  direction: ltr;
+}
+
+ul > li {
+  display: inline-block;
+  font-size: 12px;
+  -webkit-app-region: no-drag;
+  width: 45px;
+  height: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 30px;
+}
+ul > li {
+  background-color: transparent;
+}
+ul > li:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #dedede;
+}
+ul > li#btn-close {
+  font-size: 16px;
+}
+ul > li#btn-close:hover {
+  background-color: rgba(215, 40, 40, 0.9);
+}
+:host(.animate) ul > li#btn-settings:hover i {
+  transform: rotate(180deg);
+  transition: 1s;
+}

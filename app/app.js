@@ -2,21 +2,39 @@
 
 const { ipcRenderer } = require('electron');
 const os = require('os');
+const fs = require('fs');
 const path = require('path');
 const args_split = require('argv-split');
 const args = require('minimist');
 const moment = require('moment');
+const { execFile } = require('child_process');
 const humanizeDuration = require('humanize-duration');
 const settings = require(path.join(appPath, 'settings.js'));
 const achievements = require(path.join(appPath, 'parser/achievements.js'));
 const blacklist = require(path.join(appPath, 'parser/blacklist.js'));
 const userDir = require(path.join(appPath, 'parser/userDir.js'));
+const exeList = require(path.join(appPath, 'parser/exeList.js'));
 const PlaytimeTracking = require(path.join(appPath, 'parser/playtime.js'));
 const l10n = require(path.join(appPath, 'locale/loader.js'));
 const toastAudio = require(path.join(appPath, 'util/toastAudio.js'));
 const debug = new (require('@xan105/log'))({
   console: ipcRenderer.sendSync('win-isDev') || false,
   file: path.join(remote.app.getPath('userData'), `logs/${remote.app.name}.log`),
+});
+
+ipcRenderer.on('watchdog-status', (event, found) => {
+  let shadow = document.querySelector('title-bar').shadowRoot;
+  let watchdogStatus = shadow.querySelector('.status-dot');
+  let watchdoglbl = shadow.querySelector('.status-text');
+  watchdoglbl.textContent = 'Watchdog is not running! (overlay/notifications won`t work until restarted.)';
+  watchdogStatus.classList.remove('status-green', 'status-orange');
+  watchdogStatus.classList.add('status-red');
+  if (found) {
+    //let watchdogStatus = shadow.querySelector('.status-dot.status-orange');
+    watchdogStatus.classList.remove('status-orange', 'status-red');
+    watchdogStatus.classList.add('status-green');
+    watchdoglbl.textContent = 'Watchdog is running (overlay/notifications should work properly)';
+  }
 });
 
 var app = {
@@ -109,7 +127,21 @@ var app = {
                       ? `<div class="header glow" style="background: url('${list[game].img.portrait}');">`
                       : `<div class="header" style="background: url('${list[game].img.header}');">`
                   }
+
+                  <!-- Play Button -->
+                  <div class="play-button"><i class="fas fa-play"></i></div>
                   </div>
+
+                  <!-- Top Left Button -->
+                  <button class="achievement-button">
+                    <i class="fas fa-trophy"/>
+                  </button>
+
+                  <!-- Top Right Button -->
+                  <div class="config-button">
+                    <i class="fas fa-tools"></i>
+                  </div>
+                  
                   <div class="info">
                        <div class="title">${list[game].name}</div>
                        <div class="progressBar" data-percent="${progress}"><span class="meter" style="width:${progress}%"></span></div>
@@ -178,9 +210,56 @@ var app = {
           $('#user-info .info .trophy').hide();
         }
 
+        $('#btn-game-config-cancel, #game-config .overlay').click(function () {
+          self.onGameConfigCancelClick($(this));
+        });
+
+        $('#btn-game-config-save').click(async function () {
+          self.onGameConfigSaveClick($(this), await exeList.get());
+        });
+
         $('#game-list .game-box').click(function () {
           self.onGameBoxClick($(this), list);
         });
+
+        $('#game-list .game-box .play-button').click(async function (e) {
+          e.stopPropagation();
+          self.onPlayButtonClick($(this), list, await exeList.get());
+        });
+
+        $('#game-list .game-box .config-button').click(async function (e) {
+          e.stopPropagation();
+          self.onConfigButtonClick($(this), list, await exeList.get());
+        });
+
+        $('#game-config')
+          .find('.edit')
+          .click(async function (e) {
+            e.stopPropagation();
+            let gameExeList = await exeList.get();
+            let appid = parseInt($('#game-config .header').attr('title'));
+            let dialog = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
+              title: 'Choose the game executable',
+              buttonLabel: 'Select',
+              defaultPath: '',
+              filters: [{ name: 'Executables', extensions: ['exe', 'bat'] }],
+              properties: ['openFile', 'showHiddenFiles', 'dontAddToRecent'],
+            });
+
+            if (dialog.filePaths.length > 0 && dialog.filePaths[0].length > 0) {
+              const filePath = dialog.filePaths[0];
+
+              let cfg = gameExeList.find((app) => app.appid === appid);
+              if (!cfg) {
+                cfg = { appid, exe: filePath, args: '' };
+                gameExeList.push(cfg);
+              }
+              cfg.exe = filePath;
+              await exeList.save(gameExeList);
+              $('#game-config').find('.constant').text(filePath);
+              $('#game-config').find('.constant').attr('title', filePath);
+            }
+          });
 
         $('#game-list .game-box').contextmenu(function (e) {
           e.preventDefault();
@@ -640,6 +719,77 @@ var app = {
         self.css('pointer-events', 'initial');
       });
     });
+  },
+  onPlayButtonClick: async function (self, list, gameExeList) {
+    let appid = self.closest('.game-box').data('appid');
+
+    if (gameExeList.find((app) => app.appid === appid) === undefined) {
+      let dialog = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
+        title: 'Choose the game executable',
+        buttonLabel: 'Select',
+        defaultPath: '',
+        filters: [{ name: 'Executables', extensions: ['exe', 'bat'] }],
+        properties: ['openFile', 'showHiddenFiles', 'dontAddToRecent'],
+      });
+
+      if (dialog.filePaths.length > 0 && dialog.filePaths[0].length > 0) {
+        const filePath = dialog.filePaths[0];
+        let cfg = { appid, exe: filePath, args: '' };
+        gameExeList.push(cfg);
+        await exeList.save(gameExeList);
+      }
+    }
+
+    let exePath = gameExeList.find((app) => app.appid === appid).exe;
+    if (fs.statSync(exePath).isFile()) {
+      execFile(exePath, [], { cwd: path.dirname(exePath), detached: true }, (error) => {
+        if (error) {
+          console.error('Failed to start the game:', error);
+        } else {
+          console.log('Game launched!');
+        }
+      });
+    }
+  },
+  onConfigButtonClick: async function (self, list, gameExeList) {
+    $('#game-config').show();
+    $('#game-config .box').fadeIn();
+    let appid = self.closest('.game-box').data('appid');
+    $('#game-config .header').attr('title', appid);
+    let cfg = gameExeList.find((app) => app.appid === appid);
+    let exeLbl = $('#game-config').find('.constant');
+    let argsInput = $('#launch-args');
+    if (!cfg) {
+      cfg = {
+        appid,
+        exe: '',
+        args: '',
+      };
+      await exeList.save(gameExeList);
+    }
+    exeLbl.attr('title', cfg.exe);
+    exeLbl.text(cfg.exe);
+    argsInput.val(cfg.args);
+  },
+  onGameConfigCancelClick: async function (self) {
+    self.css('pointer-events', 'none');
+    $('#game-config .box').fadeOut(() => {
+      $('#game-config').hide();
+      self.css('pointer-events', 'initial');
+    });
+  },
+  onGameConfigSaveClick: async function (self, gameExeList) {
+    let appid = parseInt($('#game-config .header').attr('title'));
+    let cfg = gameExeList.find((app) => app.appid === appid);
+    let exeLbl = $('#game-config').find('.constant');
+    let argsInput = $('launch-args');
+    if (!cfg) {
+      console.error(`failed to save game config for`, appid);
+    }
+    cfg.exe = exeLbl.text();
+    cfg.args = argsInput.val() === undefined ? '' : argsInput.val();
+    await exeList.save(gameExeList);
+    this.onGameConfigCancelClick(self);
   },
 };
 

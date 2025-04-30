@@ -8,6 +8,7 @@ const appPath = remote.app.getAppPath();
   $(function () {
     $('title-bar').on('open-settings', function () {
       this.inSettings = true;
+      $('#game-config').hide();
       $('#settings').show();
       $('#settings .box').fadeIn();
 
@@ -484,6 +485,7 @@ const appPath = remote.app.getAppPath();
           if ($('#achievement').is(':visible')) {
             $('#btn-previous').trigger('click');
           }
+          $('#game-config').hide();
           $('#settings').hide();
           $('#game-list ul').empty();
           $('#game-list .loading .progressBar').attr('data-percent', 0);
