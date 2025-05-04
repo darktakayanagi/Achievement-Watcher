@@ -1,0 +1,124 @@
+/* Containerul notificării – stil PS4 */
+.ach {
+  position: fixed;
+  left: 50%;
+  bottom: 50px;
+  transform: translateX(-50%) translateY(100%);
+  width: 350px;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1.5px solid #fff;
+  box-shadow: inset 0 0 0 4px #fff;
+  border-radius: 1px;
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  opacity: 0;
+  z-index: 10000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  /* Intrare în 0.5s, ieșire după 4.5s (de exemplu, pentru o durată totală de 5s) */
+  animation: ps4AchievementIn 0.5s forwards, ps4AchievementOut 0.5s forwards 4.5s;
+}
+
+/* Animația de intrare pentru container */
+@keyframes ps4AchievementIn {
+  0% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-50%) translateY(-10px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Animația de ieșire pentru container */
+@keyframes ps4AchievementOut {
+  0% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+}
+
+/* Containerul pentru iconiță */
+.ach .icon {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
+  position: relative;
+  /* Poți adăuga și o rotație dacă dorești un efect suplimentar */
+}
+
+/* Iconița – trofeul */
+.ach .icon img {
+  width: 100%;
+  height: 100%;
+  border-radius: 15%;
+  transform: scale(0);
+  /* Intrare rapidă, ieșire după aceea; sincronizată cu containerul */
+  animation: ps4TrophyIn 0.5s forwards, ps4TrophyOut 0.5s forwards 4.5s;
+}
+
+/* Animația de intrare pentru iconiță */
+@keyframes ps4TrophyIn {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Animația de ieșire pentru iconiță */
+@keyframes ps4TrophyOut {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+
+/* Containerul pentru text */
+.ach .text_wrap {
+  flex: 1;
+  color: #fff;
+  font-family: "Trebuchet MS", sans-serif;
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+/* Stiluri pentru titlu */
+.ach .text_wrap .title {
+  font-size: 1.2em;
+  width: 250px;
+  margin: 0 0 -0.2em;
+  padding: 0;
+  font-style: bold;
+}
+
+/* Stiluri pentru detalii */
+.ach .text_wrap .detail {
+  font-size: 1em;	
+  width: 250px;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-top: 2px;
+}

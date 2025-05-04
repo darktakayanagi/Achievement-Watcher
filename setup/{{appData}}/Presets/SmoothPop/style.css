@@ -1,0 +1,67 @@
+:root {
+  --transition: 0.3s;
+  --displaytime: 4s;
+  --scale: 0.95;
+  --roundness: 16px;
+}
+
+.ach {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(30, 30, 30, 0.9);
+  border-radius: var(--roundness);
+  backdrop-filter: blur(8px);
+  transform: scale(0) translateY(30px);
+  opacity: 0;
+  animation:
+    ach-in var(--transition) ease-out forwards,
+    ach-hold calc(var(--displaytime) - var(--transition) * 2) ease forwards var(--transition),
+    ach-out var(--transition) ease-in forwards calc(var(--displaytime) - var(--transition));
+}
+
+@keyframes ach-in {
+  to {
+    transform: scale(var(--scale)) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes ach-hold {
+  to {
+    opacity: 1;
+    transform: scale(var(--scale)) translateY(0);
+  }
+}
+
+@keyframes ach-out {
+  to {
+    transform: scale(0.85) translateY(-30px);
+    opacity: 0;
+  }
+}
+
+.icon img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+}
+
+.text_wrap {
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.title {
+  font-weight: bold;
+  font-size: 18px;
+  margin: 0;
+}
+
+.detail {
+  font-size: 14px;
+  opacity: 0.85;
+}
