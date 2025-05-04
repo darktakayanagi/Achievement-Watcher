@@ -1,6 +1,7 @@
 'use strict';
 
 const remote = require('@electron/remote');
+const path = require('path');
 
 const appPath = remote.app.getAppPath();
 
@@ -21,6 +22,13 @@ const appPath = remote.app.getAppPath();
       for (let option in app.config.achievement_source) {
         if ($(`#option_${option} option[value="${app.config.achievement_source[option]}"]`).length > 0) {
           $(`#option_${option}`).val(app.config.achievement_source[option].toString()).change();
+        }
+      }
+
+      populateOverlayPreset(app.config.overlay.preset);
+      for (let option in app.config.overlay) {
+        if ($(`#option_overlay_${option} option[value="${app.config.overlay[option]}"]`).length > 0) {
+          $(`#option_overlay_${option}`).val(app.config.overlay[option].toString()).change();
         }
       }
 
@@ -133,6 +141,20 @@ const appPath = remote.app.getAppPath();
     $('#btn-settings-save').click(function () {
       let self = $(this);
       self.css('pointer-events', 'none');
+
+      $('#options-overlay .right')
+        .children('select')
+        .each(function (index) {
+          try {
+            if ($(this)[0].id !== '' && $(this).val() !== '') {
+              app.config.overlay[$(this)[0].id.replace('option_overlay_', '')] =
+                $(this).val() === 'true' ? true : $(this).val() === 'false' ? false : $(this).val();
+            }
+          } catch (e) {
+            console.warn(e);
+            debug.log('error while reading general settings ui');
+          }
+        });
 
       $('#options-ui .right')
         .children('select')
@@ -752,4 +774,18 @@ function populateUserDirList(option) {
       }
     );
   });
+}
+
+function populateOverlayPreset(selected) {
+  let presetPath = path.join(remote.app.getPath('userData'), 'Presets');
+  const folders = fs
+    .readdirSync(presetPath, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+
+  let selector = $('#option_overlay_preset');
+  selector.empty();
+  for (let preset of folders) {
+    selector.append(`<option value="${preset}" ${preset === selected ? 'selected' : ''}>${preset}</option>`);
+  }
 }

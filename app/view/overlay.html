@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Achievements Overlay</title>
+    <style>
+      html,
+      body {
+        background: transparent;
+        border-radius: 10px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        user-select: none;
+      }
+
+      .scroll-container {
+        max-height: 100vh;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .scroll-container::-webkit-scrollbar {
+        display: none;
+      }
+
+      table {
+        color: white;
+        border-collapse: collapse;
+        background-color: rgba(0, 0, 0, 0.6);
+        border-radius: 10px;
+        overflow: hidden;
+        width: 100%;
+      }
+
+      th,
+      td {
+        padding: 8px;
+        border: 1px solid #555;
+        text-align: center;
+      }
+
+      img {
+        width: 50px;
+        height: auto;
+      }
+
+      .drag {
+        -webkit-app-region: drag;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll-container">
+      <table>
+        <thead class="drag">
+          <tr>
+            <th>Icon</th>
+            <th>Achievement</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="overlayTableBody"></tbody>
+        <tfoot>
+          <tr id="noConfigMessageRow" style="display: none">
+            <td colspan="3" style="text-align: center; font-style: italic; color: #ccc">Select a config!</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <script>
+      let overlayLang = 'english';
+      let currentConfigName = null;
+      let currentDataHash = null;
+      let isLoading = false;
+
+      function getSafeLocalizedText(input, lang = 'english') {
+        if (!input) return 'Hidden';
+        if (typeof input === 'string') return input.trim() || 'Hidden';
+        if (typeof input === 'object') {
+          return input[lang] || input.english || Object.values(input).find((v) => typeof v === 'string' && v.trim() !== '') || 'Hidden';
+        }
+        return 'Hidden';
+      }
+
+      function formatTimestamp(timestamp) {
+        if (!timestamp) return 'N/A';
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleString();
+      }
+
+      function computeAchievementsHash(achievements, saved, lang) {
+        return achievements
+          .map((ach) => {
+            const name = ach.name;
+            const display = getSafeLocalizedText(ach.displayName, lang);
+            const savedData = saved?.achievements?.[name] || {};
+            const earned = savedData.earned ? '1' : '0';
+            const progress = savedData.progress ?? '';
+            const max = savedData.max_progress ?? '';
+            return `${name}-${display}-${earned}-${progress}-${max}`;
+          })
+          .join('|');
+      }
+
+      async function loadTableData(configName) {
+        if (!configName || isLoading) return;
+        isLoading = true;
+
+        const tableBody = document.querySelector('#overlayTableBody');
+        const achievementsDataObj = await window.api.loadAchievementData(configName);
+        const savedAchievementsObj = await window.api.loadSavedAchievements(configName);
+        const lang = overlayLang;
+
+        if (!Array.isArray(achievementsDataObj.achievements)) {
+          isLoading = false;
+          return;
+        }
+
+        const newHash = computeAchievementsHash(achievementsDataObj.achievements, savedAchievementsObj, lang);
+        const isSameConfig = currentConfigName === configName;
+        const isSameHash = currentDataHash === newHash;
+
+        if (isSameConfig && isSameHash) {
+          isLoading = false;
+          return;
+        }
+
+        tableBody.innerHTML = '';
+        const uniqueAchievements = new Set();
+
+        achievementsDataObj.achievements.forEach((achievement) => {
+          if (!achievement.name || uniqueAchievements.has(achievement.name)) return;
+          uniqueAchievements.add(achievement.name);
+
+          const displayName = getSafeLocalizedText(achievement.displayName, lang);
+          const description = getSafeLocalizedText(achievement.description, lang);
+          const iconGray = achievement.icon_gray || achievement.icongray;
+          const icon = achievement.icon || iconGray;
+
+          let imagePath = `${achievementsDataObj.config_path}\\${iconGray}`;
+          let status = `<span style="color: red; font-weight: bold;">Locked</span>`;
+          let earnedTimeText = '';
+          let progressText = '';
+
+          const saved = savedAchievementsObj?.achievements?.[achievement.name];
+
+          if (saved?.earned) {
+            imagePath = `${achievementsDataObj.config_path}\\${icon}`;
+            status = `<span style="color: green; font-weight: bold;">Unlocked</span>`;
+            earnedTimeText = `<br>${formatTimestamp(saved.earned_time)}`;
+          }
+
+          if (typeof saved?.progress === 'number' && typeof saved?.max_progress === 'number') {
+            progressText = `<br><span style="font-size: 0.85em; color: #888;">Progress: ${saved.progress} / ${saved.max_progress}</span>`;
+          }
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+  <td class="image">
+	<img src="file:///${imagePath.replace(/\\/g, '/')}" alt="Icon"
+		 onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/11455/11455431.png';" /></td>
+  <td class="displayName"><strong>${displayName}</strong><br>
+	<span class="description"><em>${description}</em>${progressText}</span>
+  </td>
+  <td class="status">${status} ${earnedTimeText}</td>
+`;
+          tableBody.appendChild(row);
+        });
+
+        currentConfigName = configName;
+        currentDataHash = newHash;
+        isLoading = false;
+      }
+
+      window.api.onSetLanguage((lang) => {
+        overlayLang = lang;
+        if (currentConfigName) {
+          loadTableData(currentConfigName);
+        }
+      });
+
+      window.api.onLoadOverlayData((configName) => {
+        const tableBody = document.querySelector('#overlayTableBody');
+        const messageRow = document.getElementById('noConfigMessageRow');
+
+        if (!configName) {
+          tableBody.innerHTML = '';
+          if (messageRow) messageRow.style.display = '';
+          currentConfigName = null;
+          currentDataHash = null;
+          return;
+        }
+
+        if (messageRow) messageRow.style.display = 'none';
+        loadTableData(configName);
+      });
+
+      window.api.onRefreshAchievementsTable(() => {
+        if (currentConfigName) {
+          loadTableData(currentConfigName);
+        }
+      });
+
+      window.onload = () => {
+        window.api.requestCurrentConfig();
+      };
+    </script>
+  </body>
+</html>

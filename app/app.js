@@ -3,7 +3,6 @@
 const { ipcRenderer } = require('electron');
 const os = require('os');
 const fs = require('fs');
-const path = require('path');
 const args_split = require('argv-split');
 const args = require('minimist');
 const moment = require('moment');

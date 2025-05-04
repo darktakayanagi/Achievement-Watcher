@@ -1,12 +1,140 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, session, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
 const remote = require('@electron/remote/main');
 
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const ipc = require(path.join(__dirname, 'ipc.js'));
+
+let overlayWindow = null;
+function createOverlayWindow(selectedConfig) {
+  const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize;
+
+  overlayWindow = new BrowserWindow({
+    width: 450,
+    height: 800,
+    x: width - 470,
+    y: 20,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    focusable: false,
+    hasShadow: false,
+    fullscreenable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlayWindow.setFullScreenable(false);
+  overlayWindow.setFocusable(false);
+  overlayWindow.blur();
+
+  overlayWindow.loadFile('../view/overlay.html');
+
+  overlayWindow.webContents.on('did-finish-load', () => {
+    overlayWindow.webContents.send('load-overlay-data', selectedConfig);
+    overlayWindow.webContents.send('set-language', selectedLanguage);
+  });
+
+  overlayWindow.on('closed', () => {
+    overlayWindow = null;
+  });
+}
+
+function createNotificationWindow(message) {
+  const display = screen.getPrimaryDisplay();
+  const { width, height } = display.workAreaSize;
+
+  const preset = message.preset || 'default';
+  const presetFolder = path.join(userPresetsFolder, preset);
+  const presetHtml = path.join(presetFolder, 'index.html');
+  const position = message.position || 'center-bottom';
+  const scale = parseFloat(message.scale || 1);
+
+  const { width: windowWidth, height: windowHeight } = getPresetDimensions(presetFolder);
+
+  const scaledWidth = windowWidth;
+  const scaledHeight = windowHeight;
+
+  let x = 0,
+    y = 0;
+
+  switch (position) {
+    case 'center-top':
+      x = Math.floor((width - scaledWidth) / 2);
+      y = 5;
+      break;
+    case 'top-right':
+      x = width - scaledWidth - Math.round(20 * scale);
+      y = 5;
+      break;
+    case 'bottom-right':
+      x = width - scaledWidth - Math.round(20 * scale);
+      y = height - Math.floor(scaledHeight * scale) - 40;
+      break;
+    case 'top-left':
+      x = Math.round(20 * scale);
+      y = 5;
+      break;
+    case 'bottom-left':
+      x = Math.round(20 * scale);
+      y = height - Math.floor(scaledHeight * scale) - 40;
+      break;
+    case 'center-bottom':
+    default:
+      x = Math.floor((width - scaledWidth) / 2);
+      y = height - Math.floor(scaledHeight * scale) - 40;
+      break;
+  }
+
+  const notificationWindow = new BrowserWindow({
+    width: scaledWidth,
+    height: scaledHeight,
+    x,
+    y,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    focusable: false,
+    resizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    type: 'notification',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  notificationWindow.setAlwaysOnTop(true, 'screen-saver');
+  notificationWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  notificationWindow.setFullScreenable(false);
+  notificationWindow.setFocusable(false);
+
+  notificationWindow.loadFile(presetHtml);
+
+  notificationWindow.webContents.on('did-finish-load', () => {
+    notificationWindow.webContents.send('show-notification', {
+      displayName: message.displayName,
+      description: message.description,
+      iconPath: `${message.config_path}\\${message.icon}`,
+      scale,
+    });
+  });
+
+  return notificationWindow;
+}
 
 try {
   if (app.requestSingleInstanceLock() !== true) app.quit();
@@ -121,11 +249,32 @@ try {
                 if (name.toLowerCase() === 'node' && description.toLowerCase().includes('achievement watcher')) {
                   found = true;
                 }
+                //TODO: check for processes with big ram usage, might be a game so lets try to get exe path and args used and auto add to exeList
               }
             }
             MainWin.webContents.send('watchdog-status', found);
           });
         }, 5000);
+
+        //overlay here to debug
+        globalShortcut.register('Control+Shift+O', () => {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.close();
+            overlayWindow = null;
+          } else {
+            if (!selectedConfig) {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('notify', {
+                  message: '⚠️ Select first a config!',
+                  color: '#ff9800',
+                });
+              }
+              return;
+            }
+
+            createOverlayWindow(selectedConfig);
+          }
+        });
       });
 
       MainWin.on('closed', () => {
@@ -141,9 +290,16 @@ try {
       });
     })
     .on('second-instance', (event, argv, cwd) => {
-      if (MainWin) {
-        if (MainWin.isMinimized()) MainWin.restore();
-        MainWin.focus();
+      if (argv.includes('--overlay-appid=')) {
+        //TODO: open overlay for that appid
+        if (overlayWindow) {
+        } else {
+        }
+      } else {
+        if (MainWin) {
+          if (MainWin.isMinimized()) MainWin.restore();
+          MainWin.focus();
+        }
       }
     });
 } catch (err) {

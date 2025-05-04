@@ -151,6 +151,7 @@
             <nav id="settingNav">
               <ul>
                 <li class="active" data-view="general"><i class="fas fa-tools"></i> <span></span></li>
+                <li data-view="overlay"><i class="fas fa-list"></i><span></span></li>
                 <li data-view="notification"><i class="fas fa-bell"></i> <span></span></li>
                 <li data-view="souvenir"><i class="fas fa-camera"></i> <span></span></li>
                 <li data-view="folder"><i class="far fa-folder"></i> <span></span></li>
@@ -165,11 +166,11 @@
                 <li class="title">Toast Notification Test</li>
                 <li>
                   <div id="notify_test" class="btn"><i class="fas fa-bread-slice"></i> <span>Toast Test</span></div>
-                  <span
-                    ><a href="https://github.com/xan105/Achievement-Watcher#notification-on-achievement-unlocking" target="_blank"
-                      >More info</a
-                    ></span
-                  >
+                  <span>
+                    <a href="https://github.com/xan105/Achievement-Watcher#notification-on-achievement-unlocking" target="_blank">
+                      More info
+                    </a>
+                  </span>
                 </li>
                 <li>
                   <a href="ms-settings:quiethours" target="_blank" class="btn"
@@ -856,6 +857,46 @@
                       </div>
                     </div>
                     <div class="help">Growl Notification Transport Protocol</div>
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="content" data-view="overlay">
+              <div id="options-overlay" class="arrow-list">
+                <ul>
+                  <li>
+                    <div class="left"><i class="fas fa-bell"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" class="dropdown" id="option_overlay_position">
+                        <option value="0" selected>Center Bottom</option>
+                        <option value="1">Center Top</option>
+                        <option value="2">Left Bottom</option>
+                        <option value="3">Left Top</option>
+                        <option value="4">Right Bottom</option>
+                        <option value="5">Right Top</option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                  </li>
+
+                  <li>
+                    <div class="left"><i class="fas fa-gamepad"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" class="dropdown" id="option_overlay_preset"></select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
                   </li>
                 </ul>
               </div>

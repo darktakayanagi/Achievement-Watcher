@@ -25,6 +25,22 @@ module.exports.load = () => {
       }
     }
 
+    // overlay / new notifications
+    if (
+      options.overlay.position != 0 &&
+      options.overlay.position != 1 &&
+      options.overlay.position != 2 &&
+      options.overlay.position != 3 &&
+      options.overlay.position != 4 &&
+      options.overlay.position != 5
+    ) {
+      options.overlay.position = 0;
+    }
+
+    if (typeof options.overlay.preset !== 'string') {
+      options.overlay.preset = '';
+    }
+
     if (typeof options.achievement.thumbnailPortrait !== 'boolean') {
       options.achievement.thumbnailPortrait = false;
     }
@@ -233,6 +249,10 @@ module.exports.load = () => {
     }
   } catch (err) {
     options = {
+      overlay: {
+        position: 0,
+        preset: '',
+      },
       achievement: {
         thumbnailPortrait: false,
         showHidden: false,

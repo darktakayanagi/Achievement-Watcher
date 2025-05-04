@@ -76,6 +76,9 @@ function translateUI(lang, locale, template) {
   $('#lock').data('lang-hidden', clear(template.settings.common.show));
   $('#btn-scrollup span').text(clear(template.scrollUp));
   $('#settings .box .header span').text(clear(template.settings.title));
+  selector = $('#options-overlay');
+  selector.find('li:nth-child(1) .left span').text(clear(template.settings.overlay.position));
+  selector.find('li:nth-child(2) .left span').text(clear(template.settings.overlay.preset));
   selector = $('#options-ui');
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.general.language.name));
   selector.find('li:nth-child(1) .help span').text(clear(template.settings.general.language.description[0]));
@@ -224,6 +227,7 @@ function translateUI(lang, locale, template) {
   selector.find('span:eq(0)').text(clear(template.settings.common.version));
   selector.find('span:eq(1)').text(clear(remote.app.getVersion()));
   $("#settingNav li[data-view='general'] span").text(clear(template.settings.sideMenu.general));
+  $("#settingNav li[data-view='overlay'] span").text(clear(template.settings.sideMenu.overlay));
   $("#settingNav li[data-view='notification'] span").text(clear(template.settings.sideMenu.notification));
   $("#settingNav li[data-view='souvenir'] span").text(clear(template.settings.sideMenu.souvenir));
   $("#settingNav li[data-view='folder'] span").text(clear(template.settings.sideMenu.folder));

@@ -19,6 +19,7 @@
     "title": "Settings",
     "sideMenu": {
       "general": "General",
+      "overlay": "Overlay",
       "notification": "Notification",
       "souvenir": "Souvenir",
       "folder": "Folders",
@@ -35,6 +36,10 @@
       "save": "Save",
       "version": "Version",
       "edit": "Edit"
+    },
+    "overlay": {
+      "position": "Popup Position",
+      "preset": "Preset"
     },
     "general": {
       "language": {

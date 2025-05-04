@@ -1069,6 +1069,10 @@ main {
   margin-left: -2px;
   margin-right: 1px;
 }
+#settingNav li[data-view='overlay'] i {
+  margin-left: -1px;
+  margin-right: 5px;
+}
 
 #settings .box .content,
 #game-config .box .content {
