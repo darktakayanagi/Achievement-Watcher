@@ -214,7 +214,7 @@ var app = {
         });
 
         $('#btn-game-config-save').click(async function () {
-          self.onGameConfigSaveClick($(this), await exeList.get());
+          self.onGameConfigSaveClick($(this));
         });
 
         $('#game-list .game-box').click(function () {
@@ -223,7 +223,7 @@ var app = {
 
         $('#game-list .game-box .play-button').click(async function (e) {
           e.stopPropagation();
-          self.onPlayButtonClick($(this), list, await exeList.get());
+          self.onPlayButtonClick($(this));
         });
 
         $('#game-list .game-box .config-button').click(async function (e) {
@@ -235,12 +235,12 @@ var app = {
           .find('.edit')
           .click(async function (e) {
             e.stopPropagation();
-            let gameExeList = await exeList.get();
             let appid = parseInt($('#game-config .header').attr('title'));
+            let cfg = await exeList.get(appid);
             let dialog = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
               title: 'Choose the game executable',
               buttonLabel: 'Select',
-              defaultPath: '',
+              defaultPath: cfg.exe,
               filters: [{ name: 'Executables', extensions: ['exe', 'bat'] }],
               properties: ['openFile', 'showHiddenFiles', 'dontAddToRecent'],
             });
@@ -248,13 +248,6 @@ var app = {
             if (dialog.filePaths.length > 0 && dialog.filePaths[0].length > 0) {
               const filePath = dialog.filePaths[0];
 
-              let cfg = gameExeList.find((app) => app.appid === appid);
-              if (!cfg) {
-                cfg = { appid, exe: filePath, args: '' };
-                gameExeList.push(cfg);
-              }
-              cfg.exe = filePath;
-              await exeList.save(gameExeList);
               $('#game-config').find('.constant').text(filePath);
               $('#game-config').find('.constant').attr('title', filePath);
             }
@@ -719,29 +712,27 @@ var app = {
       });
     });
   },
-  onPlayButtonClick: async function (self, list, gameExeList) {
+  onPlayButtonClick: async function (self) {
     let appid = self.closest('.game-box').data('appid');
-
-    if (gameExeList.find((app) => app.appid === appid) === undefined) {
+    let cfg = await exeList.get(appid);
+    if (cfg.exe === '') {
       let dialog = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
         title: 'Choose the game executable',
         buttonLabel: 'Select',
-        defaultPath: '',
+        defaultPath: cfg.exe,
         filters: [{ name: 'Executables', extensions: ['exe', 'bat'] }],
         properties: ['openFile', 'showHiddenFiles', 'dontAddToRecent'],
       });
 
       if (dialog.filePaths.length > 0 && dialog.filePaths[0].length > 0) {
         const filePath = dialog.filePaths[0];
-        let cfg = { appid, exe: filePath, args: '' };
-        gameExeList.push(cfg);
-        await exeList.save(gameExeList);
+        cfg.exe = filePath;
+        await exeList.add(cfg);
       }
     }
 
-    let exePath = gameExeList.find((app) => app.appid === appid).exe;
-    if (fs.statSync(exePath).isFile()) {
-      execFile(exePath, [], { cwd: path.dirname(exePath), detached: true }, (error) => {
+    if (fs.statSync(cfg.exe).isFile()) {
+      execFile(cfg.exe, [], { cwd: path.dirname(cfg.exe), detached: true }, (error) => {
         if (error) {
           console.error('Failed to start the game:', error);
         } else {
@@ -750,22 +741,14 @@ var app = {
       });
     }
   },
-  onConfigButtonClick: async function (self, list, gameExeList) {
+  onConfigButtonClick: async function (self) {
     $('#game-config').show();
     $('#game-config .box').fadeIn();
     let appid = self.closest('.game-box').data('appid');
     $('#game-config .header').attr('title', appid);
-    let cfg = gameExeList.find((app) => app.appid === appid);
+    let cfg = await exeList.get(appid);
     let exeLbl = $('#game-config').find('.constant');
     let argsInput = $('#launch-args');
-    if (!cfg) {
-      cfg = {
-        appid,
-        exe: '',
-        args: '',
-      };
-      await exeList.save(gameExeList);
-    }
     exeLbl.attr('title', cfg.exe);
     exeLbl.text(cfg.exe);
     argsInput.val(cfg.args);
@@ -777,17 +760,14 @@ var app = {
       self.css('pointer-events', 'initial');
     });
   },
-  onGameConfigSaveClick: async function (self, gameExeList) {
+  onGameConfigSaveClick: async function (self) {
     let appid = parseInt($('#game-config .header').attr('title'));
-    let cfg = gameExeList.find((app) => app.appid === appid);
+    let cfg = await exeList.get(appid);
     let exeLbl = $('#game-config').find('.constant');
     let argsInput = $('launch-args');
-    if (!cfg) {
-      console.error(`failed to save game config for`, appid);
-    }
     cfg.exe = exeLbl.text();
     cfg.args = argsInput.val() === undefined ? '' : argsInput.val();
-    await exeList.save(gameExeList);
+    await exeList.add(cfg);
     this.onGameConfigCancelClick(self);
   },
 };

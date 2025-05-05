@@ -13,6 +13,7 @@ const file = path.join(remote.app.getPath('userData'), 'cfg/exclusion.db');
 
 module.exports.get = async () => {
   const url = 'https://api.xan105.com/steam/getBogusList';
+  //TODO: replace this url with the full apilist of dlc/music/demo/etc
 
   let exclude = [
     480, //Space War
