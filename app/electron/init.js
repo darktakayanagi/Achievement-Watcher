@@ -91,7 +91,6 @@ function createMainWindow() {
 
   //enable ipc
   ipc.window(MainWin);
-  remote.initialize();
 
   MainWin.loadFile(manifest.config.window.view);
 
