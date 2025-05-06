@@ -764,7 +764,7 @@ var app = {
     let appid = parseInt($('#game-config .header').attr('title'));
     let cfg = await exeList.get(appid);
     let exeLbl = $('#game-config').find('.constant');
-    let argsInput = $('launch-args');
+    let argsInput = $('#launch-args');
     cfg.exe = exeLbl.text();
     cfg.args = argsInput.val() === undefined ? '' : argsInput.val();
     await exeList.add(cfg);
