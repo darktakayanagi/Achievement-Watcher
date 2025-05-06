@@ -21,7 +21,9 @@
     "opera.exe",
     "brave.exe",
     "msedge.exe",
-    "vivaldi.exe"
+    "vivaldi.exe",
+    "taskhostw.exe",
+    "UnityCrashHandler64.exe"
   ],
   "mute": [
     "nw.exe",
