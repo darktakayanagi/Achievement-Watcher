@@ -6,20 +6,24 @@ const ffs = require('@xan105/fs');
 
 const file = path.join(remote.app.getPath('userData'), 'cfg/exeList.db');
 
-module.exports.get = async (appid) => {
-  let defaultCfg = { appid, exe: '', args: '' };
+async function getCurrentList() {
   try {
-    let currentList = JSON.parse(await ffs.readFile(file, 'utf8'));
-    let found = currentList.find((app) => app.appid === appid);
-    return found ? found : defaultCfg;
+    return JSON.parse(await ffs.readFile(file, 'utf8'));
   } catch (err) {
     if (err.code === 'ENOENT') {
       await this.save([]);
-      return defaultCfg;
+      return [];
     } else {
       throw err;
     }
   }
+}
+
+module.exports.get = async (appid) => {
+  let defaultCfg = { appid, exe: '', args: '' };
+  let currentList = await getCurrentList();
+  let found = currentList.find((app) => app.appid === appid);
+  return found ? found : defaultCfg;
 };
 
 module.exports.save = async (data) => {
@@ -33,9 +37,8 @@ module.exports.save = async (data) => {
 module.exports.add = async (app) => {
   try {
     debug.log(`Adding ${app.appid} to exeList ...`);
-
-    let currentList = await this.get();
-    let existingEntry = currentList.find((g) => g.appid === app.appid);
+    let currentList = await getCurrentList();
+    let existingEntry = currentList.find((ap) => ap.appid === app.appid);
     if (existingEntry) {
       existingEntry.exe = app.exe;
       existingEntry.args = app.args;
