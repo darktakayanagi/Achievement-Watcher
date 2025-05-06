@@ -1,19 +1,24 @@
 'use strict';
-
-const remote = require('@electron/remote');
-const path = require('path');
-const steam = require(path.join(appPath, 'parser/steam.js'));
-const uplay = require(path.join(appPath, 'parser/uplay.js'));
-const rpcs3 = require(path.join(appPath, 'parser/rpcs3.js'));
-const greenluma = require(path.join(appPath, 'parser/greenluma.js'));
-const userDir = require(path.join(appPath, 'parser/userDir.js'));
-const blacklist = require(path.join(appPath, 'parser/blacklist.js'));
-const watchdog = require(path.join(appPath, 'parser/watchdog.js'));
-const debug = new (require('@xan105/log'))({
-  console: remote.getCurrentWindow().isDev || false,
-  file: path.join(remote.app.getPath('userData'), 'logs/parser.log'),
-});
+console.log('achievements.js loaded');
 const { crc32 } = require('crc');
+const path = require('path');
+const appPath = __dirname;
+//const settings = require(path.join(__dirname, '../settings.js'));
+//const steam = require(path.join(appPath, 'steam.js'));
+//const uplay = require(path.join(appPath, 'uplay.js'));
+//const rpcs3 = require(path.join(appPath, 'rpcs3.js'));
+//const greenluma = require(path.join(appPath, 'greenluma.js'));
+//const userDir = require(path.join(appPath, 'userDir.js'));
+//const blacklist = require(path.join(appPath, 'blacklist.js'));
+//const watchdog = require(path.join(appPath, 'watchdog.js'));
+let debug;
+
+module.exports.initDebug = ({ isDev, userDataPath }) => {
+  debug = new (require('@xan105/log'))({
+    console: isDev || false,
+    file: path.join(userDataPath, 'logs/parser.log'),
+  });
+};
 
 async function discover(source) {
   debug.log('Scanning for games ...');
@@ -134,7 +139,11 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
           } else if (appid.data.type === 'uplay' || appid.data.type === 'lumaplay') {
             game = await uplay.getGameData(appid.appid, option.achievement.lang);
           } else {
-            game = await steam.getGameData({ appID: appid.appid, lang: option.achievement.lang, key: option.steam.apiKey });
+            game = await steam.getGameData({
+              appID: appid.appid,
+              lang: option.achievement.lang,
+              key: option.steam.apiKey,
+            });
           }
 
           if (!option.achievement.mergeDuplicate && appid.source) game.source = appid.source;
@@ -216,9 +225,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
 
                   if (
                     (!achievement.CurProgress && parsed.CurProgress > 0) ||
-                    (parsed.CurProgress > 0 &&
-                      parsed.MaxProgress == achievement.MaxProgress &&
-                      parsed.CurProgress > achievement.CurProgress)
+                    (parsed.CurProgress > 0 && parsed.MaxProgress == achievement.MaxProgress && parsed.CurProgress > achievement.CurProgress)
                   ) {
                     achievement.CurProgress = parsed.CurProgress;
                   }
