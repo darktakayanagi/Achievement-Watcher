@@ -1,6 +1,5 @@
 'use strict';
 
-const remote = require('@electron/remote');
 const path = require('path');
 const yaml = require('js-yaml');
 const glob = require('fast-glob');
@@ -8,12 +7,15 @@ const zip = require('adm-zip');
 const ffs = require('@xan105/fs');
 const regedit = require('regodit');
 const request = require('request-zero');
-const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
+const steamLanguages = require(path.join(__dirname, '../locale/steam.json'));
 
-const debug = new (require('@xan105/log'))({
-  console: remote.getCurrentWindow().isDev || false,
-  file: path.join(remote.app.getPath('userData'), 'logs/uplay.log'),
-});
+let debug;
+module.exports.initDebug = ({ isDev, userDataPath }) => {
+  debug = new (require('@xan105/log'))({
+    console: remote.getCurrentWindow().isDev || false,
+    file: path.join(userDataPath, 'logs/uplay.log'),
+  });
+};
 
 module.exports.scan = () => {
   //LumaPlay

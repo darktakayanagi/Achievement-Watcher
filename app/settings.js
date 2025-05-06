@@ -1,6 +1,6 @@
 'use strict';
 
-const remote = require('@electron/remote');
+const appPath = __dirname;
 const path = require('path');
 const ini = require('@xan105/ini');
 const fs = require('fs');
@@ -8,7 +8,10 @@ const ffs = require('@xan105/fs');
 const aes = require(path.join(appPath, 'util/aes.js'));
 const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
 
-const filename = path.join(remote.app.getPath('userData'), 'cfg/options.ini');
+let filename;
+module.exports.setUserDataPath = (p) => {
+  filename = path.join(p, 'cfg/options.ini');
+};
 
 module.exports.load = () => {
   let options;
@@ -63,11 +66,7 @@ module.exports.load = () => {
 
     //Source
 
-    if (
-      options.achievement_source.legitSteam != 0 &&
-      options.achievement_source.legitSteam != 1 &&
-      options.achievement_source.legitSteam != 2
-    ) {
+    if (options.achievement_source.legitSteam != 0 && options.achievement_source.legitSteam != 1 && options.achievement_source.legitSteam != 2) {
       options.achievement_source.legitSteam = 0;
     }
 

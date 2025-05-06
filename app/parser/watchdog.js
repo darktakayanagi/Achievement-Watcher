@@ -1,11 +1,14 @@
 'use strict';
 
-const remote = require('@electron/remote');
 const path = require('path');
 const glob = require('fast-glob');
 const ffs = require('@xan105/fs');
 
-const cache = path.join(remote.app.getPath('userData'), 'steam_cache/data');
+let cache;
+
+module.exports.setUserDataPath = (p) => {
+  cache = path.join(p, 'steam_cache/data');
+};
 
 module.exports.scan = async () => {
   try {

@@ -1,7 +1,7 @@
 'use strict';
 
-const remote = require('@electron/remote');
 const path = require('path');
+const appPath = path.join(__dirname, '../');
 const ini = require('@xan105/ini');
 const parentFind = require('find-up');
 const glob = require('fast-glob');
@@ -9,7 +9,11 @@ const ffs = require('@xan105/fs');
 const listDrive = require(path.join(appPath, 'util/listDrive.js'));
 const regedit = require('regodit');
 
-const file = path.join(remote.app.getPath('userData'), 'cfg/userdir.db');
+let file;
+
+module.exports.setUserDataPath = async (p) => {
+  file = path.join(p, 'cfg/userdir.db');
+};
 
 const steam_emu_cfg_file_supported = ['ALI213.ini', 'valve.ini', 'hlm.ini', 'ds.ini', 'steam_api.ini', 'SteamConfig.ini'];
 

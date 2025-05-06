@@ -1,6 +1,5 @@
 'use strict';
 
-const remote = require('@electron/remote');
 const path = require('path');
 const glob = require('fast-glob');
 const normalize = require('normalize-path');
@@ -11,12 +10,25 @@ const request = require('request-zero');
 const urlParser = require('url');
 const ffs = require('@xan105/fs');
 const regedit = require('regodit');
+const appPath = path.join(__dirname, '../');
 const steamID = require(path.join(appPath, 'util/steamID.js'));
 const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
 const sse = require(path.join(appPath, 'parser/sse.js'));
 const htmlParser = require('node-html-parser');
 
-const cacheRoot = remote.app.getPath('userData');
+let debug;
+let cacheRoot;
+module.exports.setUserDataPath = (p) => {
+  cacheRoot = p;
+};
+
+module.exports.initDebug = ({ isDev, userDataPath }) => {
+  this.setUserDataPath(userDataPath);
+  debug = new (require('@xan105/log'))({
+    console: isDev || false,
+    file: path.join(userDataPath, 'logs/parser.log'),
+  });
+};
 
 module.exports.scan = async (additionalSearch = []) => {
   try {
