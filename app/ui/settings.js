@@ -272,7 +272,7 @@ const appPath = remote.app.getAppPath();
       }
 
       let userDirList = [];
-      $('#dirlist > li').each(function () {
+      $('#settings #dirlist > li').each(function () {
         let dir = $(this).find('.path span').text();
         let notify = $(this).find('.controls .notify').attr('data-notify') === 'true' ? true : false;
 
