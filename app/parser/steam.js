@@ -1,5 +1,7 @@
 'use strict';
 
+const axios = require('axios');
+const cheerio = require('cheerio');
 const path = require('path');
 const glob = require('fast-glob');
 const normalize = require('normalize-path');
@@ -103,23 +105,19 @@ module.exports.scanLegit = async (listingType = 0) => {
       let publicUsers = await getSteamUsers(steamPath);
 
       let steamCache = path.join(steamPath, 'appcache/stats');
-      let list = (await glob('UserGameStats_*([0-9])_*([0-9]).bin', { cwd: steamCache, onlyFiles: true, absolute: false })).map(
-        (filename) => {
-          let matches = filename.match(/([0-9]+)/g);
-          return {
-            userID: matches[0],
-            appID: matches[1],
-          };
-        }
-      );
+      let list = (await glob('UserGameStats_*([0-9])_*([0-9]).bin', { cwd: steamCache, onlyFiles: true, absolute: false })).map((filename) => {
+        let matches = filename.match(/([0-9]+)/g);
+        return {
+          userID: matches[0],
+          appID: matches[1],
+        };
+      });
 
       for (let stats of list) {
         let isInstalled = true;
         if (listingType == 1)
           isInstalled =
-            (await regedit.promises.RegQueryIntegerValue('HKCU', `Software/Valve/Steam/Apps/${stats.appID}`, 'Installed')) === '1'
-              ? true
-              : false;
+            (await regedit.promises.RegQueryIntegerValue('HKCU', `Software/Valve/Steam/Apps/${stats.appID}`, 'Installed')) === '1' ? true : false;
 
         let user = publicUsers.find((user) => user.user == stats.userID);
 
@@ -157,7 +155,7 @@ module.exports.getGameData = async (cfg) => {
 
     let result;
 
-    if (await ffs.existsAndIsYoungerThan(filePath, { timeUnit: 'M', time: 6 })) {
+    if (await ffs.existsAndIsYoungerThan(filePath, { timeUnit: 'M', time: 12 })) {
       result = JSON.parse(await ffs.readFile(filePath));
     } else {
       if (cfg.key) {
@@ -165,6 +163,11 @@ module.exports.getGameData = async (cfg) => {
       } else {
         result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
       }
+      ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+    }
+
+    if (await getMissingAchData(cfg, result)) {
+      //updated missing data, resave
       ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
     }
 
@@ -243,14 +246,8 @@ module.exports.getAchievementsFromFile = async (filePath) => {
           try {
             //uint32 little endian
             result[i].State = new DataView(new Uint8Array(Buffer.from(result[i].State.toString(), 'hex')).buffer).getUint32(0, true);
-            result[i].CurProgress = new DataView(new Uint8Array(Buffer.from(result[i].CurProgress.toString(), 'hex')).buffer).getUint32(
-              0,
-              true
-            );
-            result[i].MaxProgress = new DataView(new Uint8Array(Buffer.from(result[i].MaxProgress.toString(), 'hex')).buffer).getUint32(
-              0,
-              true
-            );
+            result[i].CurProgress = new DataView(new Uint8Array(Buffer.from(result[i].CurProgress.toString(), 'hex')).buffer).getUint32(0, true);
+            result[i].MaxProgress = new DataView(new Uint8Array(Buffer.from(result[i].MaxProgress.toString(), 'hex')).buffer).getUint32(0, true);
             result[i].Time = new DataView(new Uint8Array(Buffer.from(result[i].Time.toString(), 'hex')).buffer).getUint32(0, true);
           } catch (e) {}
         } else if (result[i].unlocktime && result[i].unlocktime.length === 7) {
@@ -419,6 +416,50 @@ function getSteamDataFromSRV(appID, lang) {
         return reject(err);
       });
   });
+}
+
+async function getMissingAchData(cfg, achievements) {
+  // some achievements dont have description if they are hidden so let's try to get them from a few other websites
+
+  {
+    try {
+      let url = `https://completionist.me/steam/app/${cfg.appID}/achievements`;
+      const { data: html } = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        },
+      });
+
+      const $ = cheerio.load(html);
+      const achs = [];
+
+      $('.explorer-list.achievements-list tr').each((_, el) => {
+        const name = $(el).find('td strong').text().trim();
+        const description = $(el).find('td span').text().trim().split('\n')[0].trim();
+
+        if (name) {
+          achs.push({ name, description });
+        }
+      });
+
+      for (const main of achievements.achievement.list) {
+        const match = achs.find((item) => item.name === main.displayName);
+        if (match && match.description && (!main.description || main.description.length <= 1)) {
+          main.description = match.description;
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('❌ Failed to fetch achievements:', err.message);
+    }
+  } // completionist.me
+
+  {
+  }
+
+  //each one failed
+  return false;
 }
 
 async function getSteamData(cfg) {
