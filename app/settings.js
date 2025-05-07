@@ -44,6 +44,10 @@ module.exports.load = () => {
       options.overlay.preset = '';
     }
 
+    if (typeof options.overlay.hotkey !== 'string') {
+      options.overlay.hotkey = 'Ctrl+Shift+O';
+    }
+
     if (typeof options.achievement.thumbnailPortrait !== 'boolean') {
       options.achievement.thumbnailPortrait = false;
     }
@@ -66,7 +70,11 @@ module.exports.load = () => {
 
     //Source
 
-    if (options.achievement_source.legitSteam != 0 && options.achievement_source.legitSteam != 1 && options.achievement_source.legitSteam != 2) {
+    if (
+      options.achievement_source.legitSteam != 0 &&
+      options.achievement_source.legitSteam != 1 &&
+      options.achievement_source.legitSteam != 2
+    ) {
       options.achievement_source.legitSteam = 0;
     }
 
@@ -251,6 +259,7 @@ module.exports.load = () => {
       overlay: {
         position: 0,
         preset: '',
+        hotkey: 'Ctrl+Shift+O',
       },
       achievement: {
         thumbnailPortrait: false,

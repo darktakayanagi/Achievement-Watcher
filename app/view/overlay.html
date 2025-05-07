@@ -114,12 +114,12 @@
         const savedAchievementsObj = await window.api.loadSavedAchievements(configName);
         const lang = overlayLang;
 
-        if (!Array.isArray(achievementsDataObj.achievements)) {
+        if (!Array.isArray(achievementsDataObj.achievements.achievement.list)) {
           isLoading = false;
           return;
         }
 
-        const newHash = computeAchievementsHash(achievementsDataObj.achievements, savedAchievementsObj, lang);
+        const newHash = computeAchievementsHash(achievementsDataObj.achievements.achievement.list, savedAchievementsObj, lang);
         const isSameConfig = currentConfigName === configName;
         const isSameHash = currentDataHash === newHash;
 
@@ -131,7 +131,7 @@
         tableBody.innerHTML = '';
         const uniqueAchievements = new Set();
 
-        achievementsDataObj.achievements.forEach((achievement) => {
+        achievementsDataObj.achievements.achievement.list.forEach((achievement) => {
           if (!achievement.name || uniqueAchievements.has(achievement.name)) return;
           uniqueAchievements.add(achievement.name);
 
@@ -140,27 +140,27 @@
           const iconGray = achievement.icon_gray || achievement.icongray;
           const icon = achievement.icon || iconGray;
 
-          let imagePath = `${achievementsDataObj.config_path}\\${iconGray}`;
+          let imagePath = iconGray;
           let status = `<span style="color: red; font-weight: bold;">Locked</span>`;
           let earnedTimeText = '';
           let progressText = '';
 
           const saved = savedAchievementsObj?.achievements?.[achievement.name];
 
-          if (saved?.earned) {
-            imagePath = `${achievementsDataObj.config_path}\\${icon}`;
+          if (achievement.Achieved) {
+            imagePath = icon;
             status = `<span style="color: green; font-weight: bold;">Unlocked</span>`;
-            earnedTimeText = `<br>${formatTimestamp(saved.earned_time)}`;
+            earnedTimeText = `<br>${formatTimestamp(achievement.UnlockTime)}`;
           }
 
-          if (typeof saved?.progress === 'number' && typeof saved?.max_progress === 'number') {
-            progressText = `<br><span style="font-size: 0.85em; color: #888;">Progress: ${saved.progress} / ${saved.max_progress}</span>`;
+          if (typeof achievement.MaxProgress === 'number' && achievement.MaxProgress > 0) {
+            progressText = `<br><span style="font-size: 0.85em; color: #888;">Progress: ${achievement.CurProgress} / ${achievement.MaxProgress}</span>`;
           }
 
           const row = document.createElement('tr');
           row.innerHTML = `
   <td class="image">
-	<img src="file:///${imagePath.replace(/\\/g, '/')}" alt="Icon"
+	<img src="${imagePath.replace(/\\/g, '/')}" alt="Icon"
 		 onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/11455/11455431.png';" /></td>
   <td class="displayName"><strong>${displayName}</strong><br>
 	<span class="description"><em>${description}</em>${progressText}</span>

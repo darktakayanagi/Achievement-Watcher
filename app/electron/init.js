@@ -331,7 +331,8 @@ try {
     .on('ready', function () {
       const args = require('minimist')(process.argv.slice(1));
       let overlayAppid = args['overlay-appid'];
-      overlayAppid ? createOverlayWindow(overlayAppid) : createMainWindow();
+      let notifyAppid = args['notify-appid'];
+      overlayAppid ? createOverlayWindow(overlayAppid) : notifyAppid ? createNotificationWindow(notifyAppid) : createMainWindow();
     })
     .on('window-all-closed', function () {
       app.quit();
@@ -342,9 +343,10 @@ try {
       });
     })
     .on('second-instance', (event, argv, cwd) => {
-      const args = require('minimist')(process.argv.slice(1));
+      const args = require('minimist')(argv.slice(1));
       let overlayAppid = args['overlay-appid'];
-      overlayAppid ? createOverlayWindow(overlayAppid) : createMainWindow();
+      let notifyAppid = args['notify-appid'];
+      overlayAppid ? createOverlayWindow(overlayAppid) : notifyAppid ? createNotificationWindow(notifyAppid) : createMainWindow();
     });
 } catch (err) {
   dialog.showErrorBox('Critical Error', `Failed to initialize:\n${err}`);

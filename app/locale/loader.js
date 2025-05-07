@@ -79,6 +79,7 @@ function translateUI(lang, locale, template) {
   selector = $('#options-overlay');
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.overlay.position));
   selector.find('li:nth-child(2) .left span').text(clear(template.settings.overlay.preset));
+  selector.find('li:nth-child(3) .left span').text(clear(template.settings.overlay.hotkey));
   selector = $('#options-ui');
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.general.language.name));
   selector.find('li:nth-child(1) .help span').text(clear(template.settings.general.language.description[0]));

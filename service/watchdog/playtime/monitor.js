@@ -39,6 +39,19 @@ const filter = {
   },
 };
 
+function getCommandLine(pid) {
+  return new Promise((resolve, reject) => {
+    exec(`wmic process where ProcessId=${pid} get CommandLine`, (err, stdout) => {
+      if (err) return reject(err);
+
+      const lines = stdout.trim().split('\n');
+      if (lines.length < 2) return resolve(null);
+
+      resolve(lines[1].trim()); // First line is "CommandLine"
+    });
+  });
+}
+
 async function init() {
   const emitter = new EventEmitter();
 
@@ -75,9 +88,9 @@ async function init() {
     if (games.length === 1) {
       //single hit
       game = games[0];
-    } else if (games.length > 1) {
-      //more than one
-      debug.log(`More than 1 entry for "${process}"`);
+    } else {
+      //more than one entry or it's a new game
+      debug.log(games.length > 1 ? `More than 1 entry for "${process}"` : `No entry found for ${process}`);
       const gameDir = path.parse(filepath).dir;
       debug.log(`Try to find appid from a cfg file in "${gameDir}"`);
       try {
@@ -91,6 +104,7 @@ async function init() {
 
     if (!game) return;
     debug.log(`DB Hit for ${game.name}(${game.appid}) ["${filepath}"]`);
+    let args = getCommandLine(pid);
 
     //RunningAppID is not that reliable and this intefere with Greenluma; Commenting out for now
     /*const runningAppID = await regedit.promises.RegQueryIntegerValue("HKCU","SOFTWARE/Valve/Steam", "RunningAppID") || 0;

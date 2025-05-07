@@ -21,20 +21,6 @@ achievementsJS.module.exports = {
   },
 };
 */
-function notifyError(message) {
-  console.error(message);
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('notify', { message, color: '#f44336' });
-  }
-}
-function notifyInfo(message) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('notify', {
-      message,
-      color: '#2196f3',
-    });
-  }
-}
 
 function notifyError(message) {
   console.error(message);
@@ -43,19 +29,39 @@ function notifyInfo(message) {
   console.log(message);
 }
 
+// Handler for renderer process
+ipcMain.handle('get-app-name', () => {
+  return app.getName();
+});
+ipcMain.handle('get-user-data-path', () => {
+  return app.getPath('userData');
+});
+
+ipcMain.on('get-app-name-sync', (event) => {
+  event.returnValue = app.getName();
+});
+
+ipcMain.on('get-user-data-path-sync', (event) => {
+  const t = app.getPath('userData');
+  event.returnValue = t;
+});
+
 // Handler for json load
-ipcMain.handle('load-achievements', async (event, configName) => {
+ipcMain.handle('load-achievements', async (event, requestedAppid) => {
   try {
-    let userDataPath = app.getPath('userData');
     let configJS = await settingsJS.load();
+    let list;
     await achievementsJS
       .makeList(configJS, (percent) => {})
-      .then((list) => {
-        if (list) {
+      .then((l) => {
+        if (l) {
+          list = l.find((app) => {
+            return parseInt(app.appid) === requestedAppid;
+          });
         }
       });
 
-    return { achievements: [], config_path: '' };
+    return { achievements: list, config_path: '' };
     const configPath = path.join(process.env.APPDATA, 'Achievements', 'configs', `${configName}.json`);
     const configData = fs.readFileSync(configPath, 'utf-8');
     const config = JSON.parse(configData);

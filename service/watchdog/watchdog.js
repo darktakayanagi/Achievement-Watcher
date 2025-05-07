@@ -27,6 +27,27 @@ const cfg_file = {
   userDir: path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'userdir.db'),
 };
 
+let isDev = true;
+
+const appRoot = path.join(__dirname, '../../app');
+
+function SpawnNotification(args) {
+  if (isDev) {
+    const electronPath = require('../../app/node_modules/electron'); // assumes 'electron' is installed in node_modules
+    spawn(electronPath, ['.', ...args], {
+      cwd: appRoot,
+      detached: true,
+      stdio: 'ignore',
+    }).unref();
+  } else {
+    const execPath = path.join(appRoot, 'AchievementWatcher.exe'); // adjust for build path
+    spawn(execPath, args, {
+      detached: true,
+      stdio: 'ignore',
+    }).unref();
+  }
+}
+
 var app = {
   isRecording: false,
   cache: [],
@@ -40,6 +61,8 @@ var app = {
       self.cache = [];
 
       debug.log('Achievement Watchdog starting ...');
+      SpawnNotification(['--notify-appid=1086940']);
+      return;
 
       processPriority
         .set('high priority')

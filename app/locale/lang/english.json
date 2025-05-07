@@ -38,8 +38,9 @@
       "edit": "Edit"
     },
     "overlay": {
-      "position": "Popup Position",
-      "preset": "Preset"
+      "position": "Notification Position",
+      "preset": { "name": "Notification Preset", "description": "Legacy uses the 'old' notification system" },
+      "hotkey": "Hotkey"
     },
     "general": {
       "language": {
