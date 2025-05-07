@@ -10,7 +10,7 @@ const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
 
 let filename;
 module.exports.setUserDataPath = (p) => {
-  filename = path.join(p, 'cfg/options.ini');
+  if (p) filename = path.join(p, 'cfg/options.ini');
 };
 
 module.exports.load = () => {

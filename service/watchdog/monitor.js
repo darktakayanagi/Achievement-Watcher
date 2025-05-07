@@ -294,19 +294,17 @@ module.exports.parse = async (filePath) => {
           if (local[achievement].State) {
             //RLD!
             //uint32 little endian
-            local[achievement].State = new DataView(
-              new Uint8Array(Buffer.from(local[achievement].State.toString(), 'hex')).buffer
-            ).getUint32(0, true);
+            local[achievement].State = new DataView(new Uint8Array(Buffer.from(local[achievement].State.toString(), 'hex')).buffer).getUint32(
+              0,
+              true
+            );
             local[achievement].CurProgress = new DataView(
               new Uint8Array(Buffer.from(local[achievement].CurProgress.toString(), 'hex')).buffer
             ).getUint32(0, true);
             local[achievement].MaxProgress = new DataView(
               new Uint8Array(Buffer.from(local[achievement].MaxProgress.toString(), 'hex')).buffer
             ).getUint32(0, true);
-            local[achievement].Time = new DataView(new Uint8Array(Buffer.from(local[achievement].Time.toString(), 'hex')).buffer).getUint32(
-              0,
-              true
-            );
+            local[achievement].Time = new DataView(new Uint8Array(Buffer.from(local[achievement].Time.toString(), 'hex')).buffer).getUint32(0, true);
           }
 
           let result = {

@@ -3,7 +3,6 @@
 const { crc32 } = require('crc');
 const path = require('path');
 const appPath = __dirname;
-const settings = require(path.join(__dirname, '../settings.js'));
 const steam = require(path.join(appPath, 'steam.js'));
 const uplay = require(path.join(appPath, 'uplay.js'));
 const rpcs3 = require(path.join(appPath, 'rpcs3.js'));

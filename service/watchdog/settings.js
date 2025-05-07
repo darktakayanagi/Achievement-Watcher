@@ -59,11 +59,7 @@ module.exports.load = async (cfg_file) => {
 
     //Source
 
-    if (
-      options.achievement_source.legitSteam != 0 &&
-      options.achievement_source.legitSteam != 1 &&
-      options.achievement_source.legitSteam != 2
-    ) {
+    if (options.achievement_source.legitSteam != 0 && options.achievement_source.legitSteam != 1 && options.achievement_source.legitSteam != 2) {
       options.achievement_source.legitSteam = 0;
       fixFile = true;
     }

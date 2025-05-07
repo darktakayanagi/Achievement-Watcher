@@ -195,9 +195,7 @@ var app = {
               });
             }
           } else {
-            debug.warn(
-              `Warning! Missing "${game.name}" (${game.appid}) binary name > Overriding user choice to check if process is running`
-            );
+            debug.warn(`Warning! Missing "${game.name}" (${game.appid}) binary name > Overriding user choice to check if process is running`);
             isRunning = true;
           }
         } else {
@@ -218,9 +216,7 @@ var app = {
                     if (achievements[i].crc) {
                       return achievements[i].crc.includes(crc32(achievement.name).toString(16)); //(SSE) crc module removes leading 0 when dealing with anything below 0x1000 -.-'
                     } else {
-                      return (
-                        achievement.name == achievements[i].name || achievement.name.toUpperCase() == achievements[i].name.toUpperCase()
-                      ); //uppercase == uppercase : cdx xcom chimera (apiname doesn't match case with steam schema)
+                      return achievement.name == achievements[i].name || achievement.name.toUpperCase() == achievements[i].name.toUpperCase(); //uppercase == uppercase : cdx xcom chimera (apiname doesn't match case with steam schema)
                     }
                   });
                   if (!ach) throw 'ACH_NOT_FOUND_IN_SCHEMA';
@@ -240,10 +236,7 @@ var app = {
                   if (!previous.Achieved && achievements[i].Achieved) {
                     if (!achievements[i].UnlockTime || achievements[i].UnlockTime == 0) achievements[i].UnlockTime = moment().unix();
                     let elapsedTime = moment().diff(moment.unix(achievements[i].UnlockTime), 'seconds');
-                    if (
-                      options.disableCheckTimestamp ||
-                      (elapsedTime >= 0 && elapsedTime <= self.options.notification_advanced.timeTreshold)
-                    ) {
+                    if (options.disableCheckTimestamp || (elapsedTime >= 0 && elapsedTime <= self.options.notification_advanced.timeTreshold)) {
                       debug.log('Unlocked:' + ach.displayName);
 
                       try {
@@ -323,11 +316,7 @@ var app = {
                     debug.log('Already unlocked:' + ach.displayName);
                     if (previous.UnlockTime > 0 && previous.UnlockTime != achievements[i].UnlockTime)
                       achievements[i].UnlockTime = previous.UnlockTime;
-                  } else if (
-                    !achievements[i].Achieved &&
-                    achievements[i].MaxProgress > 0 &&
-                    +previous.CurProgress < +achievements[i].CurProgress
-                  ) {
+                  } else if (!achievements[i].Achieved && achievements[i].MaxProgress > 0 && +previous.CurProgress < +achievements[i].CurProgress) {
                     debug.log('Progress update:' + ach.displayName);
 
                     await notify(
