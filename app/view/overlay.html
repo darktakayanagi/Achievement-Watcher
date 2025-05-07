@@ -154,7 +154,9 @@
           }
 
           if (typeof achievement.MaxProgress === 'number' && achievement.MaxProgress > 0) {
-            progressText = `<br><span style="font-size: 0.85em; color: #888;">Progress: ${achievement.CurProgress} / ${achievement.MaxProgress}</span>`;
+            progressText = `<br><span style="font-size: 0.85em; color: #888;">Progress: ${
+              achievement.Achieved ? achievement.MaxProgress : achievement.CurProgress
+            } / ${achievement.MaxProgress}</span>`;
           }
 
           const row = document.createElement('tr');
@@ -203,10 +205,6 @@
           loadTableData(currentConfigName);
         }
       });
-
-      window.onload = () => {
-        window.api.requestCurrentConfig();
-      };
     </script>
   </body>
 </html>

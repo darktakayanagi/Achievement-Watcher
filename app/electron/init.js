@@ -250,7 +250,7 @@ async function createNotificationWindow(info) {
   const achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
   achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: app.getPath('userData') });
   let ach = await achievementsJS.getAchievementsForAppid(configJS, info);
-  let a = ach.achievement.list[0];
+  let a = ach.achievement.list.find((ac) => ac.name === info.notificationAchName);
 
   const message = {
     displayName: a.displayName,
