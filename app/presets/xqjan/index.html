@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Xqjan Morphing Animation</title>
+  <meta name="duration" content="10000" />
+  <meta width="450" height="150">
+  <style>
+    :root {
+      --bg-color: #222;
+      --primary: #00aced;
+      --wave-color-1: #203e7a;
+      --wave-color-2: #0c2a66;
+	  --wave-color-3: #ffffff;
+    }
+	html {
+	  overflow: hidden;
+	  scrollbar-width: none;
+	}
+	.scroll-container {
+		max-height: 80vh;
+		overflow-y: scroll; 
+		scrollbar-width: none; 
+		-ms-overflow-style: none;
+	}
+	html, body {
+	  margin: 0;
+	  padding: 0;
+	  height: 100%;
+	  background: transparent;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  font-family: sans-serif;
+	  overflow: visible;           
+	  scrollbar-width: none;       
+	}
+
+	body::-webkit-scrollbar {
+	  display: none;                
+	}
+	body {
+	  overscroll-behavior: none;
+	}
+
+    .notification {
+      position: relative;
+      background: rgba(34, 34, 34, 0.85);
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      overflow: visible;
+      animation: popIn 0.5s ease-out forwards,
+                 expandCircle 0.6s ease-out 1.5s forwards,
+                 retractCircle 0.4s ease-in 5.5s forwards,
+                 popOut 0.5s ease-in 7s forwards;
+    }
+
+    .loader-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      animation: showWave 0.5s ease-in 0.2s forwards,
+                 hideWave 0.2s ease-out 1.2s forwards,
+                 showWave 0.5s ease-in 6s forwards,
+                 hideWave 0.2s ease-out 7s forwards;
+    }
+
+    .achievement-loader {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      animation: waveEffect 1.5s infinite ease-out;
+      opacity: 0.3;
+    }
+
+    .achievement-loader:nth-child(1) {
+      background-color: var(--wave-color-1);
+    }
+
+    .achievement-loader:nth-child(2) {
+      background-color: var(--wave-color-2);
+      animation-delay: 0.3s;
+    }
+
+    .achievement-loader:nth-child(3) {
+      background-color: var(--wave-color-3);
+      animation-delay: 0.5s;
+    }
+
+    @keyframes waveEffect {
+      0%   { transform: scale(0.9); opacity: 0.4; }
+      50%  { transform: scale(1.2); opacity: 0.1; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    @keyframes showWave {
+      to { opacity: 1; }
+    }
+
+    @keyframes hideWave {
+      to { opacity: 0; }
+    }
+
+    .icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 64px;
+      height: 64px;
+      background: url("https://dummyimage.com/64x64/555/fff.png&text=ICON") center/cover no-repeat;
+      border-radius: 50%;
+      z-index: 2;
+      animation: iconPopIn 0.5s ease-out 0s forwards,
+                 iconPopOut 0.5s ease-in 1.5s forwards,
+                 iconPopIn 0.5s ease-out 5.5s forwards,
+                 iconPopOut 0.5s ease-in 7s forwards;
+      opacity: 0;
+    }
+	
+.icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.notification.expanded .icon img {
+  opacity: 0;
+}
+
+@keyframes iconPopIn {
+  0%   { transform: translate(-50%, -50%) scale(0);     opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.3);   opacity: 1; }
+  80%  { transform: translate(-50%, -50%) scale(0.95);  }
+  100% { transform: translate(-50%, -50%) scale(1);     opacity: 1; }
+}
+
+@keyframes iconPopOut {
+  0%   { transform: translate(-50%, -50%) scale(1);     opacity: 1; }
+  30%  { transform: translate(-50%, -50%) scale(1.2);   }
+  100% { transform: translate(-50%, -50%) scale(0);     opacity: 0; }
+}
+
+
+    .text {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      transform: translateY(0%) scale(0.8);
+      opacity: 0;
+      z-index: 1;
+      animation: showText 0.5s ease-out 2s forwards,
+                 hideText 0.5s ease-in 4.8s forwards;
+    }
+
+    .title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    .desc {
+      font-size: 0.90rem;
+      color: #ccc;
+    }
+
+@keyframes popIn {
+  0%   { transform: scale(0);     opacity: 0; }
+  60%  { transform: scale(1.2);   opacity: 1; }
+  80%  { transform: scale(0.95);  }
+  100% { transform: scale(1);     opacity: 1; }
+}
+
+    @keyframes expandCircle {
+      to {
+        width: 420px;
+        height: 90px;
+        border-radius: 12px;
+      }
+    }
+
+    @keyframes retractCircle {
+      to {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+      }
+    }
+
+@keyframes popOut {
+  0%   { transform: scale(1);     opacity: 1; }
+  30%  { transform: scale(1.1);   }
+  100% { transform: scale(0);     opacity: 0; }
+}
+
+    @keyframes showText {
+      to { opacity: 1; transform: translateY(0%) scale(1); }
+    }
+
+    @keyframes hideText {
+      to { opacity: 0; transform: translateY(0%) scale(0.6); }
+    }
+  </style>
+</head>
+<body>
+  <div class="notification">
+    <div class="loader-wrapper">
+      <div class="achievement-loader"></div>
+      <div class="achievement-loader"></div>
+      <div class="achievement-loader"></div>
+    </div>
+	<div class="icon">
+	  <img src="" alt="Icon">
+	</div>
+    <div class="text">
+      <div class="title"></div>
+      <div class="desc"></div>
+    </div>
+  </div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  window.api?.onNotification?.((notificationData) => {
+    if (notificationData &&
+        notificationData.displayName &&
+        notificationData.description &&
+        notificationData.iconPath) {
+
+      document.querySelector(".title").textContent = notificationData.displayName;
+      document.querySelector(".desc").textContent = notificationData.description;
+      document.querySelector(".icon img").src = `file:///${notificationData.iconPath}`;
+
+      const root = document.body;
+      const scale = parseFloat(notificationData.scale || 1);
+      root.style.transform = `scale(${scale})`;
+      root.style.transformOrigin = 'center center';
+    }
+  });
+});
+</script>
+
+</body>
+</html>

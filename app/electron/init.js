@@ -238,12 +238,35 @@ function createOverlayWindow(selectedConfig) {
     overlayWindow = null;
   });
 }
-function createNotificationWindow(message) {
-  const display = screen.getPrimaryDisplay();
+async function createNotificationWindow(info) {
+  // info.appid, info.achName
+  const settingsJS = require(path.join(__dirname, '../settings.js'));
+  settingsJS.setUserDataPath(app.getPath('userData'));
+  let configJS = await settingsJS.load();
+  configJS.achievement_source.greenLuma = false;
+  configJS.achievement_source.importCache = false;
+  configJS.achievement_source.rpcs3 = false;
+  configJS.overlay.preset = 'default';
+  const achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
+  achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: app.getPath('userData') });
+  let ach = await achievementsJS.getAchievementsForAppid(configJS, info);
+  let a = ach.achievement.list[0];
+
+  const message = {
+    displayName: a.displayName,
+    description: a.description,
+    icon: a.icon,
+    icon_gray: a.icongray,
+    preset: configJS.overlay.preset,
+    position: configJS.overlay.position,
+    scale: parseFloat(a.scale || 1),
+  };
+
+  const display = require('electron').screen.getPrimaryDisplay();
   const { width, height } = display.workAreaSize;
 
   const preset = message.preset || 'default';
-  const presetFolder = path.join(userPresetsFolder, preset);
+  const presetFolder = path.join(__dirname, '../presets', preset);
   const presetHtml = path.join(presetFolder, 'index.html');
   const position = message.position || 'center-bottom';
   const scale = parseFloat(message.scale || 1);
@@ -299,7 +322,7 @@ function createNotificationWindow(message) {
     hasShadow: false,
     type: 'notification',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, '../overlayPreload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -316,12 +339,28 @@ function createNotificationWindow(message) {
     notificationWindow.webContents.send('show-notification', {
       displayName: message.displayName,
       description: message.description,
-      iconPath: `${message.config_path}\\${message.icon}`,
+      iconPath: `${message.icon}`,
       scale,
     });
   });
 
   return notificationWindow;
+}
+
+function getPresetDimensions(presetFolder) {
+  const presetIndexPath = path.join(presetFolder, 'index.html');
+  try {
+    const content = fs.readFileSync(presetIndexPath, 'utf-8');
+    const metaRegex = /<meta\s+width\s*=\s*"(\d+)"\s+height\s*=\s*"(\d+)"\s*\/?>/i;
+    const match = content.match(metaRegex);
+    if (match) {
+      return { width: parseInt(match[1], 10), height: parseInt(match[2], 10) };
+    }
+  } catch (error) {
+    notifyError('Error reading preset: ' + error.message);
+  }
+  // Default values if not defined
+  return { width: 400, height: 200 };
 }
 
 try {
@@ -331,8 +370,13 @@ try {
     .on('ready', function () {
       const args = require('minimist')(process.argv.slice(1));
       let overlayAppid = args['overlay-appid'];
-      let notifyAppid = args['notify-appid'];
-      overlayAppid ? createOverlayWindow(overlayAppid) : notifyAppid ? createNotificationWindow(notifyAppid) : createMainWindow();
+      let notificationAppid = args['notify-appid'];
+      let notificationAchName = args['notify-ach'];
+      overlayAppid
+        ? createOverlayWindow(overlayAppid)
+        : notificationAppid
+        ? createNotificationWindow({ notificationAppid, notificationAchName })
+        : createMainWindow();
     })
     .on('window-all-closed', function () {
       app.quit();
@@ -345,8 +389,13 @@ try {
     .on('second-instance', (event, argv, cwd) => {
       const args = require('minimist')(argv.slice(1));
       let overlayAppid = args['overlay-appid'];
-      let notifyAppid = args['notify-appid'];
-      overlayAppid ? createOverlayWindow(overlayAppid) : notifyAppid ? createNotificationWindow(notifyAppid) : createMainWindow();
+      let notificationAppid = args['notify-appid'];
+      let notificationAchName = args['notify-ach'];
+      overlayAppid
+        ? createOverlayWindow(overlayAppid)
+        : notificationAppid
+        ? createNotificationWindow({ notificationAppid, notificationAchName })
+        : createMainWindow();
     });
 } catch (err) {
   dialog.showErrorBox('Critical Error', `Failed to initialize:\n${err}`);

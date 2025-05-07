@@ -41,7 +41,7 @@ module.exports.load = () => {
     }
 
     if (typeof options.overlay.preset !== 'string') {
-      options.overlay.preset = '';
+      options.overlay.preset = 'default';
     }
 
     if (typeof options.overlay.hotkey !== 'string') {
@@ -70,11 +70,7 @@ module.exports.load = () => {
 
     //Source
 
-    if (
-      options.achievement_source.legitSteam != 0 &&
-      options.achievement_source.legitSteam != 1 &&
-      options.achievement_source.legitSteam != 2
-    ) {
+    if (options.achievement_source.legitSteam != 0 && options.achievement_source.legitSteam != 1 && options.achievement_source.legitSteam != 2) {
       options.achievement_source.legitSteam = 0;
     }
 
@@ -258,7 +254,7 @@ module.exports.load = () => {
     options = {
       overlay: {
         position: 0,
-        preset: '',
+        preset: 'default',
         hotkey: 'Ctrl+Shift+O',
       },
       achievement: {

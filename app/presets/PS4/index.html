@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <title>Popup Animation</title>
+  <meta name="duration" content="5000" />
+ <style>
+	html, body {
+	  margin: 0;
+	  padding: 0;
+	  width: 100%;
+	  height: 100%;
+	  overflow: hidden;
+	  background: transparent;
+
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	}
+
+	body {
+	  transform-origin: center center;
+	}
+</style>
+</head>
+<body>
+  <meta width="400" height="200">
+</div>
+  <div class="ach">
+    <div class="icon">
+      <img src="" alt="Icon">
+    </div>
+	<div class="text_wrap">
+            <p class="title"></p>
+            <span class="detail"></span>
+        </div>
+    </div>
+  
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      window.api.onNotification((notificationData) => {
+        if (notificationData &&
+            notificationData.displayName &&
+            notificationData.description &&
+            notificationData.iconPath) {
+
+          document.querySelector(".title").textContent = notificationData.displayName;
+          document.querySelector(".detail").textContent = notificationData.description;
+          document.querySelector(".icon img").src = `file:///${notificationData.iconPath}`;
+		  const root = document.body;
+		  const scale = parseFloat(notificationData.scale || 1);
+		  root.style.transform = `scale(${scale})`;
+		  root.style.transformOrigin = 'center center';
+        }
+            const container = document.querySelector(".ach");
+            container.classList.add("active");
+
+ 
+        setTimeout(() => {
+          container.classList.remove("active");
+          window.api.closeNotificationWindow();
+        }, 5000);
+    });
+});	
+  </script>
+</body>
+</html>
