@@ -48,17 +48,10 @@
     <script>
       window.addEventListener('DOMContentLoaded', () => {
         window.api.onNotification((notificationData) => {
-          if (
-            notificationData &&
-            notificationData.displayName &&
-            notificationData.description &&
-            notificationData.iconPath
-          ) {
+          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
             document.querySelector('.title').textContent = notificationData.displayName;
             document.querySelector('.detail').textContent = notificationData.description;
-            document.querySelector(
-              '.icon img'
-            ).src = `file:///${notificationData.iconPath}`;
+            document.querySelector('.icon img').src = `${notificationData.iconPath}`;
             const root = document.body;
             const scale = parseFloat(notificationData.scale || 1);
             root.style.transform = `scale(${scale})`;
