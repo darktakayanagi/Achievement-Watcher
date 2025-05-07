@@ -1,0 +1,285 @@
+html {
+  overflow: hidden;
+  scrollbar-width: none;
+}
+.scroll-container {
+    max-height: 80vh;
+    overflow-y: scroll; /* Permite scroll-ul */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE și Edge */
+}
+
+.ach {
+  background: #000;
+  display: block;
+  position: absolute;
+  bottom: -255em;
+  left: 50%;
+  margin-left: -175px;
+  width: 450px;
+  height: 75px;
+  color: #fff;
+  font-size: 16px;
+  border-radius: 30px;
+  transition: all 0.4s ease;
+}
+
+.ach .icon {
+  float: center;
+  font-size: 2.2em;
+  width: 60px;
+  padding: 0.1em 0 0;
+  text-align: center;
+  height: auto;  
+}
+
+.ach .icon img {
+    width: 100px;
+    height: auto;
+    border-radius: 60%;
+    text-align: center;
+    margin-top: -25px; /* Ajustează valoarea până arată corect */
+	margin-left: -10px;
+	100% {
+    opacity: 1;
+  }
+}
+
+.ach .text_wrap {
+  position: absolute;
+  top: 12px; /* <- Mutat de la 20px */
+  left: 90px;
+  width: 450px;
+  max-height: 5em; /* 2 linii x line-height ~1.2em + spațiu */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+
+
+.ach .title {
+  font-size: 1.2em;
+  width: 300px;
+  margin: 0 0 -0.1em;
+  padding: 0;
+  font-style: bold;
+}
+
+.ach .detail {
+  width: 300px;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin: 0;
+}
+
+
+
+.ach {
+  -webkit-transition: all .1s ease-out;
+  -moz-transition: all .1s ease-out;
+  -o-transition: all .1s ease-out;
+  transition: all .1s ease-out;
+}
+
+@keyframes ach_in_anim {
+  0% {
+    bottom: -5em;
+    width: 65px;
+    margin-left: -32.5px;
+    border-radius: 50%;
+  }
+  15% {
+    bottom: 2.2em;
+    width: 65px;
+    margin-left: -32.5px;
+  }
+  25% {
+    bottom: 1em;
+    width: 65px;
+    margin-left: -32.5px;
+  }
+  75% {
+    bottom: 1em;
+    width: 65px;
+    margin-left: -32.5px;
+  }
+  85% {
+    bottom: 1em;
+    width: 65px;
+    margin-left: -32.5px;
+    border-radius: 50%;
+  }
+  92% {
+    bottom: 1em;
+    width: 380px;
+    margin-left: -190px;
+    border-radius: 10;
+  }
+  100% {
+    bottom: 1em;
+    width: 400px;
+    margin-left: -175px;
+    border-radius: 10;
+  }
+}
+
+@keyframes ach_current {
+  0% {
+    bottom: 1em;
+    width: 400px;
+    margin-left: -175px;
+  }
+  100% {
+    bottom: 1em;
+    width: 400px;
+    margin-left: -175px;
+  }
+}
+
+@keyframes ach_out_anim {
+  0% {
+    bottom: 1em;
+    width: 400px;
+    margin-left: -175px;
+    border-radius: 50%;
+  }
+  16% {
+    bottom: 1em;
+    width: 65px;
+    margin-left: -32.5px;
+    border-radius: 50%;
+  }
+  20% {
+    bottom: 1em;
+    width: 50px;
+    margin-left: -25px;
+  }
+  34% {
+    bottom: 1em;
+    width: 65px;
+    margin-left: -32.5px;
+  }
+  70% {
+    bottom: 1em;
+    width: 65px;
+    margin-left: -32.5px;
+  }
+  100% {
+    bottom: -55em;
+    width: 65px;
+    margin-left: -32.5px;
+    border-radius: 50%;
+  }
+}
+
+.active {
+  animation: ach_in_anim 1.4s, ach_current 3s, ach_out_anim 0.4s;
+  animation-delay: 0s, 1.4s, 4.4s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes i_in_anim {
+  0% {
+    transform: scale(0);
+  }
+  45% {
+    transform: scale(0);
+  }
+  46% {
+    transform: scale(0.4);
+  }
+  50% {
+    transform: scale(1);
+  }
+  55% {
+    transform: scale(1.2);
+  }
+  60% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+
+@keyframes i_current {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes i_out_anim {
+  0% {
+    transform: scale(1);
+  }
+  46% {
+    transform: scale(1);
+  }
+  47% {
+    transform: scale(1.2);
+  }
+  56% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(0.4);
+  }
+  65% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(0);
+		opacity: 1;
+  }
+}
+
+.active .icon i {
+  animation: i_in_anim 1.4s, i_current 3s, i_out_anim 0.2s;
+  animation-delay: 0s, 1.4s, 4s;
+  animation-fill-mode: forwards;
+}
+
+@keyframes text_in_anim {
+  0% {
+    width: 0;
+  }
+  85% {
+    width: 0;
+  }
+  100% {
+    width: 260px;
+  }
+}
+
+@keyframes text_out_anim {
+  0% {
+    width: 260px;
+    opacity: 1;
+  }
+  12% {
+    width: 0;
+    opacity: 1;
+  }
+  100% {
+    width: 0;
+    opacity: 1;
+  }
+}
+
+
+.active .text_wrap {
+  animation: text_in_anim 1.4s, text_out_anim 0.9s;
+  animation-delay: 0s, 4.4s;
+  animation-fill-mode: forwards;
+}

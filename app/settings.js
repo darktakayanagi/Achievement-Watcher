@@ -41,7 +41,7 @@ module.exports.load = () => {
     }
 
     if (typeof options.overlay.preset !== 'string') {
-      options.overlay.preset = '';
+      options.overlay.preset = 'default';
     }
 
     if (typeof options.achievement.thumbnailPortrait !== 'boolean') {
@@ -250,7 +250,7 @@ module.exports.load = () => {
     options = {
       overlay: {
         position: 0,
-        preset: '',
+        preset: 'default',
       },
       achievement: {
         thumbnailPortrait: false,
