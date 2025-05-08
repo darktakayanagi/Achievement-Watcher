@@ -61,8 +61,7 @@ var app = {
       self.cache = [];
 
       debug.log('Achievement Watchdog starting ...');
-      SpawnNotification(['--notify-appid=1086940']);
-      return;
+      //TODO: setup global hotkey for the overlay
 
       processPriority
         .set('high priority')
@@ -269,6 +268,8 @@ var app = {
                       } catch (err) {
                         debug.error(`Action failed: ${err}`);
                       }
+
+                      await SpawnNotification([`--notify-appid=${game.appid}`, `--notify-ach=${ach.name}`]);
 
                       await notify(
                         {
