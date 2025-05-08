@@ -279,6 +279,7 @@ const appPath = remote.app.getAppPath();
         userDirList.push({ path: dir, notify: notify });
       });
 
+      settings.setUserDataPath(ipcRenderer.sendSync('get-user-data-path-sync'));
       userDir
         .save(userDirList)
         .catch((err) => {
@@ -734,45 +735,41 @@ function populateUserDirList(option) {
   elem.find('.controls .edit').click(function () {
     let path = elem.find('.path span').text();
 
-    remote.dialog.showOpenDialogSync(
-      win,
-      { defaultPath: path, properties: ['openDirectory', 'showHiddenFiles'] },
-      async function (filePaths) {
-        try {
-          if (filePaths) {
-            debug.log(`Editing folder to: ${filePaths}`);
+    remote.dialog.showOpenDialogSync(win, { defaultPath: path, properties: ['openDirectory', 'showHiddenFiles'] }, async function (filePaths) {
+      try {
+        if (filePaths) {
+          debug.log(`Editing folder to: ${filePaths}`);
 
-            if (await userDir.check(filePaths[0])) {
-              elem.find('.path span').text(filePaths[0]);
-              elem.find('.path').removeClass('overflow');
-              if (elem.find('.path span').width() >= 350) {
-                elem.find('.path').addClass('overflow');
-              }
-              debug.log('-> Edited');
-            } else {
-              debug.log('-> Invalid folder');
-              remote.dialog.showMessageBoxSync({
-                type: 'warning',
-                title: 'Invalid folder',
-                message: $("#settings .content[data-view='folder'] > .controls .info p")
-                  .html()
-                  .replace(/\s{2,}/g, '')
-                  .replace(/<br>/g, '\n'),
-              });
+          if (await userDir.check(filePaths[0])) {
+            elem.find('.path span').text(filePaths[0]);
+            elem.find('.path').removeClass('overflow');
+            if (elem.find('.path span').width() >= 350) {
+              elem.find('.path').addClass('overflow');
             }
+            debug.log('-> Edited');
           } else {
-            debug.log('Editing folder: User Cancel');
+            debug.log('-> Invalid folder');
+            remote.dialog.showMessageBoxSync({
+              type: 'warning',
+              title: 'Invalid folder',
+              message: $("#settings .content[data-view='folder'] > .controls .info p")
+                .html()
+                .replace(/\s{2,}/g, '')
+                .replace(/<br>/g, '\n'),
+            });
           }
-        } catch (err) {
-          remote.dialog.showMessageBoxSync({
-            type: 'error',
-            title: 'Unexpected Error',
-            message: 'Error editing custom folder',
-            detail: `${err}`,
-          });
+        } else {
+          debug.log('Editing folder: User Cancel');
         }
+      } catch (err) {
+        remote.dialog.showMessageBoxSync({
+          type: 'error',
+          title: 'Unexpected Error',
+          message: 'Error editing custom folder',
+          detail: `${err}`,
+        });
       }
-    );
+    });
   });
 }
 
