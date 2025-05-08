@@ -125,9 +125,9 @@ var app = {
 
             let template = `
             <li>
-                <div class="game-box" data-index="${game}" data-appid="${list[game].appid}" data-time="${
-              timeMostRecent > 0 ? timeMostRecent : 0
-            }" ${list[game].system ? `data-system="${list[game].system}"` : ''}>
+                <div class="game-box" data-index="${game}" data-appid="${list[game].appid}" data-time="${timeMostRecent > 0 ? timeMostRecent : 0}" ${
+              list[game].system ? `data-system="${list[game].system}"` : ''
+            }>
                   <div class="loading-overlay"><div class="content"><i class="fas fa-spinner fa-spin"></i></div></div>
                   ${
                     portrait && list[game].img.portrait
@@ -162,14 +162,11 @@ var app = {
           }
         }
 
-        let average_progress =
-          progress_cache.length > 0 ? Math.floor(progress_cache.reduce((acc, curr) => acc + curr) / progress_cache.length) : 0;
+        let average_progress = progress_cache.length > 0 ? Math.floor(progress_cache.reduce((acc, curr) => acc + curr) / progress_cache.length) : 0;
 
         $('#user-info .info .stats li:eq(2) span.data').text(average_progress);
 
-        $('#user-info .info .stats li:eq(1) span.data').text(
-          list.filter((game) => game.achievement.unlocked == game.achievement.total).length
-        );
+        $('#user-info .info .stats li:eq(1) span.data').text(list.filter((game) => game.achievement.unlocked == game.achievement.total).length);
 
         $('#user-info .info .stats li:eq(0) span.data').text(
           list
@@ -317,9 +314,7 @@ var app = {
                       const cache = path.join(remote.app.getPath('userData'), `steam_cache/icon/${appid}`);
 
                       for (let achievement of list.find((game) => game.appid == appid).achievement.list) {
-                        await Promise.all([request.download(achievement.icon, cache), request.download(achievement.icongray, cache)]).catch(
-                          () => {}
-                        );
+                        await Promise.all([request.download(achievement.icon, cache), request.download(achievement.icongray, cache)]).catch(() => {});
                       }
                     } catch (err) {
                       remote.dialog.showMessageBoxSync({
@@ -590,9 +585,7 @@ var app = {
                                     <div class="glow fx"></div>
                                   </div>
                               </div>
-                              <div class="icon" style="background: url('${
-                                achievement.Achieved ? achievement.icon : achievement.icongray
-                              }');"></div>
+                              <div class="icon" style="background: url('${achievement.Achieved ? achievement.icon : achievement.icongray}');"></div>
                             </div>
                             <div class="content">
                                 <div class="title">${
@@ -740,13 +733,14 @@ var app = {
     }
 
     if (fs.statSync(cfg.exe).isFile()) {
-      execFile(cfg.exe, [], { cwd: path.dirname(cfg.exe), detached: true }, (error) => {
+      let game = execFile(cfg.exe, [], { cwd: path.dirname(cfg.exe), detached: true, stdio: 'ignore' }, (error) => {
         if (error) {
           console.error('Failed to start the game:', error);
         } else {
           console.log('Game launched!');
         }
       });
+      game.unref();
     }
   },
   onConfigButtonClick: async function (self) {
