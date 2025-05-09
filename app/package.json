@@ -29,9 +29,6 @@
     "accountpicture-ms-extractor": "^1.2.4",
     "adm-zip": "0.4.13",
     "argv-split": "^2.0.1",
-    "axios": "^0.27.2",
-    "cheerio": "^1.0.0-rc.12",
-    "chrome-launcher": "^1.2.0",
     "crc": "^3.8.0",
     "deepmerge": "^4.2.2",
     "fast-glob": "^3.2.4",
@@ -48,7 +45,6 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "regodit": "^1.1.2",
     "request-zero": "^0.3.2",
-    "steamdb-js": "^0.2.2",
     "steamid": "^1.1.3",
     "windows-focus-assist": "^1.2.1",
     "xml2js": "^0.4.23"

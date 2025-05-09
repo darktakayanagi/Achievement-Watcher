@@ -1,7 +1,7 @@
 'use strict';
 
 const axios = require('axios');
-const cheerio = require('cheerio');
+//const cheerio = require('cheerio');
 const path = require('path');
 const glob = require('fast-glob');
 const normalize = require('normalize-path');
@@ -165,12 +165,12 @@ module.exports.getGameData = async (cfg) => {
       }
       ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
     }
-
+    /*
     if (await getMissingAchData(cfg, result)) {
       //updated missing data, resave
       ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
     }
-
+*/
     return result;
   } catch (err) {
     if (err.code) throw `Could not load Steam data: ${err.code} - ${err.message}`;
