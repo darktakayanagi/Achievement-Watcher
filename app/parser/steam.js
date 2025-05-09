@@ -420,7 +420,16 @@ function getSteamDataFromSRV(appID, lang) {
 
 async function getMissingAchData(cfg, achievements) {
   // some achievements dont have description if they are hidden so let's try to get them from a few other websites
-
+  {
+    let needUpdate = false;
+    for (const main of achievements.achievement.list) {
+      if (!main.description || main.description.length < 1) {
+        needUpdate = true;
+        break;
+      }
+    }
+    if (!needUpdate) return true;
+  }
   {
     try {
       let url = `https://completionist.me/steam/app/${cfg.appID}/achievements`;
