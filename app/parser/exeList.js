@@ -11,7 +11,7 @@ async function getCurrentList() {
     return JSON.parse(await ffs.readFile(file, 'utf8'));
   } catch (err) {
     if (err.code === 'ENOENT') {
-      await this.save([]);
+      await module.exports.save([]);
       return [];
     } else {
       throw err;
