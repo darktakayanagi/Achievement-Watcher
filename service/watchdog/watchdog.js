@@ -27,9 +27,9 @@ const cfg_file = {
   userDir: path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'userdir.db'),
 };
 
-let isDev = true;
-
 const appRoot = path.join(__dirname, '../../app');
+
+let isDev = process.env.NODE_ENV === 'development';
 
 function SpawnNotification(args) {
   if (isDev) {

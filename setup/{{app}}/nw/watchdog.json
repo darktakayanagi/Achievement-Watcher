@@ -4,7 +4,7 @@
   "cwd": "../watchdog",
   "env": ["NODE_SKIP_PLATFORM_CHECK=1"],
   "fileCheck": [
-    {"sum": "02cd30da48078c3c7cee213891b0bfb013e33435245519de7e84b12750bcc072", "size": 56239104},
-    {"file": "../watchdog/watchdog.js", "sum": "62af044f185ea96f0ff3123c4e425320706a2d4824abae65027f34d706cfe886", "size": 17440}
+    { "sum": "02cd30da48078c3c7cee213891b0bfb013e33435245519de7e84b12750bcc072", "size": 56239104 },
+    { "file": "../watchdog/watchdog.js", "sum": "a628a3b8070fe342db3f9bd9769a3ef19015b42ceea50a8ad1d406038b8e2dbe", "size": 19414 }
   ]
 }
