@@ -1,7 +1,5 @@
 'use strict';
 
-const remote = require('@electron/remote');
-
 const merge = require('deepmerge');
 const ffs = require('@xan105/fs');
 
@@ -48,9 +46,9 @@ function translateUI(lang, locale, template) {
   selector.empty();
   for (let language of steamLanguages) {
     selector.append(
-      `<option value="${language.api}" data-tooltip="${language.native}" title="${language.displayName}" ${
-        language.api === lang ? 'selected' : ''
-      }>${language.native}</option>`
+      `<option value="${language.api}" data-tooltip="${language.native}" title="${language.displayName}" ${language.api === lang ? 'selected' : ''}>${
+        language.native
+      }</option>`
     );
   }
 
@@ -122,21 +120,15 @@ function translateUI(lang, locale, template) {
   selector.prev().prev('.title').find('span').text(clear(template.settings.notification.title.toast));
   selector.prev('.info').text(clear(template.settings.notification.info.toast));
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.notification.option.customToastAudio.name));
-  selector
-    .find("li:nth-child(1) .right select option[value='0']")
-    .text(clear(template.settings.notification.option.customToastAudio.value.muted));
+  selector.find("li:nth-child(1) .right select option[value='0']").text(clear(template.settings.notification.option.customToastAudio.value.muted));
   selector
     .find("li:nth-child(1) .right select option[value='1']")
     .text(clear(template.settings.notification.option.customToastAudio.value.systemDefault));
   selector.find('li:nth-child(1) .help').text(clear(template.settings.notification.option.customToastAudio.description));
   selector.find('li:nth-child(2) .left span').text(clear(template.settings.notification.option.toastSouvenir.name));
   selector.find("li:nth-child(2) .right select option[value='0']").text(clear(template.settings.common.hide));
-  selector
-    .find("li:nth-child(2) .right select option[value='1']")
-    .text(clear(template.settings.notification.option.toastSouvenir.value.top));
-  selector
-    .find("li:nth-child(2) .right select option[value='2']")
-    .text(clear(template.settings.notification.option.toastSouvenir.value.bottom));
+  selector.find("li:nth-child(2) .right select option[value='1']").text(clear(template.settings.notification.option.toastSouvenir.value.top));
+  selector.find("li:nth-child(2) .right select option[value='2']").text(clear(template.settings.notification.option.toastSouvenir.value.bottom));
   selector.find('li:nth-child(2) .help').text(clear(template.settings.notification.option.toastSouvenir.description));
   selector.find('li:nth-child(3) .left span').text(clear(template.settings.notification.option.groupToast.name));
   selector.find("li:nth-child(3) .right select option[value='true']").text(clear(template.settings.common.enable));
@@ -196,9 +188,7 @@ function translateUI(lang, locale, template) {
   selector.find('.title:eq(0) span').text(clear(template.settings.folder.default));
   selector.find('.title:eq(1) span').text(clear(template.settings.folder.custom));
   $('#addCustomDir span').text(clear(template.settings.folder.add));
-  $("#settings .content[data-view='folder'] > .controls .info p").html(
-    clear(template.settings.folder.addInfo.join('\n')).replace(/\n/g, '<br>')
-  );
+  $("#settings .content[data-view='folder'] > .controls .info p").html(clear(template.settings.folder.addInfo.join('\n')).replace(/\n/g, '<br>'));
   selector = $('#options-source');
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.source.legitSteam.name));
   selector.find("li:nth-child(1) .right select option[value='0']").text(clear(template.settings.source.legitSteam.value.none));

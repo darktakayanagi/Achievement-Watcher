@@ -1,11 +1,14 @@
 'use strict';
 
+// Electron main process
+if (typeof global.ReadableStream === 'undefined') {
+  global.ReadableStream = require('stream/web').ReadableStream;
+}
 const { app, BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
-const remote = require('@electron/remote/main');
-remote.initialize();
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+
 const ipc = require(path.join(__dirname, 'ipc.js'));
 
 const manifest = require('../package.json');
@@ -15,12 +18,12 @@ if (manifest.config.appid) app.setAppUserModelId(manifest.config.appid);
 let options = manifest.config.window;
 options.show = false;
 options.webPreferences = {
+  preload: path.join(__dirname, '../mainPreload.js'),
   devTools: manifest.config.debug || false,
-  nodeIntegration: true,
-  contextIsolation: false,
+  nodeIntegration: false,
+  contextIsolation: true,
   webviewTag: false,
   v8CacheOptions: manifest.config.debug ? 'none' : 'code',
-  enableRemoteModule: true,
 };
 
 let MainWin = null;

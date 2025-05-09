@@ -1,6 +1,5 @@
 'use strict';
 
-const remote = require('@electron/remote');
 const path = require('path');
 const ffs = require('@xan105/fs');
 
