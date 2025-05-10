@@ -75,6 +75,33 @@
       let currentConfigName = null;
       let currentDataHash = null;
       let isLoading = false;
+      const headers = document.querySelectorAll('thead th');
+      // Track sorting for status and achievement only
+      let sortState = {
+        status: null, // 1 = asc, -1 = desc, null = no sort
+        achievement: null, // 1 = asc, -1 = desc, null = no sort
+      };
+
+      function updateHeaderIndicators() {
+        headers.forEach((header, i) => {
+          const text = header.textContent.replace(/[↑↓]/g, '').trim();
+          header.textContent = text;
+
+          if (i === 1 && sortState.achievement) {
+            header.textContent += sortState.achievement === 1 ? ' ↑' : ' ↓';
+          }
+
+          if (i === 2 && sortState.status) {
+            header.textContent += sortState.status === 1 ? ' ↑' : ' ↓';
+          }
+        });
+      }
+
+      function cycleSortState(current) {
+        if (current === null) return 1;
+        if (current === 1) return -1;
+        return null;
+      }
 
       function getSafeLocalizedText(input, lang = 'english') {
         if (!input) return 'Hidden';
@@ -105,33 +132,57 @@
           .join('|');
       }
 
+      function sortAchievements(l) {
+        return l.slice().sort((a, b) => {
+          // Enforce status sorting first if active
+          if (sortState.status) {
+            const aStatus = a.Achieved ? 'a' : 'b';
+            const bStatus = b.Achieved ? 'a' : 'b';
+            if (aStatus < bStatus) return -1 * sortState.status;
+            if (aStatus > bStatus) return 1 * sortState.status;
+          }
+
+          // Then achievement title sort
+          if (sortState.achievement) {
+            const aTitle = getSafeLocalizedText(a.displayName, lang).toLowerCase();
+            const bTitle = getSafeLocalizedText(b.displayName, lang).toLowerCase();
+            if (aTitle < bTitle) return -1 * sortState.achievement;
+            if (aTitle > bTitle) return 1 * sortState.achievement;
+          }
+
+          return 0;
+        });
+      }
+
       async function loadTableData(configName) {
         if (!configName || isLoading) return;
         isLoading = true;
 
         const tableBody = document.querySelector('#overlayTableBody');
         const achievementsDataObj = await window.api.loadAchievementData(configName);
-        const savedAchievementsObj = await window.api.loadSavedAchievements(configName);
+        //const savedAchievementsObj = await window.api.loadSavedAchievements(configName);
         const lang = overlayLang;
 
-        if (!Array.isArray(achievementsDataObj.achievements.achievement.list)) {
+        if (!Array.isArray(achievementsDataObj.achievements)) {
           isLoading = false;
           return;
         }
 
-        const newHash = computeAchievementsHash(achievementsDataObj.achievements.achievement.list, savedAchievementsObj, lang);
-        const isSameConfig = currentConfigName === configName;
-        const isSameHash = currentDataHash === newHash;
+        //const newHash = computeAchievementsHash(achievementsDataObj, savedAchievementsObj, lang);
+        //const isSameConfig = currentConfigName === configName;
+        //const isSameHash = currentDataHash === newHash;
 
-        if (isSameConfig && isSameHash) {
-          isLoading = false;
-          return;
-        }
+        //if (isSameConfig && isSameHash) {
+        //  isLoading = false;
+        //  return;
+        //}
 
         tableBody.innerHTML = '';
         const uniqueAchievements = new Set();
 
-        achievementsDataObj.achievements.achievement.list.forEach((achievement) => {
+        //TODO: add header click events
+        const sortedAchievements = sortAchievements(achievementsDataObj.achievements);
+        achievementsDataObj.achievements.forEach((achievement) => {
           if (!achievement.name || uniqueAchievements.has(achievement.name)) return;
           uniqueAchievements.add(achievement.name);
 
@@ -145,7 +196,7 @@
           let earnedTimeText = '';
           let progressText = '';
 
-          const saved = savedAchievementsObj?.achievements?.[achievement.name];
+          //const saved = savedAchievementsObj?.achievements?.[achievement.name];
 
           if (achievement.Achieved) {
             imagePath = icon;
@@ -173,7 +224,7 @@
         });
 
         currentConfigName = configName;
-        currentDataHash = newHash;
+        //currentDataHash = newHash;
         isLoading = false;
       }
 
@@ -195,6 +246,18 @@
           currentDataHash = null;
           return;
         }
+
+        headers.forEach((header, i) => {
+          const text = header.textContent.replace(/[↑↓]/g, '').trim();
+          header.textContent = text;
+
+          if (i === 1 && sortState.achievement) {
+            header.textContent += sortState.achievement === 1 ? ' ↑' : ' ↓';
+          }
+          if (i === 2 && sortState.status) {
+            header.textContent += sortState.status === 1 ? ' ↑' : ' ↓';
+          }
+        });
 
         if (messageRow) messageRow.style.display = 'none';
         loadTableData(configName);

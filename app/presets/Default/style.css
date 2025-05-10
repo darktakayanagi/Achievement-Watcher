@@ -39,10 +39,8 @@ html {
     border-radius: 60%;
     text-align: center;
     margin-top: -25px; /* Ajustează valoarea până arată corect */
-	margin-left: -10px;
-	100% {
+	  margin-left: -10px;
     opacity: 1;
-  }
 }
 
 .ach .text_wrap {
@@ -181,9 +179,7 @@ html {
 }
 
 .active {
-  animation: ach_in_anim 1.4s, ach_current 3s, ach_out_anim 0.4s;
-  animation-delay: 0s, 1.4s, 4.4s;
-  animation-fill-mode: forwards;
+  animation: ach_in_anim 1.4s forwards 0s, ach_current 3s forwards 1.4s, ach_out_anim 0.4s forwards 4.4s;
 }
 
 @keyframes i_in_anim {
@@ -245,9 +241,7 @@ html {
 }
 
 .active .icon i {
-  animation: i_in_anim 1.4s, i_current 3s, i_out_anim 0.2s;
-  animation-delay: 0s, 1.4s, 4s;
-  animation-fill-mode: forwards;
+  animation: i_in_anim 1.4s forwards 0s, i_current 3s forwards 1.4s, i_out_anim 0.2s forwards 4s;
 }
 
 @keyframes text_in_anim {
@@ -279,7 +273,5 @@ html {
 
 
 .active .text_wrap {
-  animation: text_in_anim 1.4s, text_out_anim 0.9s;
-  animation-delay: 0s, 4.4s;
-  animation-fill-mode: forwards;
+  animation: text_in_anim 1.4s forwards 0s, text_out_anim 0.9s forwards 4.4s;
 }

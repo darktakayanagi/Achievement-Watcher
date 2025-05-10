@@ -135,7 +135,6 @@
             <nav id="settingNav">
               <ul>
                 <li class="active" data-view="general"><i class="fas fa-tools"></i> <span></span></li>
-                <li data-view="overlay"><i class="fas fa-list"></i><span></span></li>
                 <li data-view="notification"><i class="fas fa-bell"></i> <span></span></li>
                 <li data-view="souvenir"><i class="fas fa-camera"></i> <span></span></li>
                 <li data-view="folder"><i class="far fa-folder"></i> <span></span></li>
@@ -146,6 +145,14 @@
             </nav>
 
             <section class="content" data-view="debug">
+              <ul>
+                <li class="title">Chromium Notification Test</li>
+                <li>
+                  <div id="chromium_notify_test" class="btn"><i class="fas fa-atom"></i> <span>Notification Test</span></div>
+                  <div id="chromium_playtime_test" class="btn"><i class="fas fa-gamepad"></i> <span>Playtime Test</span></div>
+                  <div id="chromium_progress_test" class="btn"><i class="fas fa-sync-alt"></i> <span>Progress Test</span></div>
+                </li>
+              </ul>
               <ul>
                 <li class="title">Toast Notification Test</li>
                 <li>
@@ -214,6 +221,33 @@
                 <label for="steamwebapikey"><i class="fab fa-steam-symbol"></i> Your Steam Web API Key :</label>
                 <input type="password" pattern="[a-fA-F\d]+" id="steamwebapikey" />
                 <span>Key will be crypted and stored to your computer in aes-256-cbc.</span>
+              </div>
+
+              <div>
+                <ul>
+                  <div class="title"></div>
+                  <li>
+                    <div class="arrow-list">
+                      <ul id="options-mainSteam">
+                        <li class="hasHelper">
+                          <div class="left"><i class="fas fa-users"></i> <span></span></div>
+                          <div class="right">
+                            <div class="previous">
+                              <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                            </div>
+                            <select autocomplete="off" class="dropdown" id="option_mainSteam">
+                              <option value="0" selected></option>
+                            </select>
+                            <div class="next">
+                              <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                            </div>
+                          </div>
+                          <div class="help"></div>
+                        </li>
+                      </ul>
+                    </div>
+                  </li>
+                </ul>
               </div>
             </section>
 
@@ -331,6 +365,22 @@
               <div class="title"><span></span></div>
               <ul id="defaultdir">
                 <li>
+                  <div class="path"><span class="constant">%PUBLIC%</span>\Documents\OnlineFix</div>
+                  <div class="controls">
+                    <ul>
+                      <li><i class="fas fa-bell"></i></li>
+                    </ul>
+                  </div>
+                </li>
+                <li>
+                  <div class="path"><span class="constant">%PUBLIC%</span>\Documents\Steam\RUNE</div>
+                  <div class="controls">
+                    <ul>
+                      <li><i class="fas fa-bell"></i></li>
+                    </ul>
+                  </div>
+                </li>
+                <li>
                   <div class="path"><span class="constant">%PUBLIC%</span>\Documents\Steam\CODEX</div>
                   <div class="controls">
                     <ul>
@@ -340,6 +390,14 @@
                 </li>
                 <li>
                   <div class="path"><span class="constant">%appdata%</span>\Goldberg SteamEmu Saves</div>
+                  <div class="controls">
+                    <ul>
+                      <li><i class="fas fa-bell"></i></li>
+                    </ul>
+                  </div>
+                </li>
+                <li>
+                  <div class="path"><span class="constant">%appdata%</span>\GSE Saves</div>
                   <div class="controls">
                     <ul>
                       <li><i class="fas fa-bell"></i></li>
@@ -686,6 +744,57 @@
 
                 <div class="title"><span></span></div>
                 <div class="info"></div>
+                <ul id="options-notify-chromium">
+                  <li>
+                    <div class="left"><i class="fas fa-compass"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" class="dropdown" id="option_overlay_position">
+                        <option value="center-bot" selected>Center Bottom</option>
+                        <option value="center-top">Center Top</option>
+                        <option value="left-bot">Left Bottom</option>
+                        <option value="left-top">Left Top</option>
+                        <option value="right-bot">Right Bottom</option>
+                        <option value="right-top">Right Top</option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="left"><i class="fas fa-gamepad"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" class="dropdown" id="option_overlay_preset"></select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
+                  </li>
+                  <li>
+                    <div class="left"><i class="fas fa-ruler"></i> <span></span></div>
+                    <div class="right">
+                      <input type="range" id="scaleSlider" min="10" max="500" value="100" />
+                      <span id="scaleValue">100</span>%
+                    </div>
+                  </li>
+                  <li>
+                    <div class="left"><i class="fas fa-clock"></i> <span></span></div>
+                    <div class="right">
+                      <input type="range" id="durationSlider" min="10" max="500" value="100" />
+                      <span id="durationValue">100</span>%
+                    </div>
+                  </li>
+                </ul>
+
+                <div class="title"><span></span></div>
+                <div class="info"></div>
                 <ul id="options-notify-toast">
                   <li class="hasHelper">
                     <div class="left"><i class="fas fa-volume-up"></i> <span></span></div>
@@ -699,17 +808,6 @@
                       <select autocomplete="off" class="dropdown" id="option_customToastAudio">
                         <option value="0"></option>
                         <option value="1" data-file="" selected></option>
-                        <option value="2" data-file="Achievement Watcher - Steam Deck.wav">Steam Deck</option>
-                        <option value="2" data-file="Achievement Watcher - Xbox.wav">Xbox</option>
-                        <option value="2" data-file="Achievement Watcher - Xbox Rare.wav">Xbox (Rare)</option>
-                        <option value="2" data-file="Achievement Watcher - Playstation.wav">Playstation</option>
-                        <option value="2" data-file="Achievement Watcher - Playstation5.wav">PS5</option>
-                        <option value="2" data-file="Achievement Watcher - Playstation5 Platinum.wav">PS5 (Platinum)</option>
-                        <option value="2" data-file="Achievement Watcher - Windows 8 Notify System Generic.wav">Win 8</option>
-                        <option value="2" data-file="Achievement Watcher - Windows 10 Notify System Generic.wav">Win 10</option>
-                        <option value="2" data-file="Achievement Watcher - Windows 11 Notify System Generic.wav">Win 11</option>
-                        <option value="2" data-file="Achievement Watcher - GOG Galaxy.wav">GOG Galaxy</option>
-                        <option value="2" data-file="Achievement Watcher - Android 9 Notification Popcorn.wav">Popcorn</option>
                       </select>
                       <div class="next">
                         <span class="arrow"><i class="fas fa-chevron-right"></i></span>
@@ -756,6 +854,22 @@
 
                 <div class="title"><span></span></div>
                 <ul id="options-notify-transport">
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-atom"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" id="option_chromium">
+                        <option value="true" selected></option>
+                        <option value="false"></option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
+                  </li>
                   <li class="hasHelper">
                     <div class="left"><i class="fas fa-bread-slice"></i> <span></span></div>
                     <div class="right">
@@ -839,51 +953,6 @@
                       </div>
                     </div>
                     <div class="help">Growl Notification Transport Protocol</div>
-                  </li>
-                </ul>
-              </div>
-            </section>
-
-            <section class="content" data-view="overlay">
-              <div id="options-overlay" class="arrow-list">
-                <ul>
-                  <li>
-                    <div class="left"><i class="fas fa-bell"></i> <span></span></div>
-                    <div class="right">
-                      <div class="previous">
-                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
-                      </div>
-                      <select autocomplete="off" class="dropdown" id="option_overlay_position">
-                        <option value="0" selected>Center Bottom</option>
-                        <option value="1">Center Top</option>
-                        <option value="2">Left Bottom</option>
-                        <option value="3">Left Top</option>
-                        <option value="4">Right Bottom</option>
-                        <option value="5">Right Top</option>
-                      </select>
-                      <div class="next">
-                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
-                      </div>
-                    </div>
-                  </li>
-
-                  <li>
-                    <div class="left"><i class="fas fa-gamepad"></i> <span></span></div>
-                    <div class="right">
-                      <div class="previous">
-                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
-                      </div>
-                      <select autocomplete="off" class="dropdown" id="option_overlay_preset"></select>
-                      <div class="next">
-                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
-                      </div>
-                    </div>
-                    <div class="help"></div>
-                  </li>
-
-                  <li>
-                    <div class="left"><i class="fas fa-bolt"></i><span></span></div>
-                    <div class="right"><span>Ctrl+Shift+O</span></div>
                   </li>
                 </ul>
               </div>
@@ -987,6 +1056,17 @@
                         <span class="arrow"><i class="fas fa-chevron-right"></i></span>
                       </div>
                     </div>
+                  </li>
+
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-bolt"></i><span></span></div>
+                    <div class="right">
+                      <div style="width: 180px; display: flex; justify-content: center; align-items: center; gap: 10px">
+                        <span id="hotkey"></span>
+                        <div id="btn-hotkey-edit"><i class="fas fa-pen"></i></div>
+                      </div>
+                    </div>
+                    <div class="help"><span></span></div>
                   </li>
                 </ul>
               </div>

@@ -33,7 +33,7 @@ body {
 .achievement-banner.animated.achievement-banner-big {
   width: 400px;
   left: calc(200px - 200px);
-  background-color: #107C10;
+  background-color: #107c10;
 }
 
 /* Loader animate */
@@ -54,34 +54,34 @@ body {
 
 .achievement-loader:nth-of-type(1) {
   animation: achievementLoaderAnimationFrames;
-  background-color: lighten(#107C10, 5%);
+  background-color: lighten(#107c10, 5%);
   animation-duration: 7s;
 }
 
 .achievement-loader:nth-of-type(2) {
   animation: achievementLoaderAnimationFrames;
-  background-color: #107C10;
+  background-color: #107c10;
   animation-delay: 0.1s;
   animation-duration: 6.5s;
 }
 
 .achievement-loader:nth-of-type(3) {
   animation: achievementLoaderAnimationFrames;
-  background-color: lighten(#107C10, 5%);
+  background-color: lighten(#107c10, 5%);
   animation-delay: 0.25s;
   animation-duration: 6s;
 }
 
 .achievement-loader:nth-of-type(4) {
   animation: achievementLoaderAnimationFrames;
-  background-color: #107C10;
+  background-color: #107c10;
   animation-delay: 0.5s;
   animation-duration: 5.5s;
 }
 
 .achievement-loader:nth-of-type(5) {
   animation: achievementLoaderAnimationFrames;
-  background-color: lighten(#107C10, 5%);
+  background-color: lighten(#107c10, 5%);
   animation-delay: 0.75s;
   animation-duration: 5s;
 }
@@ -108,19 +108,19 @@ body {
 
 @keyframes achievementLoaderAnimationFrames {
   0% {
-    transform: scaleX(0.00) scaleY(0.00);
+    transform: scaleX(0) scaleY(0);
     opacity: 0;
   }
   10% {
-    transform: scaleX(1.00) scaleY(1.00);
+    transform: scaleX(1) scaleY(1);
     opacity: 1;
   }
   90% {
-    transform: scaleX(1.00) scaleY(1.00);
+    transform: scaleX(1) scaleY(1);
     opacity: 1;
   }
   100% {
-    transform: scaleX(0.00) scaleY(0.00);
+    transform: scaleX(0) scaleY(0);
     opacity: 0;
   }
 }
@@ -172,7 +172,6 @@ body {
   text-overflow: ellipsis;
 }
 
-
 .achievement-banner .text_wrap .detail {
   position: absolute;
   top: -30px;
@@ -193,56 +192,119 @@ body {
 @keyframes xboxLogoAnimationFrames {
   0% {
     background-color: transparent !important;
-    transform: scaleX(0.00) scaleY(0.00);
+    transform: scaleX(0) scaleY(0);
   }
   5% {
     background-color: transparent !important;
-    transform: scaleX(1.20) scaleY(1.20);
+    transform: scaleX(1.2) scaleY(1.2);
   }
   10% {
     background-color: transparent !important;
-    transform: scaleX(1.00) scaleY(1.00);
+    transform: scaleX(1) scaleY(1);
   }
   90% {
     background-color: transparent !important;
-    transform: scaleX(1.00) scaleY(1.00);
+    transform: scaleX(1) scaleY(1);
   }
   95% {
     background-color: transparent !important;
-    transform: scaleX(1.20) scaleY(1.20);
+    transform: scaleX(1.2) scaleY(1.2);
   }
   100% {
     background-color: transparent !important;
-    transform: scaleX(0.00) scaleY(0.00);
+    transform: scaleX(0) scaleY(0);
   }
 }
 
 @keyframes achievementTextAnimationFrames {
-  0% { opacity: 0; transform: translate(25px, 120px); }
-  20% { opacity: 1; transform: translate(25px, 0); }
-  50% { opacity: 1; transform: translate(25px, 0); }
-  70% { opacity: 1; transform: translate(300px, 0); }
-  100% { opacity: 0; transform: translate(300px,0); }
+  0% {
+    opacity: 0;
+    transform: translate(25px, 120px);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(25px, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(25px, 0);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(300px, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(300px, 0);
+  }
 }
 
 @keyframes achievementNameAnimationFrames {
-  0% { opacity: 0; transform: translateX(300px); }
-  10% { opacity: 0.5; transform: translateX(100px); }
-  50% { opacity: 0.8; transform: translateX(30px); }
-  60% { opacity: 0.8; transform: translateX(30px); }
-  80% { opacity: 1; transform: translateX(30px); }
-  90%  { opacity: 1; transform: translate(30px, -50px); }
-  100% { opacity: 0; transform: translate(30px, -100px); }
+  0% {
+    opacity: 0;
+    transform: translateX(300px);
+  }
+  10% {
+    opacity: 0.5;
+    transform: translateX(100px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateX(30px);
+  }
+  60% {
+    opacity: 0.8;
+    transform: translateX(30px);
+  }
+  80% {
+    opacity: 1;
+    transform: translateX(30px);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(30px, -50px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(30px, -100px);
+  }
 }
 
 @keyframes mainAnimationFrames {
-  0% { }
-  10% { background-color: #107C10; }
-  15% { width: 100px; height: 100px; left: calc(50% - 50px); }
-  30% { width: 450px; left: calc(50% - 225px); }
-  50% { width: 450px; left: calc(50% - 225px); }
-  80% { width: 450px; left: calc(50% - 225px); }
-  90% { width: 100px; height: 100px; left: calc(50% - 50px); background-color: #107C10; }
-  95% { width: 100px; height: 100px; left: calc(50% - 50px); background-color: transparent; }
-  100% { }
+  0% {
+  }
+  10% {
+    background-color: #107c10;
+  }
+  15% {
+    width: 100px;
+    height: 100px;
+    left: calc(50% - 50px);
+  }
+  30% {
+    width: 450px;
+    left: calc(50% - 225px);
+  }
+  50% {
+    width: 450px;
+    left: calc(50% - 225px);
+  }
+  80% {
+    width: 450px;
+    left: calc(50% - 225px);
+  }
+  90% {
+    width: 100px;
+    height: 100px;
+    left: calc(50% - 50px);
+    background-color: #107c10;
+  }
+  95% {
+    width: 100px;
+    height: 100px;
+    left: calc(50% - 50px);
+    background-color: transparent;
+  }
+  100% {
+  }
 }

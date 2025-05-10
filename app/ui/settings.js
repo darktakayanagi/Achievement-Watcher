@@ -4,11 +4,29 @@ const remote = require('@electron/remote');
 const path = require('path');
 
 const appPath = remote.app.getAppPath();
+let listeningHotkey = false;
+let keysDown = new Set();
+let keys = '';
+let holdingKeysCheck = null;
 
 (function ($, window, document) {
   $(function () {
+    function normalizeKey(e) {
+      const key = e.key;
+      if (key === ' ') return 'Space';
+      if (key === 'Control') return 'Ctrl';
+      if (key === 'Meta') return 'Cmd';
+      return key.length === 1 ? key.toUpperCase() : key;
+    }
     $('title-bar').on('open-settings', function () {
       this.inSettings = true;
+      listeningHotkey = false;
+      keysDown.clear();
+      toastAudio.setUserDataPath(ipcRenderer.sendSync('get-user-data-path-sync'));
+      $('#scaleSlider').val(app.config.overlay.scale);
+      $('#scaleValue').text(app.config.overlay.scale);
+      $('#durationSlider').val(app.config.overlay.duration);
+      $('#durationValue').text(app.config.overlay.duration);
       $('#game-config').hide();
       $('#settings').show();
       $('#settings .box').fadeIn();
@@ -25,6 +43,7 @@ const appPath = remote.app.getAppPath();
         }
       }
 
+      $('#hotkey').text(app.config.overlay.hotkey);
       populateOverlayPreset(app.config.overlay.preset);
       for (let option in app.config.overlay) {
         if ($(`#option_overlay_${option} option[value="${app.config.overlay[option]}"]`).length > 0) {
@@ -50,10 +69,11 @@ const appPath = remote.app.getAppPath();
         }
       }
 
+      let selectedSound = app.config.notification_toast.customToastAudio;
+      selectedSound = selectedSound === '1' || selectedSound === '0' ? selectedSound : path.basename(toastAudio.getCustom());
+      populateSounds(selectedSound);
       $('#option_customToastAudio').find('option[value="1"]').attr('data-file', toastAudio.getDefault());
-      if ($('#option_customToastAudio option:selected').val() == 2) {
-        $(`#option_customToastAudio option[data-file="${toastAudio.getCustom()}"]`).prop('selected', true);
-      }
+
       $('#option_customToastAudio').on('change', function () {
         try {
           let value = $(this).val();
@@ -61,7 +81,7 @@ const appPath = remote.app.getAppPath();
             let filename = $(this).find(':selected').data('file');
             if (!filename || filename == '') return;
 
-            let file = path.join(process.env['WINDIR'], 'Media', filename);
+            let file = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Media', filename);
             $('#customToastAudio_sample').attr('src', file).get(0).play();
           }
         } catch (err) {
@@ -90,8 +110,9 @@ const appPath = remote.app.getAppPath();
           $('#steamwebapikey').val(app.config.steam.apiKey);
         }
       }
+      populateLegitUsers(app.config.steam.main || '0');
 
-      $('#dirlist').empty();
+      $('#settings #dirlist').empty();
       userDir
         .get()
         .then(async (userDirList) => {
@@ -122,6 +143,42 @@ const appPath = remote.app.getAppPath();
       }
     });
 
+    window.addEventListener('keydown', (e) => {
+      if (!listeningHotkey) return;
+      keysDown.add(normalizeKey(e));
+      keys = Array.from(keysDown).join(' + ');
+      $('#hotkey').text(keys);
+      e.preventDefault();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (!listeningHotkey) return;
+      keysDown.delete(normalizeKey(e));
+      holdingKeysCheck = setTimeout(() => {
+        if (keysDown.size > 0) {
+          console.log(keys);
+          keys = Array.from(keysDown).join(' + ');
+          $('#hotkey').text(keys);
+        }
+      }, 250);
+      if (keysDown.size === 0) {
+        listeningHotkey = false;
+      }
+    });
+
+    $('#btn-hotkey-edit').click(function () {
+      listeningHotkey = true;
+      $('#hotkey').text('...');
+    });
+
+    $('#scaleSlider').on('input', function () {
+      $('#scaleValue').text($(this).val());
+    });
+
+    $('#durationSlider').on('input', function () {
+      $('#durationValue').text($(this).val());
+    });
+
     $('#btn-settings-cancel, #settings .overlay').click(function () {
       let self = $(this);
       self.css('pointer-events', 'none');
@@ -142,20 +199,9 @@ const appPath = remote.app.getAppPath();
       let self = $(this);
       self.css('pointer-events', 'none');
 
-      $('#options-overlay .right')
-        .children('select')
-        .each(function (index) {
-          try {
-            if ($(this)[0].id !== '' && $(this).val() !== '') {
-              app.config.overlay[$(this)[0].id.replace('option_overlay_', '')] =
-                $(this).val() === 'true' ? true : $(this).val() === 'false' ? false : $(this).val();
-            }
-          } catch (e) {
-            console.warn(e);
-            debug.log('error while reading general settings ui');
-          }
-        });
-
+      app.config.overlay.hotkey = $('#hotkey').text();
+      app.config.overlay.scale = $('#scaleSlider').val();
+      app.config.overlay.duration = $('#durationSlider').val();
       $('#options-ui .right')
         .children('select')
         .each(function (index) {
@@ -195,6 +241,20 @@ const appPath = remote.app.getAppPath();
           } catch (e) {
             console.warn(e);
             debug.log('error while reading notification common settings ui');
+          }
+        });
+
+      $('#options-notify-chromium .right')
+        .children('select')
+        .each(function (index) {
+          try {
+            if ($(this)[0].id !== '' && $(this).val() !== '') {
+              app.config.overlay[$(this)[0].id.replace('option_overlay_', '')] =
+                $(this).val() === 'true' ? true : $(this).val() === 'false' ? false : $(this).val();
+            }
+          } catch (e) {
+            console.warn(e);
+            debug.log('error while reading general settings ui');
           }
         });
 
@@ -270,6 +330,8 @@ const appPath = remote.app.getAppPath();
           }
         }
       }
+
+      app.config.steam.main = $('#options-mainSteam .right select').val();
 
       let userDirList = [];
       $('#settings #dirlist > li').each(function () {
@@ -596,6 +658,16 @@ const appPath = remote.app.getAppPath();
       };
     });
 
+    $('#chromium_playtime_test').click(async function () {
+      ipcRenderer.send('playtime-test');
+    });
+    $('#chromium_progress_test').click(async function () {
+      ipcRenderer.send('progress-test');
+    });
+    $('#chromium_notify_test').click(async function () {
+      ipcRenderer.send('notify-test');
+    });
+
     $('#notify_test').click(function () {
       let self = $(this);
       self.css('pointer-events', 'none');
@@ -682,7 +754,7 @@ function populateUserDirList(option) {
   };
 
   let alreadyInList = false;
-  $('#dirlist > li').each(function () {
+  $('#settings #dirlist > li').each(function () {
     let dir = $(this).find('.path span').text();
     if (path.normalize(dir) == path.normalize(options.dir)) {
       alreadyInList = true;
@@ -711,12 +783,12 @@ function populateUserDirList(option) {
               </li>`;
 
   if (options.reverse) {
-    $('#dirlist').append(template);
+    $('#settings #dirlist').append(template);
   } else {
-    $('#dirlist').prepend(template);
+    $('#settings #dirlist').prepend(template);
   }
 
-  let elem = options.reverse ? $('#dirlist > li').last() : $('#dirlist > li').first();
+  let elem = options.reverse ? $('#settings #dirlist > li').last() : $('#settings #dirlist > li').first();
 
   if (elem.find('.path span').width() >= 350 || options.dir.length > 42) {
     elem.find('.path').addClass('overflow');
@@ -785,4 +857,32 @@ function populateOverlayPreset(selected) {
   for (let preset of folders) {
     selector.append(`<option value="${preset}" ${preset === selected ? 'selected' : ''}>${preset}</option>`);
   }
+}
+
+function populateLegitUsers(selected) {
+  let list = ipcRenderer.sendSync('get-steam-user-list');
+  let selector = $('#option_mainSteam');
+  let defaultOption = selector.find('option[value="0"]');
+  defaultOption.prop('selected', selected === '0');
+  selector.empty();
+  selector.append(defaultOption);
+  for (let user of list) selector.append(`<option value="${user.user}" ${selected === user.user ? 'selected' : ''}>${user.name}</option>`);
+}
+
+function populateSounds(selected) {
+  const supportedExtensions = ['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'];
+  let mediaPath = path.join(remote.app.getPath('userData'), 'Media');
+  const files = fs.readdirSync(mediaPath).filter((f) => supportedExtensions.includes(path.extname(f).toLocaleLowerCase()));
+  let selector = $('#option_customToastAudio');
+  let mutedOption = selector.find('option[value="0"]');
+  let defaultOption = selector.find('option[value="1"]');
+  mutedOption.prop('selected', selected === '0');
+  defaultOption.prop('selected', selected === '1' || !files.includes(selected));
+  selector.empty();
+  selector.append(mutedOption);
+  selector.append(defaultOption);
+  for (let f of files)
+    selector.append(
+      `<option value="2" data-file="${f}" ${selected === path.basename(f) ? 'selected' : ''}>${path.basename(f, path.extname(f))}</option>`
+    );
 }

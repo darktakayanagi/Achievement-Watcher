@@ -1,5 +1,6 @@
 temp/
 service/watchdog/_wip_
+service/obs
 
 # Node modules
 app/node_modules/

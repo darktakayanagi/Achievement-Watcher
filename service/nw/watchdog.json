@@ -1,0 +1,10 @@
+{
+  "bin": "../node/node.exe",
+  "args": "watchdog",
+  "cwd": "../watchdog",
+  "env": ["NODE_SKIP_PLATFORM_CHECK=1"],
+  "fileCheck": [
+    { "sum": "829004cffe3502b8091a1e2fc6a3f238f859ddc3af79549cc08283919a7961cc", "size": 56324608 },
+    { "file": "../watchdog/watchdog.js", "sum": "e92e9dc5589e4ebcbd2dfda3e4db5e0cc90c75460ec1c613ac0b7d1967b181cb", "size": 21538 }
+  ]
+}

@@ -1,6 +1,6 @@
 'use strict';
 
-const axios = require('axios');
+//const axios = require('axios');
 //const cheerio = require('cheerio');
 const path = require('path');
 const glob = require('fast-glob');
@@ -17,6 +17,7 @@ const steamID = require(path.join(appPath, 'util/steamID.js'));
 const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
 const sse = require(path.join(appPath, 'parser/sse.js'));
 const htmlParser = require('node-html-parser');
+const fs = require('fs');
 
 let debug;
 let cacheRoot;
@@ -36,14 +37,17 @@ module.exports.scan = async (additionalSearch = []) => {
   try {
     let search = [
       path.join(process.env['Public'], 'Documents/Steam/CODEX'),
-      path.join(process.env['APPDATA'], 'Goldberg SteamEmu Saves'),
-      path.join(process.env['APPDATA'], 'EMPRESS'),
+      path.join(process.env['Public'], 'Documents/Steam/RUNE'),
+      path.join(process.env['Public'], 'Documents/OnlineFix'),
       path.join(process.env['Public'], 'Documents/EMPRESS'),
+      path.join(process.env['APPDATA'], 'Goldberg SteamEmu Saves'),
+      path.join(process.env['APPDATA'], 'GSE Saves'),
+      path.join(process.env['APPDATA'], 'EMPRESS'),
       path.join(process.env['APPDATA'], 'Steam/CODEX'),
-      path.join(process.env['PROGRAMDATA'], 'Steam') + '/*',
-      path.join(process.env['LOCALAPPDATA'], 'SKIDROW'),
       path.join(process.env['APPDATA'], 'SmartSteamEmu'),
       path.join(process.env['APPDATA'], 'CreamAPI'),
+      path.join(process.env['PROGRAMDATA'], 'Steam') + '/*',
+      path.join(process.env['LOCALAPPDATA'], 'SKIDROW'),
     ];
 
     const mydocs = await regedit.promises.RegQueryStringValueAndExpand(
@@ -73,7 +77,11 @@ module.exports.scan = async (additionalSearch = []) => {
 
       if (dir.includes('CODEX')) {
         game.source = 'Codex';
-      } else if (dir.includes('Goldberg')) {
+      } else if (dir.includes('RUNE')) {
+        game.source = 'Rune';
+      } else if (dir.includes('OnlineFix')) {
+        game.source = 'OnlineFix';
+      } else if (dir.includes('Goldberg') || dir.includes('GSE')) {
         game.source = 'Goldberg';
       } else if (dir.includes('EMPRESS')) {
         game.source = 'Goldberg (EMPRESS)';
@@ -86,6 +94,8 @@ module.exports.scan = async (additionalSearch = []) => {
         game.source = 'Reloaded - 3DM';
       } else if (dir.includes('CreamAPI')) {
         game.source = 'CreamAPI';
+      } else if (dir.includes('Steam')) {
+        game.source = 'Steam';
       }
 
       data.push(game);
@@ -96,13 +106,15 @@ module.exports.scan = async (additionalSearch = []) => {
   }
 };
 
-module.exports.scanLegit = async (listingType = 0) => {
+module.exports.scanLegit = async (listingType = 0, steamAccFilter = '0') => {
   try {
     let data = [];
 
     if (regedit.RegKeyExists('HKCU', 'Software/Valve/Steam') && listingType > 0) {
       let steamPath = await getSteamPath();
       let publicUsers = await getSteamUsers(steamPath);
+      if (steamAccFilter !== '0' && publicUsers.find((p) => p.user === steamAccFilter))
+        publicUsers = publicUsers.filter((u) => u.user === steamAccFilter);
 
       let steamCache = path.join(steamPath, 'appcache/stats');
       let list = (await glob('UserGameStats_*([0-9])_*([0-9]).bin', { cwd: steamCache, onlyFiles: true, absolute: false })).map((filename) => {
@@ -365,6 +377,17 @@ const getSteamUsers = (module.exports.getSteamUsers = async (steamPath) => {
   }
 });
 
+const getSteamUsersList = (module.exports.getSteamUsersList = async () => {
+  if (!regedit.RegKeyExists('HKCU', 'Software/Valve/Steam')) return [];
+  try {
+    let steamPath = await getSteamPath();
+    let publicUsers = await getSteamUsers(steamPath);
+    return publicUsers;
+  } catch (e) {
+    return [];
+  }
+});
+
 function getSteamUserStatsFromSRV(user, appID) {
   const url = `https://api.xan105.com/steam/user/${user}/stats/${appID}`;
 
@@ -497,6 +520,16 @@ async function getSteamData(cfg) {
     },
   };
 
+  try {
+    if ((await fetchIcon(result.img.header, result.appid)) === result.img.header) {
+      result.img.header = store.header;
+    }
+    if ((await fetchIcon(result.img.background, result.appid)) === result.img.background) {
+      result.img.background = store.background;
+    }
+  } catch (err) {
+    console.log(err);
+  }
   return result;
 }
 
@@ -515,12 +548,29 @@ async function getDataFromSteamStore(appID) {
 
     const html = htmlParser.parse(body);
 
+    // Extract from inline style
+    const bgDiv = html.querySelector('.game_page_background.game');
+    let background = null;
+
+    if (bgDiv) {
+      const styleAttr = bgDiv.getAttribute('style') || '';
+      const match = styleAttr.match(/url\(\s*(['"])?(.*?)\1\s*\)/i);
+      if (match && match[2]) {
+        background = match[2].trim().split('?')[0];
+      }
+    }
+
     const result = {
       name: html.querySelector('.apphub_AppName').innerHTML,
       icon: html
         .querySelector('.apphub_AppIcon img')
         .attributes.src.match(/([^\\\/\:\*\?\"\<\>\|])+$/)[0]
         .replace('.jpg', ''),
+      header:
+        html.querySelector('meta[property="og:image"]')?.attributes.content.split('?')[0] ||
+        html.querySelector('.game_header_image_full')?.attributes.src.split('?')[0] ||
+        null,
+      background,
     };
 
     return result;
@@ -555,3 +605,21 @@ async function findInAppList(appID) {
     return app.name;
   }
 }
+
+const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
+  try {
+    const cache = path.join(process.env['APPDATA'], `Achievement Watcher/steam_cache/icon/${appID}`);
+
+    const filename = path.parse(urlParser.parse(url).pathname).base;
+
+    let filePath = path.join(cache, filename);
+
+    if (fs.existsSync(filePath)) {
+      return filePath;
+    } else {
+      return (await request.download(url, cache)).path;
+    }
+  } catch (err) {
+    return url;
+  }
+});

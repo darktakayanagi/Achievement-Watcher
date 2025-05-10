@@ -18,13 +18,14 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
   }
   userDir.setUserDataPath(userDataPath);
   steam.initDebug({ isDev, userDataPath });
+  blacklist.initDebug({ isDev, userDataPath });
   debug = new (require('@xan105/log'))({
     console: isDev || false,
     file: path.join(userDataPath, 'logs/parser.log'),
   });
 };
 
-async function discover(source) {
+async function discover(source, steamAccFilter) {
   debug.log('Scanning for games ...');
 
   let data = [];
@@ -76,7 +77,7 @@ async function discover(source) {
   //Legit Steam
   if (source.legitSteam > 0) {
     try {
-      data = data.concat(await steam.scanLegit(source.legitSteam));
+      data = data.concat(await steam.scanLegit(source.legitSteam, steamAccFilter));
     } catch (err) {
       debug.error(err);
     }
@@ -122,56 +123,59 @@ async function discover(source) {
 module.exports.getAchievementData = async () => {};
 
 module.exports.getAchievementsForAppid = async (option, requestedAppid, callbackProgress = () => {}) => {
-  let appidList = await discover(option.achievement_source);
-  let appid = appidList.find((app) => app.appid === requestedAppid.notificationAppid) || {
-    appid: requestedAppid.notificationAppid,
-    data: { type: 'steamAPI' },
+  let appidList = await discover(option.achievement_source, option.steam.main);
+  let app = (await appidList.find((app) => app.appid === String(requestedAppid))) || {
+    appid: requestedAppid,
+    data: { type: 'unknown' },
   };
+
   let percent = 0.5;
   let result = [];
   let game;
   let isDuplicate = false;
 
   try {
-    if (result.some((res) => res.appid == appid.appid) && option.achievement.mergeDuplicate) {
-      game = result.find((elem) => elem.appid == appid.appid);
+    if (result.some((res) => res.appid == app.appid) && option.achievement.mergeDuplicate) {
+      game = result.find((elem) => elem.appid == app.appid);
       isDuplicate = true;
-    } else if (appid.data.type === 'rpcs3') {
+    } else if (app.data.type === 'rpcs3') {
       game = await rpcs3.getGameData(appid.data.path);
-    } else if (appid.data.type === 'uplay' || appid.data.type === 'lumaplay') {
-      game = await uplay.getGameData(appid.appid, option.achievement.lang);
+    } else if (app.data.type === 'uplay' || app.data.type === 'lumaplay') {
+      game = await uplay.getGameData(app.appid, option.achievement.lang);
     } else {
       game = await steam.getGameData({
-        appID: appid.appid,
+        appID: app.appid,
         lang: option.achievement.lang,
         key: option.steam.apiKey,
       });
     }
 
-    if (!option.achievement.mergeDuplicate && appid.source) game.source = appid.source;
-    return game;
+    if (!option.achievement.mergeDuplicate && app.source) game.source = app.source;
+
+    if (app.data.type === 'unknown') return game;
+
     let root = {};
     try {
-      if (appid.data.type === 'file') {
-        root = await steam.getAchievementsFromFile(appid.data.path);
+      if (app.data.type === 'file') {
+        root = await steam.getAchievementsFromFile(app.data.path);
         //Note to self: Empty file should be considered as a 0% game -> do not throw an error just issue a warning
         if (root.constructor === Object && Object.entries(root).length === 0)
-          debug.warn(`[${appid.appid}] Warning ! Achievement file in '${appid.data.path}' is probably empty`);
-      } else if (appid.data.type === 'reg') {
-        root = await greenluma.getAchievements(appid.data.root, appid.data.path);
-      } else if (appid.data.type === 'steamAPI') {
+          debug.warn(`[${app.appid}] Warning ! Achievement file in '${app.data.path}' is probably empty`);
+      } else if (app.data.type === 'reg') {
+        root = await greenluma.getAchievements(app.data.root, app.data.path);
+      } else if (app.data.type === 'steamAPI') {
         root = await steam.getAchievementsFromAPI({
-          appID: appid.appid,
-          user: appid.data.userID,
-          path: appid.data.cachePath,
+          appID: app.appid,
+          user: app.data.userID,
+          path: app.data.cachePath,
           key: option.steam.apiKey,
         });
-      } else if (appid.data.type === 'rpcs3') {
-        root = await rpcs3.getAchievements(appid.data.path, game.achievement.total);
-      } else if (appid.data.type === 'lumaplay') {
-        root = uplay.getAchievementsFromLumaPlay(appid.data.root, appid.data.path);
-      } else if (appid.data.type === 'cached') {
-        root = await watchdog.getAchievements(appid.appid);
+      } else if (app.data.type === 'rpcs3') {
+        root = await rpcs3.getAchievements(app.data.path, game.achievement.total);
+      } else if (app.data.type === 'lumaplay') {
+        root = uplay.getAchievementsFromLumaPlay(app.data.root, app.data.path);
+      } else if (app.data.type === 'cached') {
+        root = await watchdog.getAchievements(app.appid);
       } else {
         throw 'Not yet implemented';
       }
@@ -252,9 +256,9 @@ module.exports.getAchievementsForAppid = async (option, requestedAppid, callback
           }
         } catch (err) {
           if (err === 'ACH_NOT_FOUND_IN_SCHEMA') {
-            debug.warn(`[${appid.appid}] Achievement not found in game schema data ?! ... Achievement was probably deleted or renamed over time`);
+            debug.warn(`[${app.appid}] Achievement not found in game schema data ?! ... Achievement was probably deleted or renamed over time`);
           } else {
-            debug.error(`[${appid.appid}] Unexpected Error: ${err}`);
+            debug.error(`[${app.appid}] Unexpected Error: ${err}`);
           }
         }
       }
@@ -262,10 +266,10 @@ module.exports.getAchievementsForAppid = async (option, requestedAppid, callback
 
     game.achievement.unlocked = game.achievement.list.filter((ach) => ach.Achieved == 1).length;
     if (!isDuplicate) result.push(game);
-
+    return game;
     //loop appid
   } catch (err) {
-    debug.error(`[${appid.appid}] Error parsing local achievements data => ${err} > SKIPPING`);
+    debug.error(`[${app.appid}] Error parsing local achievements data => ${err} > SKIPPING`);
   }
 
   callbackProgress(percent);
@@ -275,7 +279,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
   try {
     let result = [];
 
-    let appidList = await discover(option.achievement_source);
+    let appidList = await discover(option.achievement_source, option.steam.main);
 
     if (appidList.length > 0) {
       let count = 1;

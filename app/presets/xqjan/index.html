@@ -44,7 +44,7 @@
         overscroll-behavior: none;
       }
 
-      .notification {
+      .ach {
         position: relative;
         background: rgba(34, 34, 34, 0.85);
         border-radius: 50%;
@@ -145,7 +145,7 @@
         transition: opacity 0.3s ease;
       }
 
-      .notification.expanded .icon img {
+      .ach.expanded .icon img {
         opacity: 0;
       }
 
@@ -181,7 +181,7 @@
         }
       }
 
-      .text {
+      .text_wrap {
         position: absolute;
         display: flex;
         flex-direction: column;
@@ -204,7 +204,7 @@
         color: white;
       }
 
-      .desc {
+      .detail {
         font-size: 0.9rem;
         color: #ccc;
       }
@@ -273,7 +273,7 @@
     </style>
   </head>
   <body>
-    <div class="notification">
+    <div class="ach">
       <div class="loader-wrapper">
         <div class="achievement-loader"></div>
         <div class="achievement-loader"></div>
@@ -282,26 +282,11 @@
       <div class="icon">
         <img src="" alt="Icon" />
       </div>
-      <div class="text">
+      <div class="text_wrap">
         <div class="title"></div>
-        <div class="desc"></div>
+        <div class="detail"></div>
       </div>
     </div>
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        window.api?.onNotification?.((notificationData) => {
-          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
-            document.querySelector('.title').textContent = notificationData.displayName;
-            document.querySelector('.desc').textContent = notificationData.description;
-            document.querySelector('.icon img').src = `${notificationData.iconPath}`;
-
-            const root = document.body;
-            const scale = parseFloat(notificationData.scale || 1);
-            root.style.transform = `scale(${scale})`;
-            root.style.transformOrigin = 'center center';
-          }
-        });
-      });
-    </script>
+    <script src="../scriptCode.js"></script>
   </body>
 </html>

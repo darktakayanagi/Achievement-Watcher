@@ -1433,7 +1433,8 @@ main {
   margin: 0 10px 0 auto;
 }
 
-#dirlist > li .controls ul > li {
+#dirlist > li .controls ul > li,
+#btn-hotkey-edit {
   display: inline-block;
   padding: 5px 10px;
   margin: auto 0;
@@ -1445,7 +1446,8 @@ main {
   text-align: center;
 }
 
-#defaultdir > li .controls ul > li {
+#defaultdir > li .controls ul > li,
+#btn-hotkey-edit {
   display: inline-block;
   width: 34px;
   box-sizing: border-box;
@@ -1453,7 +1455,8 @@ main {
   margin: auto 0;
 }
 
-#dirlist > li .controls ul > li:hover {
+#dirlist > li .controls ul > li:hover,
+#btn-hotkey-edit:hover {
   background-color: rgba(255, 255, 255, 0.2);
   color: #ffffff;
 }

@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('customApi', {
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('customApi', {
   closeWindow: () => ipcRenderer.send('close-window'),
 });
 
+ipcRenderer.on('set-window-scale', (event, scale) => {
+  webFrame.setZoomFactor(scale);
+});
 contextBridge.exposeInMainWorld('api', {
   // Config management
   saveConfig: (config) => ipcRenderer.invoke('saveConfig', config),
@@ -29,6 +32,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.once(channel, (_, data) => callback(data));
   },
   disableProgress: (value) => ipcRenderer.send('set-disable-progress', value),
+  onAnimationScale: (callback) => ipcRenderer.on('set-animation-scale', callback),
 
   // Event for receiving a new monitored achievement
   onNewAchievement: (callback) => ipcRenderer.on('new-achievement', (event, data) => callback(data)),

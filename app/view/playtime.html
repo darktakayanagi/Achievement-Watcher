@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Playtime Notification</title>
+    <style>
+      :root {
+        --transition: 0.3s;
+        --displaytime: 6s;
+        --scale: 1;
+        --roundness: 16px;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: 'Segoe UI', sans-serif;
+        overflow: hidden;
+      }
+
+      .playtime-container {
+        width: 460px;
+        border-radius: var(--roundness);
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(6px);
+        color: white;
+        transform: scale(0) translateY(30px);
+        opacity: 0;
+      }
+
+      .header-img {
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+      }
+
+      .info-bar {
+        display: flex;
+        gap: 16px;
+        padding: 16px;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .text-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        flex: 1;
+      }
+
+      .title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 4px;
+      }
+
+      .desc {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      @keyframes play-in {
+        to {
+          transform: scale(var(--scale)) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes play-hold {
+        to {
+          transform: scale(var(--scale)) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes play-out {
+        to {
+          transform: scale(0.85) translateY(20px);
+          opacity: 0;
+        }
+      }
+
+      .playtime-in {
+        animation: play-in var(--transition) ease-out forwards,
+          play-hold calc(var(--displaytime) - var(--transition) * 2) ease forwards var(--transition),
+          play-out var(--transition) ease-in forwards calc(var(--displaytime) - var(--transition));
+      }
+
+      .playtime-out {
+        animation: play-out var(--transition) ease-in forwards;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="playtime-container" id="playtime-box">
+      <img id="header-img" class="header-img" src="" alt="Game Header" />
+      <div class="info-bar">
+        <div class="text-content">
+          <div class="title" id="play-title">Game Name</div>
+          <div class="desc" id="play-desc">Tracking Playtime...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = window.electron;
+
+      window.addEventListener('DOMContentLoaded', () => {
+        const box = document.getElementById('playtime-box');
+        const title = document.getElementById('play-title');
+        const desc = document.getElementById('play-desc');
+        const header = document.getElementById('header-img');
+
+        ipcRenderer.on('show-playtime', (data) => {
+          title.textContent = data.displayName || 'Now Playing';
+          desc.textContent = data.description || 'Playtime started';
+          header.src = data.headerUrl || '';
+
+          if (data.scale) {
+            document.documentElement.style.setProperty('--scale', data.scale);
+          }
+
+          box.classList.remove('playtime-in', 'playtime-out');
+          void box.offsetWidth;
+          box.classList.add('playtime-in');
+
+          const styles = getComputedStyle(document.documentElement);
+          const displayTime = parseFloat(styles.getPropertyValue('--displaytime')) || 6;
+          setTimeout(() => {
+            ipcRenderer.send('close-playtime-window');
+          }, displayTime * 1000);
+        });
+
+        ipcRenderer.on('start-close-animation', () => {
+          if (data.scale) {
+            document.documentElement.style.setProperty('--scale', data.scale);
+          }
+
+          box.classList.remove('playtime-in', 'playtime-out');
+          void box.offsetWidth;
+          box.classList.add('playtime-in');
+
+          const styles = getComputedStyle(document.documentElement);
+          const displayTime = parseFloat(styles.getPropertyValue('--displaytime')) || 6;
+          setTimeout(() => {
+            ipcRenderer.send('close-playtime-window');
+          }, displayTime * 1000);
+        });
+      });
+    </script>
+  </body>
+</html>

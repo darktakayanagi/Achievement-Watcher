@@ -1,10 +1,9 @@
 'use strict';
-
 const { ipcRenderer } = require('electron');
-const userDataPath = null;
-async function getUserDataPath() {
+let userDataPath = null;
+function getUserDataPath() {
   if (userDataPath) return userDataPath;
-  userDataPath = await ipcRenderer.invoke('get-user-data-path');
+  userDataPath = ipcRenderer.sendSync('get-user-data-path-sync');
   return userDataPath;
 }
 const os = require('os');
@@ -12,9 +11,10 @@ const fs = require('fs');
 const args_split = require('argv-split');
 const args = require('minimist');
 const moment = require('moment');
-const { execFile } = require('child_process');
+const { spawn } = require('child_process');
 const humanizeDuration = require('humanize-duration');
 const settings = require(path.join(appPath, 'settings.js'));
+settings.setUserDataPath(getUserDataPath());
 const achievements = require(path.join(appPath, 'parser/achievements.js'));
 const userdatapath = ipcRenderer.sendSync('get-user-data-path-sync');
 achievements.initDebug({ isDev: ipcRenderer.sendSync('win-isDev') || false, userDataPath: userdatapath });
@@ -29,18 +29,33 @@ let debug = new (require('@xan105/log'))({
   file: path.join(userdatapath, `logs/${ipcRenderer.sendSync('get-app-name-sync')}.log`),
 });
 
+ipcRenderer.on('reset-watchdog-status', (event) => {
+  let shadow = document.querySelector('title-bar').shadowRoot;
+  let watchdogStatus = shadow.querySelector('.status-dot');
+  let watchdoglbl = shadow.querySelector('.status-text');
+  watchdoglbl.textContent = 'Checking watchdog status...';
+  watchdogStatus.classList.remove('status-green', 'status-red');
+  watchdogStatus.classList.add('status-orange');
+  let startBtn = shadow.querySelector('#start-watchdog');
+  startBtn.textContent = '';
+  startBtn.innerHTML = '';
+});
+
 ipcRenderer.on('watchdog-status', (event, found) => {
   let shadow = document.querySelector('title-bar').shadowRoot;
   let watchdogStatus = shadow.querySelector('.status-dot');
   let watchdoglbl = shadow.querySelector('.status-text');
-  watchdoglbl.textContent = 'Watchdog is not running! (overlay/notifications won`t work until restarted.)';
+  watchdoglbl.textContent = 'Watchdog is not running! (overlay/notifications won`t trigger.)';
   watchdogStatus.classList.remove('status-green', 'status-orange');
   watchdogStatus.classList.add('status-red');
+  let startBtn = shadow.querySelector('#start-watchdog');
+  startBtn.innerHTML = '<i class="fas fa-shield-alt"></i>Click to Start Watchdog!';
   if (found) {
     //let watchdogStatus = shadow.querySelector('.status-dot.status-orange');
     watchdogStatus.classList.remove('status-orange', 'status-red');
     watchdogStatus.classList.add('status-green');
     watchdoglbl.textContent = 'Watchdog is running (overlay/notifications should work properly)';
+    startBtn.textContent = '';
   }
 });
 
@@ -131,8 +146,16 @@ var app = {
                   <div class="loading-overlay"><div class="content"><i class="fas fa-spinner fa-spin"></i></div></div>
                   ${
                     portrait && list[game].img.portrait
-                      ? `<div class="header glow" style="background: url('${list[game].img.portrait}');">`
-                      : `<div class="header" style="background: url('${list[game].img.header}');">`
+                      ? `<div class="header glow" style="background: url('${ipcRenderer.sendSync(
+                          'fetch-icon',
+                          list[game].img.portrait,
+                          list[game].appid
+                        )}');">`
+                      : `<div class="header" style="background: url('${ipcRenderer.sendSync(
+                          'fetch-icon',
+                          list[game].img.header,
+                          list[game].appid
+                        )}');">`
                   }
 
                   <!-- Play Button -->
@@ -733,20 +756,26 @@ var app = {
     }
 
     if (fs.statSync(cfg.exe).isFile()) {
-      let game = execFile(cfg.exe, [], { cwd: path.dirname(cfg.exe), detached: true, stdio: 'ignore' }, (error) => {
-        if (error) {
-          console.error('Failed to start the game:', error);
-        } else {
-          console.log('Game launched!');
+      let game = spawn(
+        cfg.exe,
+        cfg.args.trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [],
+        { cwd: path.dirname(cfg.exe), detached: true, stdio: 'ignore' },
+        (error) => {
+          if (error) {
+            console.error('Failed to start the game:', error);
+          } else {
+            console.log('Game launched!');
+          }
         }
-      });
+      );
       game.unref();
     }
   },
   onConfigButtonClick: async function (self) {
+    let appid = self.closest('.game-box').data('appid');
+    console.log(`Opening config window for appid ${appid}`);
     $('#game-config').show();
     $('#game-config .box').fadeIn();
-    let appid = self.closest('.game-box').data('appid');
     $('#game-config .header').attr('title', appid);
     let cfg = await exeList.get(appid);
     let exeLbl = $('#game-config').find('.constant');
