@@ -2,7 +2,7 @@
   "private": true,
   "name": "Achievement-Watcher",
   "description": "A sexy achievement file parser with real-time notification.",
-  "version": "1.6.8",
+  "version": "2.0.0",
   "main": "./electron/init.js",
   "engines": {
     "node": "~14.0.0"
@@ -11,15 +11,35 @@
     "start": "electron .",
     "native-rebuild": "call .\\node_modules\\.bin\\electron-rebuild.cmd",
     "clean": "npm prune --production",
-    "prepare": "patch-package"
+    "prepare": "patch-package",
+    "build": "electron-builder"
   },
   "author": "Anthony Beaumont",
   "license": "LGPL-3.0-only",
   "devDependencies": {
     "electron": "12.2.3",
+    "electron-builder": "^22.14.13",
     "electron-context-menu": "^2.5.0",
     "electron-rebuild": "^2.3.5",
     "patch-package": "^6.2.2"
+  },
+  "build": {
+    "productName": "Achievement Watcher",
+    "publish": {
+      "provider": "github",
+      "owner": "darktakayanagi",
+      "repo": "Achievement-Watcher"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "resources\\icon\\icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh"
+    }
   },
   "dependencies": {
     "@electron/remote": "^1.1.0",
@@ -31,6 +51,7 @@
     "argv-split": "^2.0.1",
     "crc": "^3.8.0",
     "deepmerge": "^4.2.2",
+    "electron-updater": "^4.6.5",
     "fast-glob": "^3.2.4",
     "find-up": "^4.1.0",
     "humanize-duration": "^3.25.1",
@@ -40,11 +61,9 @@
     "moment": "^2.29.1",
     "node-html-parser": "^4.0.0",
     "normalize-path": "^3.0.0",
-    "puppeteer": "^13.5.2",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "regodit": "^1.1.2",
     "request-zero": "^0.3.2",
+    "sound-play": "^1.1.0",
     "steamid": "^1.1.3",
     "windows-focus-assist": "^1.2.1",
     "xml2js": "^0.4.23"
@@ -64,7 +83,7 @@
       "view": "./view/app.html"
     },
     "update": {
-      "github": "xan105/Achievement-Watcher",
+      "github": "darktakayanagi/Achievement-Watcher",
       "name": "Achievement.Watcher.Setup.exe"
     },
     "appid": "io.github.xan105.achievement.watcher"

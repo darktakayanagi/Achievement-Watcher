@@ -5,8 +5,9 @@ const urlParser = require('url');
 const fs = require('@xan105/fs');
 const request = require('request-zero');
 const steamLang = require('./steam.json');
+const htmlParser = require('node-html-parser');
 
-module.exports.loadSteamData = async (appID, lang, key) => {
+module.exports.loadSteamData = async (appID, lang, key, binary = null) => {
   if (!steamLang.some((language) => language.api === lang)) {
     throw 'Unsupported API language code';
   }
@@ -22,6 +23,7 @@ module.exports.loadSteamData = async (appID, lang, key) => {
     } else {
       if (key) {
         result = await getSteamData(appID, lang, key);
+        result.binary = binary;
       } else {
         result = await getSteamDataFromSRV(appID, lang);
       }
@@ -82,7 +84,7 @@ async function getSteamData(appID, lang, key) {
 
   const schema = data.game.availableGameStats;
   if (!(schema && schema.achievements && schema.achievements.length > 0)) throw "Schema doesn't have any achievement";
-
+  let store = await getDataFromSteamStore(+appID);
   const result = {
     name: await findInAppList(+appID),
     appid: appID,
@@ -91,7 +93,9 @@ async function getSteamData(appID, lang, key) {
       header: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/header.jpg`,
       background: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/page_bg_generated_v6b.jpg`,
       portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/library_600x900.jpg`,
-      icon: null,
+      icon: store.icon
+        ? `https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/${appID}/${store.icon}.jpg`
+        : 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/480/winner.jpg',
     },
     achievement: {
       total: schema.achievements.length,
@@ -126,5 +130,35 @@ async function findInAppList(appID) {
     const app = list.find((app) => app.appid === appID);
     if (!app) throw 'ERR_NAME_NOT_FOUND';
     return app.name;
+  }
+}
+
+async function getDataFromSteamStore(appID) {
+  if (!appID || !(Number.isInteger(appID) && appID > 0)) throw 'ERR_INVALID_APPID';
+
+  const url = `https://store.steampowered.com/app/${appID}`;
+
+  try {
+    const { body } = await request(url, {
+      headers: {
+        Cookie: 'birthtime=662716801; wants_mature_content=1; path=/; domain=store.steampowered.com', //Bypass age check and mature filter
+        'Accept-Language': 'en-US;q=1.0', //force result to english
+      },
+    });
+
+    const html = htmlParser.parse(body);
+
+    const result = {
+      name: html.querySelector('.apphub_AppName').innerHTML,
+      icon: html
+        .querySelector('.apphub_AppIcon img')
+        .attributes.src.match(/([^\\\/\:\*\?\"\<\>\|])+$/)[0]
+        .replace('.jpg', ''),
+    };
+
+    return result;
+  } catch (err) {
+    debug.warn(err);
+    return {};
   }
 }

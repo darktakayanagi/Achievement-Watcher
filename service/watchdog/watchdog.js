@@ -1,6 +1,7 @@
 'use strict';
 
 const instance = new (require('single-instance'))('Achievement Watchdog');
+const hotkeys = require('node-hotkeys');
 const os = require('os');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -21,21 +22,53 @@ const debug = require('./util/log.js');
 const { crc32 } = require('crc');
 const { isWinRTAvailable } = require('powertoast');
 const { isFullscreenAppRunning } = require('./queryUserNotificationState.js');
+const { startObs, recordGame, setRecordPath, setRecordResolution } = require('./obsHandler.js');
+const userShellFolder = require('./util/userShellFolder.js');
 
 const cfg_file = {
   option: path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'options.ini'),
   userDir: path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'userdir.db'),
 };
 
-const appRoot = path.join(__dirname, '../../app');
+const appRoot = path.join(__dirname, '../');
 
 let isDev = process.env.NODE_ENV === 'development';
+let iohookRunning = false;
+let runningAppid;
+let overlayOpened = false;
+let overlayHotkey;
+let runningGames = [];
 
-function SpawnNotification(args) {
+function parseOverlayHotkey(hotkey) {
+  overlayHotkey = hotkey
+    .split('+')
+    .map((part) => part.trim().toLowerCase())
+    .join(' + ');
+}
+
+function RegisterOverlayHotkey(hotkey) {
+  parseOverlayHotkey(hotkey);
+  debug.log('Registering Overlay hotkey...');
+  if (iohookRunning) return;
+  hotkeys.on({
+    hotkeys: overlayHotkey,
+    matchAllModifiers: true,
+    callback: function () {
+      if (runningAppid) {
+        SpawnOverlayNotification([`--wintype=overlay`, `--appid=${runningAppid}`, `--description=${overlayOpened ? 'close' : 'open'}`]);
+        overlayOpened = !overlayOpened;
+      }
+    },
+  });
+  iohookRunning = true;
+}
+
+function SpawnOverlayNotification(args) {
+  debug.log('Spawning achievement notification...');
   if (isDev) {
-    const electronPath = require('../../app/node_modules/electron'); // assumes 'electron' is installed in node_modules
+    const electronPath = require(path.join(appRoot, '../app/node_modules/electron')); // assumes 'electron' is installed in node_modules
     spawn(electronPath, ['.', ...args], {
-      cwd: appRoot,
+      cwd: path.join(appRoot, '../app'),
       detached: true,
       stdio: 'ignore',
     }).unref();
@@ -43,10 +76,12 @@ function SpawnNotification(args) {
     const execPath = path.join(appRoot, 'AchievementWatcher.exe'); // adjust for build path
     spawn(execPath, args, {
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', process.stdout, process.stderr],
     }).unref();
+    debug.log(execPath);
   }
 }
+module.exports = { SpawnOverlayNotification };
 
 var app = {
   isRecording: false,
@@ -61,7 +96,6 @@ var app = {
       self.cache = [];
 
       debug.log('Achievement Watchdog starting ...');
-      //TODO: setup global hotkey for the overlay
 
       processPriority
         .set('high priority')
@@ -76,6 +110,16 @@ var app = {
       self.options = await settings.load(cfg_file.option);
       debug.log(self.options);
 
+      RegisterOverlayHotkey(self.options.overlay.hotkey);
+
+      try {
+        startObs().then(async () => {
+          await setRecordPath(userShellFolder['myvideo']);
+          await setRecordResolution();
+        });
+      } catch (err) {
+        debug.log(err);
+      }
       if (isWinRTAvailable() === true && self.options.notification_transport.winRT === true) debug.log('[Toast] will use WinRT');
       else debug.warn('[Toast] will use PowerShell');
 
@@ -163,12 +207,16 @@ var app = {
         try {
           appID = options.appid
             ? options.appid
-            : filePath.dir.replace(/(\\stats$)|(\\SteamEmu$)|(\\SteamEmu\\UserStats$)/g, '').match(/([0-9]+$)/g)[0];
+            : filePath.dir.replace(/(\\stats$)|(\\SteamEmu$)|(\\SteamEmu\\UserStats$)/gi, '').match(/([0-9]+$)/g)[0];
         } catch (err) {
           throw "Unable to find game's appID";
         }
 
-        let game = await self.load(appID);
+        let game = runningGames.find((g) => String(g.appid) === appID) || (await self.load(appID));
+        if (game.achievement === undefined) {
+          let g = await self.load(appID);
+          game.achievement = g.achievement;
+        }
 
         let isRunning = false;
 
@@ -269,8 +317,6 @@ var app = {
                         debug.error(`Action failed: ${err}`);
                       }
 
-                      await SpawnNotification([`--notify-appid=${game.appid}`, `--notify-ach=${ach.name}`]);
-
                       await notify(
                         {
                           appid: game.appid,
@@ -288,6 +334,7 @@ var app = {
                             toast: self.options.notification_transport.toast,
                             gntp: self.options.notification_transport.gntp,
                             websocket: self.options.notification_transport.websocket,
+                            chromium: self.options.notification_transport.chromium,
                           },
                           toast: {
                             appid: self.toastID,
@@ -339,6 +386,7 @@ var app = {
                           toast: self.options.notification_transport.toast,
                           gntp: self.options.notification_transport.gntp,
                           websocket: self.options.notification_transport.websocket,
+                          chromium: self.options.notification_transport.chromium,
                         },
                         toast: {
                           appid: self.toastID,
@@ -408,7 +456,9 @@ var app = {
 instance
   .lock()
   .then(() => {
-    app.start().catch(() => {});
+    app.start().catch((err) => {
+      debug.log(err);
+    });
 
     try {
       websocket();
@@ -421,7 +471,23 @@ instance
       .then((monitor) => {
         debug.log('Playtime monitoring activated');
 
-        monitor.on('notify', ([game, time]) => {
+        monitor.on('disable-overlay', () => {
+          runningAppid = null;
+          SpawnOverlayNotification([`--wintype=overlay`, `--appid=0`]);
+        });
+
+        monitor.on('enable-overlay', (appid) => {
+          runningAppid = appid;
+        });
+
+        monitor.on('notify', async ([game, time]) => {
+          if (time) {
+            let gameIndex = runningGames.findIndex((g) => g.appid === game.appid);
+            if (gameIndex !== -1) runningGames.splice(gameIndex, 1);
+          } else {
+            runningGames.push(game);
+            recordGame(game);
+          }
           if (app.options.notification.playtime) {
             notify(
               {
@@ -438,6 +504,7 @@ instance
                   toast: app.options.notification_transport.toast,
                   gntp: app.options.notification_transport.gntp,
                   websocket: false,
+                  chromium: app.options.notification_transport.chromium,
                 },
                 toast: {
                   appid: app.toastID,

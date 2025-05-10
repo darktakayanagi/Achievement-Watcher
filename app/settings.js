@@ -4,6 +4,7 @@ const appPath = __dirname;
 const path = require('path');
 const ini = require('@xan105/ini');
 const fs = require('fs');
+const os = require('os');
 const ffs = require('@xan105/fs');
 const aes = require(path.join(appPath, 'util/aes.js'));
 const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
@@ -15,7 +16,7 @@ module.exports.setUserDataPath = (p) => {
 
 module.exports.load = () => {
   let options;
-
+  console.log('Loading settings');
   try {
     options = ini.parse(fs.readFileSync(filename, 'utf8'));
 
@@ -28,16 +29,13 @@ module.exports.load = () => {
       }
     }
 
+    if (typeof options.username !== 'string') {
+      options.username = os.userInfo().username || 'User';
+    }
+
     // overlay / new notifications
-    if (
-      options.overlay.position != 0 &&
-      options.overlay.position != 1 &&
-      options.overlay.position != 2 &&
-      options.overlay.position != 3 &&
-      options.overlay.position != 4 &&
-      options.overlay.position != 5
-    ) {
-      options.overlay.position = 0;
+    if (typeof options.overlay.position !== 'string') {
+      options.overlay.position = 'right-top';
     }
 
     if (typeof options.overlay.preset !== 'string') {
@@ -46,6 +44,14 @@ module.exports.load = () => {
 
     if (typeof options.overlay.hotkey !== 'string') {
       options.overlay.hotkey = 'Ctrl+Shift+O';
+    }
+
+    if (isNaN(options.overlay.scale)) {
+      options.overlay.scale = 100;
+    }
+
+    if (isNaN(options.overlay.duration)) {
+      options.overlay.duration = 100;
     }
 
     if (typeof options.achievement.thumbnailPortrait !== 'boolean') {
@@ -136,6 +142,10 @@ module.exports.load = () => {
 
     //Transport
 
+    if (typeof options.notification_transport.chromium !== 'boolean') {
+      options.notification_transport.chromium = true;
+    }
+
     if (typeof options.notification_transport.toast !== 'boolean') {
       options.notification_transport.toast = true;
     }
@@ -172,6 +182,10 @@ module.exports.load = () => {
 
     if (typeof options.notification_advanced.iconPrefetch !== 'boolean') {
       options.notification_advanced.iconPrefetch = true;
+    }
+
+    if (typeof options.steam.main !== 'string') {
+      options.steam.main = '0';
     }
 
     //Souvenir
@@ -251,11 +265,15 @@ module.exports.load = () => {
       options.steam = {};
     }
   } catch (err) {
+    console.log(`failed to load settings: ${err}`);
     options = {
+      username: os.userInfo().username || 'User',
       overlay: {
-        position: 0,
+        position: 'right-top',
         preset: 'default',
         hotkey: 'Ctrl+Shift+O',
+        scale: 100,
+        duration: 100,
       },
       achievement: {
         thumbnailPortrait: false,
@@ -284,6 +302,7 @@ module.exports.load = () => {
         groupToast: false,
       },
       notification_transport: {
+        chromium: true,
         toast: true,
         winRT: true,
         balloon: true,
@@ -316,7 +335,7 @@ module.exports.load = () => {
         cwd: '',
         hide: true,
       },
-      steam: {},
+      steam: { main: '0' },
     };
 
     try {

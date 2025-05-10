@@ -15,9 +15,7 @@
   backdrop-filter: blur(8px);
   transform: scale(0) translateY(30px);
   opacity: 0;
-  animation:
-    ach-in var(--transition) ease-out forwards,
-    ach-hold calc(var(--displaytime) - var(--transition) * 2) ease forwards var(--transition),
+  animation: ach-in var(--transition) ease-out forwards, ach-hold calc(var(--displaytime) - var(--transition) * 2) ease forwards var(--transition),
     ach-out var(--transition) ease-in forwards calc(var(--displaytime) - var(--transition));
 }
 

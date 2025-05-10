@@ -3,6 +3,12 @@
 const path = require('path');
 const regedit = require('regodit');
 
+let userDataPath;
+
+module.exports.setUserDataPath = (p) => {
+  userDataPath = p;
+};
+
 module.exports.getDefault = () => {
   const _default_ = 'Windows Notify System Generic.wav';
 
@@ -21,7 +27,7 @@ module.exports.getDefault = () => {
 
 module.exports.setCustom = (filename) => {
   try {
-    const file = path.join(process.env['WINDIR'], 'Media', filename);
+    const file = path.join(userDataPath, 'Media', filename);
 
     regedit.RegWriteStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Current', '', file);
     regedit.RegWriteStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Default', '', file);
@@ -35,7 +41,7 @@ module.exports.getCustom = () => {
     const filepath = regedit.RegQueryStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Current', '');
 
     if (filepath) {
-      return path.parse(filepath).base;
+      return filepath;
     } else {
       return '';
     }

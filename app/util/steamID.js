@@ -10,8 +10,12 @@ module.exports = {
   },
   whoIs: async function (steamID64) {
     const url = `http://steamcommunity.com/profiles/${steamID64}/?xml=1`;
-    const userProfile = await request.getXml(url);
-    return userProfile;
+    try {
+      const userProfile = await request.getXml(url);
+      return userProfile;
+    } catch (e) {
+      return {}; //if it fails is because that account is not valid or doesnt exist
+    }
   },
   isPublic: async function (steamID64) {
     let user = await this.whoIs(steamID64);

@@ -12,13 +12,16 @@ const tasklist = require('win-tasklist');
 const Timer = require('./timer.js');
 const TimeTrack = require('./track.js');
 const { findByReadingContentOfKnownConfigfilesIn } = require('./steam_appid_find.js');
+const { loadSteamData } = require('../steam.js');
 
 const debug = new (require('@xan105/log'))({
   console: true,
   file: path.join(process.env['APPDATA'], 'Achievement Watcher/logs/playtime.log'),
 });
 
+const appdataPath = process.env['APPDATA'];
 const blacklist = require('./filter.json');
+let gameIndex;
 
 const systemTempDir = os.tmpdir() || process.env['TEMP'] || process.env['TMP'];
 
@@ -29,11 +32,13 @@ const filter = {
       systemTempDir,
       process.env['USERPROFILE'],
       process.env['APPDATA'],
+      path.join(__dirname, '../..'),
       process.env['LOCALAPPDATA'],
       process.env['ProgramFiles'],
       process.env['ProgramFiles(x86)'],
       path.join(process.env['SystemRoot'], 'System32'),
       path.join(process.env['SystemRoot'], 'SysWOW64'),
+      path.join(process.env['SystemRoot']),
     ],
     file: blacklist.mute,
   },
@@ -56,7 +61,7 @@ async function init() {
   const emitter = new EventEmitter();
 
   let nowPlaying = [];
-  let gameIndex = await getGameIndex();
+  gameIndex = await getGameIndex();
 
   await WQL.promises.createEventSink();
   const processMonitor = await WQL.promises.subscribe({
@@ -96,7 +101,17 @@ async function init() {
       try {
         const appid = await findByReadingContentOfKnownConfigfilesIn(gameDir);
         debug.log(`Found appid: ${appid}`);
-        game = games.find((game) => game.appid == appid);
+        //double check that the appid is not on gameIndex:
+        game = gameIndex.find((g) => g.appid === appid);
+        if (!game) {
+          const settings = require('../settings.js');
+          const options = await settings.load(path.join(appdataPath, 'Achievement Watcher/cfg', 'options.ini'));
+          const lang = options.achievement.lang;
+          const apikey = options.steam.apiKey;
+          let d = await loadSteamData(appid, lang, apikey, process);
+          game = { appid, binary: process, icon: d.img.icon.split('/').pop().split('.')[0], name: d.name };
+          addToGameIndex(game);
+        }
       } catch (err) {
         debug.warn(err);
       }
@@ -104,7 +119,11 @@ async function init() {
 
     if (!game) return;
     debug.log(`DB Hit for ${game.name}(${game.appid}) ["${filepath}"]`);
-    let args = getCommandLine(pid);
+    game.pid = pid;
+    //TODO: get launched game and add it to exeList
+    //TODO: check for game updates?
+
+    //let args = getCommandLine(pid);
 
     //RunningAppID is not that reliable and this intefere with Greenluma; Commenting out for now
     /*const runningAppID = await regedit.promises.RegQueryIntegerValue("HKCU","SOFTWARE/Valve/Steam", "RunningAppID") || 0;
@@ -130,7 +149,7 @@ async function init() {
     } else {
       debug.warn('Only one game instance allowed');
     }
-
+    emitter.emit('enable-overlay', game.appid);
     emitter.emit('notify', [game]);
   });
 
@@ -165,11 +184,27 @@ async function init() {
     TimeTrack(game.appid, playedtime).catch((err) => {
       debug.error(err);
     });
-
+    emitter.emit('disable-overlay');
     emitter.emit('notify', [game, 'You played for ' + humanized]);
   });
 
   return emitter;
+}
+
+async function addToGameIndex(game) {
+  let userOverride;
+  try {
+    userOverride = JSON.parse(await fs.readFile(path.join(appdataPath, 'Achievement Watcher/cfg', 'gameIndex.json'), 'utf8'));
+  } catch (err) {
+    if (err.code === 'ENOENT') userOverride = [];
+  }
+  if (userOverride.find((g) => g.appid === game.appid)) return;
+  userOverride.push(game);
+  await fs.writeFile(path.join(appdataPath, 'Achievement Watcher/cfg', 'gameIndex.json'), JSON.stringify(userOverride), 'utf8').catch((err) => {
+    debug.error(err);
+  });
+  gameIndex.push(game);
+  debug.log(`Added ${game.name} to GameIndex.json`);
 }
 
 async function getGameIndex() {
@@ -207,10 +242,10 @@ async function getGameIndex() {
 
   try {
     userOverride = JSON.parse(await fs.readFile(filePath.user, 'utf8'));
-    shouldArrayOfObjWithProperties(userOverride, ['appid', 'name', 'binary']);
+    //shouldArrayOfObjWithProperties(userOverride, ['appid', 'name', 'binary', 'icon']);
     debug.log(`[Playtime] user gameIndex loaded ! ${userOverride.length} override(s)`);
   } catch (err) {
-    debug.error(err);
+    if (err) if (err.code !== 'ENOENT') debug.error(err);
     userOverride = [];
   }
 

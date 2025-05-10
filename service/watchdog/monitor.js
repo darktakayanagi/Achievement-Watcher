@@ -29,11 +29,23 @@ module.exports.getFolders = async (userDir_file) => {
       options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[0]] },
     },
     {
+      dir: path.join(process.env['Public'], 'Documents/Steam/RUNE'),
+      options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[0]] },
+    },
+    {
+      dir: path.join(process.env['Public'], 'Documents/OnlineFix'),
+      options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[0]] },
+    },
+    {
       dir: path.join(process.env['APPDATA'], 'Steam/CODEX'),
       options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[0]] },
     },
     {
       dir: path.join(process.env['APPDATA'], 'Goldberg SteamEmu Saves'),
+      options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[1], files.achievement[0]] }, //keeping "achievements.ini" [0] for backward compatibility with custom goldberg emu build
+    },
+    {
+      dir: path.join(process.env['APPDATA'], 'GSE Saves'),
       options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[1], files.achievement[0]] }, //keeping "achievements.ini" [0] for backward compatibility with custom goldberg emu build
     },
     {
@@ -315,6 +327,7 @@ module.exports.parse = async (filePath) => {
               local[achievement].State == 1 ||
               local[achievement].HaveAchieved == 1 ||
               local[achievement].Unlocked == 1 ||
+              local[achievement].unlocked == 1 ||
               local[achievement].earned ||
               local[achievement] === '1'
                 ? true
@@ -324,6 +337,7 @@ module.exports.parse = async (filePath) => {
             UnlockTime:
               local[achievement].UnlockTime ||
               local[achievement].unlocktime ||
+              local[achievement].unlock_time ||
               local[achievement].HaveAchievedTime ||
               local[achievement].HaveHaveAchievedTime ||
               local[achievement].Time ||

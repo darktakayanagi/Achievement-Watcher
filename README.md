@@ -1,3 +1,23 @@
+# 🔶 Achievement Watcher Fork
+
+> [!IMPORTANT]
+> This fork is not a takeover, not a resurrection of the original project, and not a replacement.
+>
+> This is just my personal changes added to it and made public for anyone who might want to use them.
+>
+> See [Releases](https://github.com/darktakayanagi/Achievement-Watcher/Releases) for full details
+
+## Notable Changes
+
+- Play button to run games from within the app
+- video souvenir now captures also the moments before triggering an achievement, possible with OBS Studio (developed by the OBS Project & licensed under the GNU GPL v2. [Source code](https://github.com/obsproject/obs-studio))
+- Chromium Notifications (developed by [@PSerban93](https://github.com/PSerban93))
+
+<hr />
+<hr />
+
+# Original README
+
 **⚠️ NB: The cache server was shutdown over a year ago.<br />
 You need a Steam Web API key for the app to be able to fetch data from Steam.<br />
 You can acquire one [by filling out this form](https://steamcommunity.com/dev/apikey).<br />
@@ -16,8 +36,9 @@ To see the full list of what this app can import please see the [**Wiki/Compatib
 </tr>
 </table>
 
-The original idea behind this app was that some steam emulators generate a text file where your unlocked achievements are stored. 
+The original idea behind this app was that some steam emulators generate a text file where your unlocked achievements are stored.
 But they aren't very friendly to know which is which, here is an example :
+
 ```ini
 [NEW_ACHIEVEMENT_1_1]
 Achieved=1
@@ -28,17 +49,18 @@ UnlockTime=0000000000
 00000=NEW_ACHIEVEMENT_1_1
 Count=1
 ```
+
 So which achievement is NEW_ACHIEVEMENT_1_1 ? You'll have to ask the steam API or look online in a site like the steamdb to find out.
 So let's just do that automagically :)
 
-Notification on achievement unlocking
-==========================================
+# Notification on achievement unlocking
 
 Not as sexy as a directX Overlay but it's the next best thing.<br />
 Display a notification when you unlock an achievement via<br />
+
 - [Toast notification](https://github.com/xan105/Achievement-Watcher/wiki/Toast-notification) (Windows 8 / 10)
-- [Websocket](https://github.com/xan105/Achievement-Watcher/wiki/Websocket-Notification-'API') (Usage example: Twitch overlay) 
-- [GNTP (Growl)](https://github.com/xan105/Achievement-Watcher/wiki/GNTP-(Growl-Notification-Transport-Protocol)) (Recommended for Windows 7)
+- [Websocket](https://github.com/xan105/Achievement-Watcher/wiki/Websocket-Notification-'API') (Usage example: Twitch overlay)
+- [GNTP (Growl)](<https://github.com/xan105/Achievement-Watcher/wiki/GNTP-(Growl-Notification-Transport-Protocol)>) (Recommended for Windows 7)
 
 ⚠️ **Please verify your system settings for this to work properly**. [More info](https://github.com/xan105/Achievement-Watcher/wiki/Toast-notification#windows-settings)<br />
 You can test notification in Settings > Debug to make sure your system is correctly configured or seems to be.<br />
@@ -48,24 +70,21 @@ There is a lot of things to check so make sure to have a look at the [wiki](http
   <img src="https://github.com/xan105/Achievement-Watcher/raw/1.x/screenshot/live.gif">
 </p>
 
-📸 If you have enabled the *souvenir* option(s) then a screenshot and/or video will be taken when you unlock an achievement.<br />
+📸 If you have enabled the _souvenir_ option(s) then a screenshot and/or video will be taken when you unlock an achievement.<br />
 
-📖 Wiki and troubleshoot
-========================
+# 📖 Wiki and troubleshoot
 
 There is a lot to say about this app. So for more info, configuration, troubleshoot, common issues etc ...<br />
 Please kindly see the [Wiki](https://github.com/xan105/Achievement-Watcher/wiki), thank you.
 
-Translation Help
-================
+# Translation Help
 
 I do my best to translate everything for every supported language by Steam, but it's rather difficult and I don't speak that much languages.<br />
 Fluent in another language ? Any help to add/modify/improve would be greatly appreciated.
 
 More details [here](https://github.com/xan105/achievement-watcher/tree/1.x/app/locale)
 
-How to build
-============
+# How to build
 
 ### Prequisites:
 
@@ -73,6 +92,7 @@ You will need Node.js 14.x in x64 with NPM installed.<br/>
 Innosetup 5 unicode with preprocessor and [Inno Download Plugin](https://mitrichsoftware.wordpress.com/inno-setup-tools/inno-download-plugin/) (building the setup)<br/>
 
 For Node.js you globally need asar and json :<br/>
+
 ```
 npm install -g asar json
 ```
@@ -86,17 +106,16 @@ Install `node_modules` folders with `npm install.cmd`<br/>
 or do it yourself with `npm ci` in `/app`, `/service/updater` and `/service/watchdog`.<br/>
 Use `buildme.cmd` in the root folder to build.
 
-### Notes: 
+### Notes:
 
-+ Most of the native code is now shipped as prebuilt binaries. If you want to compile them yourself I invit you to check out their corresponding repo.<br/>
-NB: Golang cgo requires a gcc compiler installed and set in PATH (recommended : http://tdm-gcc.tdragon.net/download).
+- Most of the native code is now shipped as prebuilt binaries. If you want to compile them yourself I invit you to check out their corresponding repo.<br/>
+  NB: Golang cgo requires a gcc compiler installed and set in PATH (recommended : http://tdm-gcc.tdragon.net/download).
 
-+ Innosetup is expected to be installed in `C:\Program Files (x86)\Inno Setup 5` if that is not the case then update `buildme.cmd` with the correct path.
+- Innosetup is expected to be installed in `C:\Program Files (x86)\Inno Setup 5` if that is not the case then update `buildme.cmd` with the correct path.
 
-+ If NPM gives you some trouble, try to delete every `package-lock.json`.
+- If NPM gives you some trouble, try to delete every `package-lock.json`.
 
-Legal
-=====
+# Legal
 
 ⚠️ **Software provided here is purely for informational purposes and does not provide nor encourage illegal access to copyrighted material.**<br />
 

@@ -8,12 +8,12 @@
 [Setup]
 #define AppUserModelID "io.github.xan105.achievement.watcher"
 #define AppName "Achievement Watcher"
-#define OurVersion "1.6.8"
-#define Author "Anthony Beaumont"
-#define Website "https://github.com/xan105/Achievement-Watcher"
+#define OurVersion "2.0.0"
+#define Author "Anthony Beaumont (Forked by Fabio Louro)"
+#define Website "https://github.com/darktakayanagi/Achievement-Watcher"
 #define DonationURL "https://www.paypal.me/xan105"
-#define VersionURL "https://github.com/xan105/Achievement-Watcher/raw/master/setup/version.ini"
-#define Copyright "© 2019-2022"
+#define VersionURL "https://github.com/darktakayanagi/Achievement-Watcher/raw/master/setup/version.ini"
+#define Copyright "Â© 2019-2022 & 2025"
 
 ; xp, vista, win7, win8, win8.1, win10
 #define MinWin "win7"
@@ -93,10 +93,12 @@ Source: "..\app\node_modules\electron\dist\*"; Excludes: "\electron.exe,\LICENSE
 Source: "..\service\*"; Excludes: "\buildme.cmd,\watchdog\_wip_,\watchdog\patches"; DestDir: "{app}"; Flags: ignoreversion overwritereadonly recursesubdirs createallsubdirs;
 Source: "{{app}}\*"; DestDir: "{app}"; Flags: ignoreversion overwritereadonly recursesubdirs createallsubdirs;
 Source: "{{appData}}\*"; DestDir: "{userappdata}\Achievement Watcher"; Flags: onlyifdoesntexist recursesubdirs createallsubdirs;
-Source: "winmedia\*"; DestDir: "{win}\media"; Flags: ignoreversion overwritereadonly;
+Source: "winmedia\*"; DestDir: "{userappdata}\Achievement Watcher\Media"; Flags: ignoreversion overwritereadonly;
 Source: "redist\microsoft\*"; DestDir: "{tmp}\redist" ; Flags: ignoreversion overwritereadonly recursesubdirs createallsubdirs;
 Source: "redist\growl\*"; DestDir: "{tmp}\redist" ; Flags: ignoreversion overwritereadonly; 
-    
+Source: "..\app\Presets\*"; DestDir: "{userappdata}\Achievement Watcher\Presets"; Flags: ignoreversion overwritereadonly recursesubdirs createallsubdirs;
+Source: "..\app\view\*"; DestDir: "{userappdata}\Achievement Watcher\view"; Flags: ignoreversion recursesubdirs createallsubdirs; 
+ 
 [Icons]
 Name: "{commondesktop}\{#AppName}"; Filename: "{#AppMain}"; WorkingDir: "{#AppWorkingDir}"; IconFilename: "{#AppIcon}"; Check: GetOption('CreateDesktopIcon');
 Name: "{commonstartup}\{#AppName}"; Filename: "{app}\nw\nw.exe"; Parameters: "-config watchdog.json"; WorkingDir: "{#AppWorkingDir}"; IconFilename: "{#AppIcon}";
@@ -215,6 +217,7 @@ begin
   Copyright.Left := Image.Left + Image.width + ScaleX(5);
   Copyright.Caption := '{#Author} {#Copyright}';
   Copyright.AutoSize := True;
+  Copyright.WordWrap := True;
   Copyright.Parent := WizardForm;
 
   CopyrightURL := TLabel.Create(WizardForm);

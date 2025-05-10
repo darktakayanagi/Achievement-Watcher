@@ -10,7 +10,7 @@ const template = `
     <link rel="stylesheet" href="../resources/css/titlebar.css" type="text/css" />
 
     <div class="sf-indicator">
-    <ul id="watchdog-status" class="sf-indicator"><span class="status-dot status-orange"></span><span class="status-text">Checking watchdog status...</span></ul>
+    <ul id="watchdog-status" class="sf-indicator"><span class="status-dot status-orange"></span><span class="status-text">Checking watchdog status...</span> <span id="start-watchdog"></span></ul>
     </div>
     <ul>
       <li id="btn-close"><i class="fas fa-times"></i></li>
@@ -30,6 +30,7 @@ export default class titleBar extends HTMLElement {
     this.maximizeBtn = this.shadowRoot.querySelector('#btn-maximize');
     this.settingsBtn = this.shadowRoot.querySelector('#btn-settings');
     this.minimizeBtn = this.shadowRoot.querySelector('#btn-minimize');
+    this.watchdogBtn = this.shadowRoot.querySelector('#start-watchdog');
   }
 
   /* Life Cycle */
@@ -38,6 +39,7 @@ export default class titleBar extends HTMLElement {
     this.maximizeBtn.addEventListener('click', this.maximize.bind(this));
     this.settingsBtn.addEventListener('click', this.settings.bind(this));
     this.minimizeBtn.addEventListener('click', this.minimize.bind(this));
+    this.watchdogBtn.addEventListener('click', this.start_watchdog.bind(this));
 
     const defaults = [ipcRenderer.invoke('win-isMinimizable'), ipcRenderer.invoke('win-isMaximizable')];
 
@@ -83,8 +85,10 @@ export default class titleBar extends HTMLElement {
 
     if (this.hasAttribute('insettings')) {
       this.settingsBtn.style['pointer-events'] = 'none';
+      this.watchdogBtn.style['pointer-events'] = 'none';
     } else {
       this.settingsBtn.style['pointer-events'] = 'initial';
+      this.watchdogBtn.style['pointer-events'] = 'initial';
     }
   }
 
@@ -143,5 +147,9 @@ export default class titleBar extends HTMLElement {
   minimize() {
     //this.dispatchEvent(new CustomEvent('minimize'));
     ipcRenderer.invoke('win-minimize');
+  }
+
+  start_watchdog() {
+    ipcRenderer.invoke('start-watchdog');
   }
 }

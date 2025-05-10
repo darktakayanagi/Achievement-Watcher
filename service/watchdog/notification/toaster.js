@@ -12,6 +12,7 @@ const xinput = require('xinput-ffi');
 const fetch = require('./prefetch.js');
 const { broadcast } = require('../websocket.js');
 const regedit = require('regodit');
+const { takeScreenshot, saveAndMoveReplay, setRecordPath } = require('../obsHandler.js');
 
 const debug = require('../util/log.js');
 
@@ -25,6 +26,7 @@ module.exports = async (message, option = {}) => {
         toast: option.transport.toast != null ? option.transport.toast : true,
         gntp: option.transport.gntp || false,
         websocket: option.transport.websocket || false,
+        chromium: option.transport.chromium != null ? option.transport.chromium : true,
       },
       toast: {
         appid: option.toast.appid,
@@ -46,64 +48,6 @@ module.exports = async (message, option = {}) => {
       },
       rumble: option.rumble != null ? option.rumble : true,
     };
-
-    if (options.souvenir.video > 0 && videoIsRecording === false) {
-      debug.log('Souvenir: video');
-      try {
-        const filePath = path.join(
-          options.souvenir.video_options.custom_dir || userShellFolder['myvideo'],
-          fs.win32.sanitizeFileName(message.gameDisplayName),
-          fs.win32.sanitizeFileName(message.achievementDisplayName) + '.mp4'
-        );
-        debug.log(`"${filePath}"`);
-        videoIsRecording = true;
-        const vendor = options.souvenir.video == 1 ? 'nvenc' : 'amf';
-        const encoder = options.souvenir.video_options.codec == 1 ? 'hevc' : 'h264';
-        videoCapture
-          .hwencode(filePath, `${encoder}_${vendor}`, {
-            overwrite: options.souvenir.video_options.overwrite_video,
-            timeLength: `00:00:${options.souvenir.video_options.duration}`,
-            framerate: options.souvenir.video_options.framerate,
-            bits10: options.souvenir.video_options.colorDepth10bits,
-            mouse: options.souvenir.video_options.cursor,
-            audioInterface: 'virtual-audio-capturer',
-          })
-          .then(() => {
-            videoIsRecording = false;
-          })
-          .catch((err) => {
-            videoIsRecording = false;
-            debug.error(err);
-          });
-      } catch (err) {
-        debug.error(err);
-      }
-    } else {
-      debug.log('Skipping souvenir: video');
-    }
-
-    if (options.souvenir.screenshot) {
-      debug.log('Souvenir: screenshot');
-      try {
-        const filePath = path.join(
-          options.souvenir.screenshot_options.custom_dir || userShellFolder['mypictures'],
-          fs.win32.sanitizeFileName(message.gameDisplayName),
-          fs.win32.sanitizeFileName(message.achievementDisplayName) + '.png'
-        );
-        debug.log(`"${filePath}"`);
-        if (options.toast.imageIntegration > 0) {
-          message.image = await screenshot(filePath, options.souvenir.screenshot_options.overwrite_image);
-        } else {
-          screenshot(filePath, options.souvenir.screenshot_options.overwrite_image).catch((err) => {
-            debug.error(err);
-          });
-        }
-      } catch (err) {
-        debug.error(err);
-      }
-    } else {
-      debug.log('Skipping souvenir: screenshot');
-    }
 
     if (options.notify) {
       if (options.transport.websocket) {
@@ -138,6 +82,18 @@ module.exports = async (message, option = {}) => {
         ) {
           message.image = await fetch(message.image, message.appid);
         }
+      }
+
+      if (options.transport.chromium) {
+        const watchdog = require('../watchdog.js');
+        let t = options.gntpLabel && options.gntpLabel === 'Playtime' ? 'playtime' : message.progress ? 'progress' : 'achievement';
+        watchdog.SpawnOverlayNotification([
+          `--wintype=${t}`,
+          `--appid=${message.appid}`,
+          `--ach=${message.achievementName}`,
+          `--description=${message.achievementDescription}`,
+          `--count=${message.progress?.current}/${message.progress?.max}`,
+        ]);
       }
 
       if (options.transport.toast) {
@@ -208,6 +164,88 @@ module.exports = async (message, option = {}) => {
           });
         }, duration * 1000 * message.delay || 0);
       }
+    }
+    if (options.souvenir.screenshot) {
+      debug.log('Souvenir: screenshot');
+      try {
+        const filePath = path.join(
+          options.souvenir.screenshot_options.custom_dir || userShellFolder['mypictures'],
+          fs.win32.sanitizeFileName(message.gameDisplayName),
+          fs.win32.sanitizeFileName(message.achievementDisplayName) + '.png'
+        );
+        debug.log(`"${filePath}"`);
+        let ssTaken = false;
+        try {
+          ssTaken = await takeScreenshot(filePath, options.souvenir.screenshot_options.overwrite_image, 3000);
+          message.image = filePath;
+        } catch (e) {
+          ssTaken = false;
+          debug.error(e);
+        }
+        if (!ssTaken) {
+          if (options.toast.imageIntegration > 0) {
+            message.image = await screenshot(filePath, options.souvenir.screenshot_options.overwrite_image);
+          } else {
+            screenshot(filePath, options.souvenir.screenshot_options.overwrite_image).catch((err) => {
+              debug.error(err);
+            });
+          }
+        }
+      } catch (err) {
+        debug.error(err);
+      }
+    } else {
+      debug.log('Skipping souvenir: screenshot');
+    }
+
+    if (options.souvenir.video > 0 && videoIsRecording === false) {
+      debug.log('Souvenir: video');
+      try {
+        try {
+          const filePath = path.join(
+            options.souvenir.video_options.custom_dir || userShellFolder['myvideo'],
+            fs.win32.sanitizeFileName(message.gameDisplayName),
+            fs.win32.sanitizeFileName(message.achievementDisplayName) + '.mkv'
+          );
+          videoIsRecording = true;
+          debug.log(`"${filePath}"`);
+          await setRecordPath(options.souvenir.video_options.custom_dir || userShellFolder['myvideo']);
+          saveAndMoveReplay(filePath).then(() => {
+            videoIsRecording = false;
+          });
+        } catch (er) {
+          debug.error(er);
+          const filePath = path.join(
+            options.souvenir.video_options.custom_dir || userShellFolder['myvideo'],
+            fs.win32.sanitizeFileName(message.gameDisplayName),
+            fs.win32.sanitizeFileName(message.achievementDisplayName) + '.mp4'
+          );
+          debug.log(`"${filePath}"`);
+          videoIsRecording = true;
+          const vendor = options.souvenir.video == 1 ? 'nvenc' : 'amf';
+          const encoder = options.souvenir.video_options.codec == 1 ? 'hevc' : 'h264';
+          videoCapture
+            .hwencode(filePath, `${encoder}_${vendor}`, {
+              overwrite: options.souvenir.video_options.overwrite_video,
+              timeLength: `00:00:${options.souvenir.video_options.duration}`,
+              framerate: options.souvenir.video_options.framerate,
+              bits10: options.souvenir.video_options.colorDepth10bits,
+              mouse: options.souvenir.video_options.cursor,
+              audioInterface: 'virtual-audio-capturer',
+            })
+            .then(() => {
+              videoIsRecording = false;
+            })
+            .catch((err) => {
+              videoIsRecording = false;
+              debug.error(err);
+            });
+        }
+      } catch (err) {
+        debug.error(err);
+      }
+    } else {
+      debug.log('Skipping souvenir: video');
     }
   } catch (err) {
     debug.log(err);

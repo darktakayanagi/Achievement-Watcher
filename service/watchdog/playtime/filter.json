@@ -23,7 +23,12 @@
     "msedge.exe",
     "vivaldi.exe",
     "taskhostw.exe",
-    "UnityCrashHandler64.exe"
+    "UnityCrashHandler64.exe",
+    "dxwebsetup.exe",
+    "QuickSFV.exe",
+    "achievementwatcher.exe",
+    "generate_emu_config.exe",
+    "ui32.exe"
   ],
   "mute": [
     "nw.exe",
@@ -36,6 +41,7 @@
     "python.exe",
     "pythonw.exe",
     "pip.exe",
-    "setup.exe"
+    "setup.exe",
+    "obs64.exe"
   ]
 }

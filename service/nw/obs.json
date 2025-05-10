@@ -1,0 +1,8 @@
+{
+  "bin": "../obs/bin/64bit/obs64.exe",
+  "args": "",
+  "cwd": "../obs/bin/64bit",
+  "fileCheck": [
+    { "sum": "9af13bc874cf54f22d2216a74ef9a51663621c76f3486ae404faaf6f545b02ab", "size": 5131824 }
+  ]
+}

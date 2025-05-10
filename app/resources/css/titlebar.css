@@ -83,6 +83,13 @@ ul#watchdog-status {
   direction: ltr;
 }
 
+#start-watchdog {
+  display: inline-block;
+  -webkit-app-region: no-drag;
+  line-height: 30px;
+  z-index: 99;
+}
+
 ul > li {
   display: inline-block;
   font-size: 12px;
@@ -97,7 +104,8 @@ ul > li {
 ul > li {
   background-color: transparent;
 }
-ul > li:hover {
+ul > li:hover,
+#start-watchdog:hover {
   background-color: rgba(255, 255, 255, 0.2);
   color: #dedede;
 }

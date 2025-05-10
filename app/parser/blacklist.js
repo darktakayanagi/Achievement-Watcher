@@ -9,8 +9,8 @@ let exclusionFile;
 module.exports.initDebug = ({ isDev, userDataPath }) => {
   exclusionFile = path.join(userDataPath, 'cfg/exclusion.db');
   debug = new (require('@xan105/log'))({
-    console: remote.getCurrentWindow().isDev || false,
-    file: path.join(remote.app.getPath('userData'), 'logs/blacklist.log'),
+    console: isDev || false,
+    file: path.join(userDataPath, 'logs/blacklist.log'),
   });
 };
 

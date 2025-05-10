@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="style.css" />
+    <meta width="350" height="120" />
+    <title>Progress Notification</title>
+    <style>
+      :root {
+        --transition: 0.3s;
+        --displaytime: 5s;
+        --scale: 0.95;
+        --roundness: 8px;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: Arial, sans-serif;
+      }
+
+      .progress-notification {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: rgba(0, 0, 0, 0.75);
+        border-radius: var(--roundness);
+        padding: 10px 20px;
+        color: white;
+        transform: scale(0) translateY(30px);
+        opacity: 0;
+        animation: ach-in var(--transition) ease-out forwards,
+          ach-hold calc(var(--displaytime) - var(--transition) * 2) ease forwards var(--transition),
+          ach-out var(--transition) ease-in forwards calc(var(--displaytime) - var(--transition));
+      }
+
+      @keyframes ach-in {
+        to {
+          transform: scale(var(--scale)) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes ach-hold {
+        to {
+          opacity: 1;
+          transform: scale(var(--scale)) translateY(0);
+        }
+      }
+
+      @keyframes ach-out {
+        to {
+          transform: scale(0.85) translateY(-30px);
+          opacity: 0;
+        }
+      }
+
+      .progress-icon img {
+        width: 64px;
+        height: 64px;
+      }
+
+      .progress-text {
+        flex: 1;
+      }
+
+      .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #444;
+        overflow: hidden;
+        margin-top: 5px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background-color: lime;
+        transition: width 0.5s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="progress-notification">
+      <div class="progress-icon"><img src="" alt="Icon" /></div>
+      <div class="progress-text">
+        <div class="title"></div>
+        <div class="bar-container">
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (!window.api || !window.api.onProgressUpdate) {
+          return;
+        }
+
+        window.api.onProgressUpdate((data) => {
+          if (!data) return;
+
+          const titleEl = document.querySelector('.title');
+          const imgEl = document.querySelector('.progress-icon img');
+          const fill = document.querySelector('.progress-fill');
+
+          const percent = (data.progress / data.max_progress) * 100;
+
+          titleEl.textContent = `${data.displayName}: ${data.progress}/${data.max_progress}`;
+          imgEl.src = `${data.icon}`;
+          console.log(imgEl.src);
+          fill.style.width = `${percent}%`;
+        });
+
+        setTimeout(() => {
+          if (window.api && window.api.closeNotificationWindow) {
+            window.api.closeNotificationWindow();
+          }
+        }, 5000);
+      });
+    </script>
+  </body>
+</html>

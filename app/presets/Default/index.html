@@ -40,41 +40,6 @@
       </div>
     </div>
 
-    <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        window.api.onNotification((notificationData) => {
-          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
-            document.querySelector('.title').textContent = notificationData.displayName;
-            document.querySelector('.detail').textContent = notificationData.description;
-            document.querySelector('.icon img').src = `${notificationData.iconPath}`;
-            const root = document.body;
-            const scale = parseFloat(notificationData.scale || 1);
-            root.style.transform = `scale(${scale})`;
-          }
-
-          const container = document.querySelector('.ach');
-          container.classList.add('active');
-
-          setTimeout(() => {
-            container.classList.remove('active');
-            window.api.closeNotificationWindow();
-          }, 6000);
-        });
-      });
-
-      /*
-      window.electronAPI.onNotification((data) => {
-        document.querySelector('.title').textContent = data.displayName;
-        document.querySelector('.detail').textContent = data.description;
-        document.querySelector('.icon img').src = data.icon;
-        document.querySelector('.ach').classList.add('show');
-
-        // ascunde după câteva secunde
-        setTimeout(() => {
-          document.querySelector('.ach').classList.remove('show');
-        }, 5000);
-      });
-      */
-    </script>
+    <script src="../scriptCode.js"></script>
   </body>
 </html>

@@ -40,7 +40,12 @@
     "overlay": {
       "position": "Notification Position",
       "preset": { "name": "Notification Preset", "description": "Legacy uses the 'old' notification system" },
-      "hotkey": "Hotkey"
+      "hotkey": {
+        "name": "Overlay Hotkey",
+        "description": "While ingame, you can press this hotkey to show that game's achievements overlay."
+      },
+      "scale": "Notification Scale",
+      "duration": "Animation duration"
     },
     "general": {
       "language": {
@@ -76,7 +81,8 @@
       "title": {
         "common": "Common",
         "toast": "Toast notification",
-        "transport": "Transport"
+        "transport": "Transport",
+        "chromium": "Chromium notification"
       },
       "info": {
         "toast": "Some features are only available in Windows 10"
@@ -132,6 +138,10 @@
         },
         "useWS": {
           "description": "Broadcast achievement to all connected clients"
+        },
+        "useChromium": {
+          "name": "Chromium notification",
+          "description": "Uses chromium to show styled notifications."
         }
       }
     },
@@ -215,7 +225,12 @@
     "advanced": {
       "blacklistTitle": "AppID Blacklist",
       "blacklistButton": "Reset blacklist",
-      "blacklistInfo": "Right click on a gamebox to add it to the blacklist."
+      "blacklistInfo": "Right click on a gamebox to add it to the blacklist.",
+      "mainSteam": {
+        "title": "Main Steam Account",
+        "name": "Filter by user",
+        "description": "Show Steam achievements of only the selected account"
+      }
     }
   }
 }
