@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const remote = require('@electron/remote/main');
 remote.initialize();
 const minimist = require('minimist');
@@ -611,6 +612,7 @@ try {
 
   app
     .on('ready', function () {
+      autoUpdater.checkForUpdatesAndNotify();
       ipc.window();
       const args = minimist(process.argv.slice(1));
       parseArgs(args);
@@ -636,6 +638,18 @@ try {
       const args = minimist(argv.slice(1));
       parseArgs(args);
     });
+  autoUpdater.on('update-downloaded', () => {
+    dialog
+      .showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: 'A new version has been downloaded. Restart now to install it?',
+        buttons: ['Yes', 'Later'],
+      })
+      .then((result) => {
+        if (result.response === 0) autoUpdater.quitAndInstall();
+      });
+  });
 } catch (err) {
   dialog.showErrorBox('Critical Error', `Failed to initialize:\n${err}`);
   app.quit();
