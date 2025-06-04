@@ -86,10 +86,6 @@ window.addEventListener('DOMContentLoaded', () => {
       document.querySelector('.title').textContent = notificationData.displayName;
       document.querySelector('.detail').textContent = notificationData.description || '';
       document.querySelector('.icon img').src = notificationData.iconPath;
-      const root = document.body;
-      const scale = parseFloat(notificationData.scale || 1);
-      root.style.transform = `scale(${scale})`;
-      root.style.transformOrigin = 'center center';
     }
     const container = document.querySelector('.ach');
     container.classList.add('active');

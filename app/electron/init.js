@@ -305,7 +305,7 @@ async function createNotificationWindow(info) {
     icon_gray: pathToFileURL(await fetchIcon(a.icongray, info.appid)).href,
     preset: configJS.overlay.preset,
     position: configJS.overlay.position,
-    scale: parseFloat(a.scale || 1),
+    scale: parseFloat(configJS.overlay.scale),
   };
 
   const display = require('electron').screen.getPrimaryDisplay();
@@ -315,43 +315,32 @@ async function createNotificationWindow(info) {
   const presetFolder = path.join(manifest.config.debug ? path.join(__dirname, '../') : userData, 'presets', preset);
   const presetHtml = path.join(presetFolder, 'index.html');
   const position = message.position || 'center-bot';
-  const scale = parseFloat(message.scale || 1);
+  const scale = parseFloat(message.scale * 0.01 || 1);
 
   const { width: windowWidth, height: windowHeight } = getPresetDimensions(presetFolder);
 
-  const scaledWidth = windowWidth * (configJS.overlay?.scale ?? 100) * 0.01;
-  const scaledHeight = windowHeight * (configJS.overlay?.scale ?? 100) * 0.01;
+  const scaledWidth = windowWidth * scale;
+  const scaledHeight = windowHeight * scale;
 
   let x = 0,
     y = 0;
 
-  switch (position) {
-    case 'center-top':
-      x = Math.floor((width - scaledWidth) / 2);
-      y = 5;
-      break;
-    case 'right-top':
-      x = width - scaledWidth - Math.round(20 * scale);
-      y = 5;
-      break;
-    case 'right-bot':
-      x = width - scaledWidth - Math.round(20 * scale);
-      y = height - Math.floor(scaledHeight * scale) - 40;
-      break;
-    case 'left-top':
-      x = Math.round(20 * scale);
-      y = 5;
-      break;
-    case 'left-bot':
-      x = Math.round(20 * scale);
-      y = height - Math.floor(scaledHeight * scale) - 40;
-      break;
-    case 'center-bot':
-    default:
-      x = Math.floor((width - scaledWidth) / 2);
-      y = height - Math.floor(scaledHeight * scale) - 40;
-      break;
+  if (position.includes('left')) {
+    x = 20;
+  } else if (position.includes('right')) {
+    x = width - scaledWidth - 20;
+  } else if (position.includes('center')) {
+    x = Math.floor(width / 2 - scaledWidth / 2);
   }
+
+  if (position.includes('top')) {
+    y = 10;
+  } else if (position.includes('bot')) {
+    y = height - Math.round(scaledHeight) - 20;
+  } else if (position.includes('mid')) {
+    y = height / 2 - Math.round(scaledHeight / 2);
+  }
+
   notificationWindow = new BrowserWindow({
     width: scaledWidth,
     height: scaledHeight,
@@ -412,7 +401,7 @@ async function createNotificationWindow(info) {
   }
   notificationWindow.webContents.on('did-finish-load', () => {
     notificationWindow.showInactive();
-    notificationWindow.webContents.send('set-window-scale', (configJS.overlay?.scale ?? 100) * 0.01);
+    notificationWindow.webContents.send('set-window-scale', scale);
     notificationWindow.webContents.send('set-animation-scale', (configJS.overlay?.duration ?? 1) * 0.01);
     notificationWindow.webContents.send('show-notification', {
       displayName: message.displayName,
