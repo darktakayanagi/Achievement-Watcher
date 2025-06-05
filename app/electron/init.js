@@ -1,12 +1,15 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
+const path = require('path');
+const { app } = require('electron');
+app.setName('Achievement Watcher');
+app.setPath('userData', path.join(app.getPath('appData'), app.getName()));
+const { BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const remote = require('@electron/remote/main');
 remote.initialize();
 const minimist = require('minimist');
 const { exec, spawn } = require('child_process');
-const path = require('path');
 const fs = require('fs');
 const ipc = require(path.join(__dirname, 'ipc.js'));
 const player = require('sound-play');

@@ -12,7 +12,8 @@
     "native-rebuild": "call .\\node_modules\\.bin\\electron-rebuild.cmd",
     "clean": "npm prune --production",
     "prepare": "patch-package",
-    "build": "electron-builder"
+    "prepare:watchdog": "cd ../service/watchdog && npm prune --production",
+    "build": "npm run prepare:watchdog && electron-builder --config electron-builder.yml --publish never"
   },
   "author": "Anthony Beaumont",
   "license": "LGPL-3.0-only",
@@ -22,24 +23,6 @@
     "electron-context-menu": "^2.5.0",
     "electron-rebuild": "^2.3.5",
     "patch-package": "^6.2.2"
-  },
-  "build": {
-    "productName": "Achievement Watcher",
-    "publish": {
-      "provider": "github",
-      "owner": "darktakayanagi",
-      "repo": "Achievement-Watcher"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "resources\\icon\\icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "include": "build/installer.nsh"
-    }
   },
   "dependencies": {
     "@electron/remote": "^1.1.0",
@@ -69,7 +52,7 @@
     "xml2js": "^0.4.23"
   },
   "config": {
-    "debug": true,
+    "debug": false,
     "user-agent": "Chrome/",
     "disable-gpu": false,
     "window": {
