@@ -5,6 +5,6 @@
   "env": ["NODE_SKIP_PLATFORM_CHECK=1"],
   "fileCheck": [
     { "sum": "829004cffe3502b8091a1e2fc6a3f238f859ddc3af79549cc08283919a7961cc", "size": 56324608 },
-    { "file": "../watchdog/watchdog.js", "sum": "ce1bd406241b932161343850a5ee2521b2f42e8ebc57054c837490db93d3a48a", "size": 21753 }
+    { "file": "../watchdog/watchdog.js", "sum": "cfcfef69862ed042370cbb9f01e38c322df9a1a07d0109ec819dfbbf8054bf1c", "size": 21795 }
   ]
 }

@@ -6,8 +6,9 @@ const path = require('path');
 const os = require('os');
 const debug = require('./util/log.js');
 
-const crash_file = path.join(__dirname, '../', 'obs/config/obs-studio', 'safe_mode');
-const settings_file = path.join(__dirname, '../', 'obs/config/obs-studio/plugin_config/obs-websocket', 'config.json');
+const obs_path = path.join(process.env.APPDATA, 'obs-studio');
+const crash_file = path.join(obs_path, 'safe_mode');
+const settings_file = path.join(obs_path, 'plugin_config/obs-websocket', 'config.json');
 let config;
 let latestReplay;
 let saveDir;
@@ -26,6 +27,14 @@ obs.on('ReplayBufferSaved', async () => {
 });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function switchProfileAndSceneCollection() {
+  await startObs();
+  const p = await obs.call('GetProfileList');
+  if (p.currentProfileName !== 'AW') await obs.call('SetCurrentProfile', { profileName: 'AW' });
+  const s = await obs.call('GetSceneCollectionList');
+  if (s.currentSceneCollectionName !== 'AW') await obs.call('SetCurrentSceneCollection', { sceneCollectionName: 'AW' });
+}
 
 function watchObs() {
   if (obsCheckInterval !== null) return;
@@ -57,7 +66,7 @@ async function connectToObs() {
       }
 
       await sleep(5000); // wait a bit after connecting
-
+      await switchProfileAndSceneCollection();
       const { outputActive } = await obs.call('GetReplayBufferStatus');
       if (!outputActive) await obs.call('StartReplayBuffer');
 
@@ -74,7 +83,8 @@ async function connectToObs() {
       if (attempt < maxRetries) {
         await sleep(5000); // wait before retrying
       } else {
-        debug.error('Failed to connect to OBS after 6 attempts.');
+        debug.error('Failed to connect to OBS after 6 attempts. Restarting OBS');
+        startObs(true);
       }
     }
   }
@@ -156,21 +166,26 @@ async function recordGame(game) {
   //debug.log(`attached OBS to ${game.name}'s window (${png.width}x${png.height})`);
 }
 
-async function startObs() {
+async function startObs(kill = false) {
   checkSettings();
-  if (isRunning()) {
-    exec('taskkill /IM obs64.exe /F', (err, stdout, stderr));
-  }
-  deleteCrashFile();
 
-  const obs = spawn(path.join(__dirname, '../nw/nw.exe'), ['-config', 'obs.json'], {
-    cwd: path.join(__dirname, '../nw/'),
-    detached: true,
-    stdio: 'ignore',
-    shell: false,
-  });
-  obs.unref(); // Let it run independently
-  debug.log('Started OBS minimized.');
+  while (true) {
+    if (isRunning()) {
+      if (!kill) break;
+      execSync('taskkill /IM obs64.exe /F');
+    }
+    deleteCrashFile();
+
+    const obs = spawn(path.join(__dirname, '../nw/nw.exe'), ['-config', 'obs.json'], {
+      cwd: path.join(__dirname, '../nw/'),
+      detached: true,
+      stdio: 'ignore',
+      shell: false,
+    });
+    obs.unref(); // Let it run independently
+    debug.log('Started OBS minimized.');
+    break;
+  }
   await sleep(2000);
   await connectToObs();
   watchObs();
@@ -191,7 +206,10 @@ async function setRecordResolution() {
     const width = primary.getBounds().width;
     const height = primary.getBounds().height;
     const displayID = await obs.call('GetSceneItemId', { sceneName: 'AW', sourceName: 'AW display capture' });
-    await obs.call('StopReplayBuffer');
+    const outputActive = await obs.call('GetReplayBufferStatus');
+    if (outputActive) {
+      await obs.call('StopReplayBuffer');
+    }
     while (true) {
       const s = await obs.call('GetOutputList');
       if (!s.outputs[0].outputActive && !s.outputs[1].outputActive && !s.outputs[2].outputActive) break;

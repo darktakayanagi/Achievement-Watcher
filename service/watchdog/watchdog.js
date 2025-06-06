@@ -113,7 +113,7 @@ var app = {
       RegisterOverlayHotkey(self.options.overlay.hotkey);
 
       try {
-        startObs().then(async () => {
+        startObs(true).then(async () => {
           await setRecordPath(userShellFolder['myvideo']);
           await setRecordResolution();
         });
