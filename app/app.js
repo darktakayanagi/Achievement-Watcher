@@ -616,7 +616,11 @@ var app = {
                                     ? `<i class="fas fa-trophy" data-type="${achievement.type}"></i> ${achievement.displayName}`
                                     : `${achievement.displayName}`
                                 }</div>
-                                <div class="description">${achievement.description || ''}</div>
+                                <div class="description">${
+                                  achievement.hidden == 1 && !app.config.achievement.showHidden && !achievement.Achieved
+                                    ? '...'
+                                    : achievement.description || '...'
+                                }</div>
                                 <div class="progressBar" data-current="${achievement.CurProgress || '0'}" data-max="${
           achievement.MaxProgress || '0'
         }" data-percent="${percent}">
