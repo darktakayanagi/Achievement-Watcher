@@ -75,6 +75,14 @@ module.exports.getFolders = async (userDir_file) => {
       dir: path.join(process.env['APPDATA'], 'SmartSteamEmu'),
       options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[7]] },
     },
+    {
+      dir: path.join(process.env['APPDATA'], 'NemirtingasEpicEmu', '*/*/'),
+      options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[1]] },
+    },
+    {
+      dir: path.join(process.env['APPDATA'], 'NemirtingasGalaxyEmu', '*/*/'),
+      options: { recursive: true, filter: /([0-9]+)/, file: [files.achievement[1]] },
+    },
   ];
 
   try {
