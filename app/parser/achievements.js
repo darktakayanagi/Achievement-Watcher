@@ -3,6 +3,8 @@
 const { crc32 } = require('crc');
 const path = require('path');
 const appPath = __dirname;
+const gog = require(path.join(appPath, 'gog.js'));
+const epic = require(path.join(appPath, 'epic.js'));
 const steam = require(path.join(appPath, 'steam.js'));
 const uplay = require(path.join(appPath, 'uplay.js'));
 const rpcs3 = require(path.join(appPath, 'rpcs3.js'));
@@ -94,6 +96,22 @@ async function discover(source, steamAccFilter) {
     //Uplay
     try {
       data = data.concat(await uplay.scanLegit());
+    } catch (err) {
+      debug.error(err);
+    }
+  }
+
+  if (source.gog) {
+    try {
+      data = data.concat(await gog.scan());
+    } catch (err) {
+      debug.error(err);
+    }
+  }
+
+  if (source.epic) {
+    try {
+      data = data.concat(await epic.scan());
     } catch (err) {
       debug.error(err);
     }

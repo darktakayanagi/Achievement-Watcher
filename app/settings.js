@@ -96,6 +96,14 @@ module.exports.load = () => {
       options.achievement_source.lumaPlay = true;
     }
 
+    if (typeof options.achievement_source.gog !== 'boolean') {
+      options.achievement_source.gog = true;
+    }
+
+    if (typeof options.achievement_source.epic !== 'boolean') {
+      options.achievement_source.gog = true;
+    }
+
     if (typeof options.achievement_source.importCache !== 'boolean') {
       options.achievement_source.importCache = true;
     }
@@ -288,6 +296,8 @@ module.exports.load = () => {
         greenLuma: true,
         rpcs3: true,
         lumaPlay: false,
+        gog: true,
+        epic: true,
         importCache: true,
       },
       notification: {
