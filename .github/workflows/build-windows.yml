@@ -3,8 +3,8 @@ name: Build Windows Installer
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags like v1.0.0
-  workflow_dispatch:  # Allows manual triggering
+      - 'v*' # Triggers on version tags like v1.0.0
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Download and extract OBS Studio portable 31.0.3
         if: steps.cache-obs.outcome != 'cache-hit'
-        shell: pwsh  # Explicitly use PowerShell Core (cross-version compatibility)
+        shell: pwsh # Explicitly use PowerShell Core (cross-version compatibility)
         run: |
           New-Item -ItemType Directory -Force -Path service/obs
           Invoke-WebRequest -Uri https://github.com/obsproject/obs-studio/releases/download/31.0.3/OBS-Studio-31.0.3-Windows.zip -OutFile obs.zip
@@ -34,6 +34,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 14
+
+      - name: Setup MSBuild (needed for node-gyp native modules)
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Run VS Developer Command Prompt
+        working-directory: app
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"vswhere.exe" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath`) do (
+            call "%%i\VC\Auxiliary\Build\vcvars64.bat"
+            npm config set msvs_version 2022
+            npm ci || npm install --verbose
+          )
 
       - name: Install dependencies with fallback
         working-directory: app
