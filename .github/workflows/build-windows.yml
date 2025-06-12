@@ -1,0 +1,51 @@
+name: Build Windows Installer
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - id: cache-obs
+        name: Cache OBS Studio
+        uses: actions/cache@v4
+        with:
+          path: service/obs
+          key: obs-studio-31.0.3-${{ runner.os }}
+
+      - name: Download and extract OBS Studio portable 31.0.3
+        if: steps.cache-obs.outcome != 'cache-hit'
+        shell: pwsh  # Explicitly use PowerShell Core (cross-version compatibility)
+        run: |
+          New-Item -ItemType Directory -Force -Path service/obs
+          Invoke-WebRequest -Uri https://github.com/obsproject/obs-studio/releases/download/31.0.3/OBS-Studio-31.0.3-Windows.zip -OutFile obs.zip
+          Expand-Archive -Path obs.zip -DestinationPath service/obs -Force
+          Remove-Item obs.zip
+
+      - name: Setup Node.js 14.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 14
+
+      - name: Install dependencies with fallback
+        working-directory: app
+        run: |
+          npm ci || npm install --verbose
+
+      - name: Build (no publish)
+        run: npx electron-builder --config ../electron-builder.yml --windows --publish never
+        working-directory: app
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: app/dist/
