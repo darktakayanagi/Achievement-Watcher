@@ -487,6 +487,8 @@ instance
           } else {
             runningGames.push(game);
             recordGame(game);
+            await setRecordPath(userShellFolder['myvideo']);
+            await setRecordResolution();
           }
           if (app.options.notification.playtime) {
             notify(
