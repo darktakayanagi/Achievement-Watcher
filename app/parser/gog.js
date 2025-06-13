@@ -4,6 +4,7 @@ const path = require('path');
 const glob = require('fast-glob');
 const request = require('request-zero');
 
+let cacheRoot;
 let debug;
 module.exports.initDebug = ({ isDev, userDataPath }) => {
   this.setUserDataPath(userDataPath);
@@ -11,6 +12,10 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
     console: isDev || false,
     file: path.join(userDataPath, 'logs/parser.log'),
   });
+};
+
+module.exports.setUserDataPath = (p) => {
+  cacheRoot = p;
 };
 
 module.exports.scan = async (dir) => {
