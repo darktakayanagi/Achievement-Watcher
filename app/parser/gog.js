@@ -2,6 +2,7 @@
 
 const path = require('path');
 const glob = require('fast-glob');
+const request = require('request-zero');
 
 let debug;
 module.exports.initDebug = ({ isDev, userDataPath }) => {
@@ -27,7 +28,13 @@ module.exports.scan = async (dir) => {
           path: dir,
         },
       };
-      data.push(game);
+      const url = `https://gamesdb.gog.com/platforms/gog/external_releases/${game.appid}`;
+      let gameinfo = await request.getJson(url);
+      if (gameinfo) {
+        let steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
+        game.appid = steamid || game.appid;
+        data.push(game);
+      }
     }
     return data;
   } catch (err) {
