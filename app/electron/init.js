@@ -15,6 +15,12 @@ const ipc = require(path.join(__dirname, 'ipc.js'));
 const player = require('sound-play');
 const { fetchIcon } = require(path.join(__dirname, '../parser/steam.js'));
 const { pathToFileURL } = require('url');
+const SteamUser = require('steam-user');
+const client = new SteamUser();
+client.logOn({ anonymous: true });
+client.on('loggedOn', () => {
+  console.log('logged on');
+});
 
 const manifest = require('../package.json');
 const userData = app.getPath('userData');
@@ -34,6 +40,24 @@ let isOverlayShowing = false;
 const earnedNotificationQueue = [];
 const playtimeQueue = [];
 const progressQueue = [];
+
+ipcMain.on('get-steam-data', async (event, arg) => {
+  const appid = +arg.appid;
+  if (arg.type === 'icon') {
+    await client.getProductInfo([appid], [], false, async (err, data) => {
+      const appInfo = data[appid].appinfo;
+      event.returnValue = `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
+    });
+  }
+  if (arg.type === 'portrait') {
+    await client.getProductInfo([appid], [], false, async (err, data) => {
+      const appInfo = data[appid].appinfo;
+      event.returnValue = `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
+    });
+  }
+  await delay(5000);
+  event.returnValue = {};
+});
 
 ipcMain.on('notify-test', async (event, arg) => {
   await createNotificationWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED' });
@@ -659,7 +683,7 @@ try {
       ipc.window();
       const args = minimist(process.argv.slice(1));
       parseArgs(args);
-      await delay(1000);
+      await delay(5000);
       if (!overlayWindow && !progressWindow && !notificationWindow && !playtimeWindow && !MainWin) app.quit();
     })
     .on('window-all-closed', function () {
@@ -682,7 +706,7 @@ try {
     .on('second-instance', async (event, argv, cwd) => {
       const args = minimist(argv.slice(1));
       parseArgs(args);
-      await delay(1000);
+      await delay(5000);
       if (!overlayWindow && !progressWindow && !notificationWindow && !playtimeWindow && !MainWin) app.quit();
     });
   autoUpdater.on('update-downloaded', () => {

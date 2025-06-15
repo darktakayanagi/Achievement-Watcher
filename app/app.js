@@ -120,6 +120,13 @@ var app = {
         let progress_cache = [];
 
         for (let game in list) {
+          const g = list[game];
+
+          for (let [type, value] of Object.entries(g.img)) {
+            if (!value) {
+              list[game].img[type] = ipcRenderer.sendSync('get-steam-data', { appid: g.appid, type });
+            }
+          }
           if (list[game].achievement.unlocked > 0 || self.config.achievement.hideZero == false) {
             let progress = Math.round((100 * list[game].achievement.unlocked) / list[game].achievement.total);
 

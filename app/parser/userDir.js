@@ -5,7 +5,7 @@ const appPath = path.join(__dirname, '../');
 const ini = require('@xan105/ini');
 const parentFind = require('find-up');
 const glob = require('fast-glob');
-const ffs = require('@xan105/fs');
+const fs = require('fs');
 const listDrive = require(path.join(appPath, 'util/listDrive.js'));
 const regedit = require('regodit');
 
@@ -19,7 +19,7 @@ const steam_emu_cfg_file_supported = ['ALI213.ini', 'valve.ini', 'hlm.ini', 'ds.
 
 module.exports.get = async () => {
   try {
-    return JSON.parse(await ffs.readFile(file, 'utf8'));
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (err) {
     throw err;
   }
@@ -27,7 +27,7 @@ module.exports.get = async () => {
 
 module.exports.save = async (data) => {
   try {
-    await ffs.writeFile(file, JSON.stringify(data, null, 2), 'utf8');
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
   } catch (err) {
     throw err;
   }

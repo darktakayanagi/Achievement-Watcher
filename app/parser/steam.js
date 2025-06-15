@@ -18,6 +18,9 @@ const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
 const sse = require(path.join(appPath, 'parser/sse.js'));
 const htmlParser = require('node-html-parser');
 const fs = require('fs');
+const SteamUser = require('steam-user');
+const client = new SteamUser();
+client.logOn({ anonymous: true });
 
 let debug;
 let cacheRoot;
@@ -439,6 +442,12 @@ function getSteamDataFromSRV(appID, lang) {
         return reject(err);
       });
   });
+
+  //TODO: replace the previous code with this(properly formatted):
+  //await client.getProductInfo([appID], [], false, async (err, data) => {
+  //  const appInfo = data[appID].appinfo;
+  //  return appInfo;
+  //});
 }
 
 async function getMissingAchData(cfg, achievements) {
@@ -503,6 +512,12 @@ async function getSteamData(cfg) {
   if (!(schema && schema.achievements && schema.achievements.length > 0)) throw "Schema doesn't have any achievement";
 
   const store = await getDataFromSteamStore(+cfg.appID);
+  let portrait_options = [
+    `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${cfg.appID}/portrait.png`,
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${cfg.appID}/library_600x900.jpg`,
+  ];
+  if (store.portrait) portrait_options.push(store.portrait);
+  portrait_options.push(null);
 
   const result = {
     name: store.name || (await findInAppList(+cfg.appID)),
@@ -526,6 +541,12 @@ async function getSteamData(cfg) {
     }
     if ((await fetchIcon(result.img.background, result.appid)) === result.img.background) {
       result.img.background = store.background;
+    }
+    while (portrait_options.length > 0) {
+      if ((await fetchIcon(result.img.portrait, result.appid)) !== result.img.portrait) {
+        break;
+      }
+      result.img.portrait = portrait_options.shift();
     }
   } catch (err) {
     console.log(err);
@@ -570,6 +591,7 @@ async function getDataFromSteamStore(appID) {
         html.querySelector('meta[property="og:image"]')?.attributes.content.split('?')[0] ||
         html.querySelector('.game_header_image_full')?.attributes.src.split('?')[0] ||
         null,
+      portrait: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appID}/portrait.png`,
       background,
     };
 
