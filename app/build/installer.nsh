@@ -27,19 +27,6 @@ Section "Install"
   StrCpy $APPDATA_MYAPP "$APPDATA\Achievement Watcher"
   CreateDirectory "$APPDATA_MYAPP"
 
-  ; Define OBS base appdata path
-  StrCpy $OBS_APPDATA "$APPDATA\obs-studio\basic"
-
-  ; Create profiles and scenes folders if they don't exist
-  CreateDirectory "$OBS_APPDATA\profiles"
-  CreateDirectory "$OBS_APPDATA\scenes"
-
-  ; Copy the profile folder recursively
-  ExecWait 'xcopy /E /I /Y "$INSTDIR\resources\userData\obs\AW" "$OBS_APPDATA\profiles\AW"'
-
-  ; Copy the scene JSON file
-  CopyFiles /SILENT "$INSTDIR\resources\userData\obs\AW.json" "$OBS_APPDATA\scenes\"
-
 SectionEnd
 
 
