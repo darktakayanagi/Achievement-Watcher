@@ -293,11 +293,9 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
     let appidList = await discover(option.achievement_source, option.steam.main);
 
     if (appidList.length > 0) {
-      let count = 1;
+      let count = 0;
 
       for (let appid of appidList) {
-        let percent = Math.floor((count / appidList.length) * 100);
-
         let game;
         let isDuplicate = false;
 
@@ -443,8 +441,9 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
           debug.error(`[${appid.appid}] Error parsing local achievements data => ${err} > SKIPPING`);
         }
 
-        callbackProgress(percent);
         count = count + 1;
+        let percent = Math.floor((count / appidList.length) * 100);
+        callbackProgress(percent);
       }
     }
 

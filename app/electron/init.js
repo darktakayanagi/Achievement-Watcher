@@ -613,9 +613,46 @@ function parseArgs(args) {
   }
 }
 
+function checkResources() {
+  function copyFolderRecursive(src, dst) {
+    fs.mkdirSync(dst, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const e of entries) {
+      const srcPath = path.join(src, e.name);
+      const dstPath = path.join(dst, e.name);
+      if (e.isDirectory()) {
+        copyFolderRecursive();
+      } else {
+        fs.copyFileSync(srcPath, dstPath);
+      }
+    }
+  }
+
+  const resourcesPath = path.join(manifest.config.debug ? path.join(__dirname, '..') : path.join(process.resourcesPath, 'userdata'));
+  if (!fs.existsSync(path.join(userData, 'Presets'))) {
+    const presets = path.join(resourcesPath, 'presets');
+    copyFolderRecursive(presets, path.join(userData, 'Presets'));
+  }
+
+  if (!fs.existsSync(path.join(userData, 'Media'))) {
+    const media = path.join(resourcesPath, 'Media');
+    copyFolderRecursive(media, path.join(userData, 'Media'));
+  }
+  if (!fs.existsSync(path.join(userData, 'view'))) {
+    const view = path.join(resourcesPath, 'view');
+    copyFolderRecursive(view, path.join(userData, 'view'));
+  }
+
+  if (!fs.existsSync(path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'))) {
+    const profile = path.join(resourcesPath, 'obs', 'AW');
+    copyFolderRecursive(profile, path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'));
+    fs.copyFileSync(path.join(resourcesPath, 'obs', 'AW.json'), path.join(app.getPath('appData'), 'obs-studio', 'basic', 'scenes', 'AW.json'));
+  }
+}
+
 try {
   if (app.requestSingleInstanceLock() !== true) app.quit();
-
+  checkResources();
   app
     .on('ready', async function () {
       autoUpdater.checkForUpdatesAndNotify();

@@ -27,10 +27,6 @@ Section "Install"
   StrCpy $APPDATA_MYAPP "$APPDATA\Achievement Watcher"
   CreateDirectory "$APPDATA_MYAPP"
 
-  CopyFiles /SILENT "$INSTDIR\resources\userData\Media\*" "$APPDATA_MYAPP\Media\"
-  CopyFiles /SILENT "$INSTDIR\resources\userData\Presets\*" "$APPDATA_MYAPP\Presets\"
-  CopyFiles /SILENT "$INSTDIR\resources\userData\view\*" "$APPDATA_MYAPP\view\"
-
   ; Define OBS base appdata path
   StrCpy $OBS_APPDATA "$APPDATA\obs-studio\basic"
 
