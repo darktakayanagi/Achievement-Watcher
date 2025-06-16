@@ -25,7 +25,7 @@ module.exports.scan = async (dir) => {
   let cache = [];
 
   if (fs.existsSync(cacheFile)) {
-    cache = JSON.parse(fs.readFileSync(filePath, { encoding: 'utf8' }));
+    cache = JSON.parse(fs.readFileSync(cacheFile, { encoding: 'utf8' }));
   }
 
   try {
