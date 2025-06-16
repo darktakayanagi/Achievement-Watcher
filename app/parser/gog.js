@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
 const glob = require('fast-glob');
 const request = require('request-zero');
 
@@ -19,12 +20,16 @@ module.exports.setUserDataPath = (p) => {
 };
 
 module.exports.scan = async (dir) => {
+  const cacheFile = path.join(cacheRoot, 'steam_cache', 'gog.db');
+  let data = [];
+  let cache = [];
+
+  if (fs.existsSync(cacheFile)) {
+    cache = JSON.parse(fs.readFileSync(filePath, { encoding: 'utf8' }));
+  }
+
   try {
-    let data = [];
-    for (let dir of await glob(
-      path.join(process.env['APPDATA'] || path.join(os.homedir(), 'Library', 'Application Support'), 'NemirtingasGalaxyEmu', '*/*/'),
-      { onlyDirectories: true, absolute: true }
-    )) {
+    for (let dir of await glob(path.join(process.env['APPDATA'], 'NemirtingasGalaxyEmu', '*/*/'), { onlyDirectories: true, absolute: true })) {
       let game = {
         appid: path.parse(dir).name,
         source: 'gog',
@@ -33,14 +38,24 @@ module.exports.scan = async (dir) => {
           path: dir,
         },
       };
-      const url = `https://gamesdb.gog.com/platforms/gog/external_releases/${game.appid}`;
-      let gameinfo = await request.getJson(url);
-      if (gameinfo) {
-        let steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
+      let steamid;
+      let cached = cache.find((g) => g.gogid === game.appid);
+      if (cached) {
+        steamid = cached.steamid;
+      } else {
+        const url = `https://gamesdb.gog.com/platforms/gog/external_releases/${game.appid}`;
+        let gameinfo = await request.getJson(url);
+        if (gameinfo) {
+          steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
+          if (steamid) cache.push({ gogid: game.appid, steamid });
+        }
+      }
+      if (steamid) {
         game.appid = steamid || game.appid;
         data.push(game);
       }
     }
+    fs.writeFile(filePath, JSON.stringify(cache, null, 2));
     return data;
   } catch (err) {
     throw err;

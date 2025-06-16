@@ -19,6 +19,7 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
     return;
   }
   userDir.setUserDataPath(userDataPath);
+  gog.initDebug({ isDev, userDataPath });
   steam.initDebug({ isDev, userDataPath });
   blacklist.initDebug({ isDev, userDataPath });
   debug = new (require('@xan105/log'))({
