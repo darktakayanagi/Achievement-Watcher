@@ -353,8 +353,11 @@ module.exports.parse = async (filePath) => {
               0,
           };
 
-          if (!result.Achieved && result.MaxProgress != 0 && result.CurProgress != 0 && result.MaxProgress == result.CurProgress) {
-            //CODEX Gears5 (09/2019)  && Gears tactics (05/2020)
+          if (
+            (!result.Achieved && result.MaxProgress != 0 && result.CurProgress != 0 && result.MaxProgress == result.CurProgress) ||
+            (result.UnlockTime && +result.UnlockTime !== '0')
+          ) {
+            //CODEX Gears5 (09/2019)  && Gears tactics (05/2020) && Nemirtingas Galaxy Emu
             result.Achieved = true;
           }
 

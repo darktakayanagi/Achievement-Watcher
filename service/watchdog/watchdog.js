@@ -12,6 +12,7 @@ const moment = require('moment');
 const websocket = require('./websocket.js');
 const processPriority = require('./util/priority.js');
 const fs = require('@xan105/fs');
+const request = require('request-zero');
 const settings = require('./settings.js');
 const monitor = require('./monitor.js');
 const steam = require('./steam.js');
@@ -210,6 +211,10 @@ var app = {
             : filePath.dir.replace(/(\\stats$)|(\\SteamEmu$)|(\\SteamEmu\\UserStats$)/gi, '').match(/([0-9]+$)/g)[0];
         } catch (err) {
           throw "Unable to find game's appID";
+        }
+
+        if (dir.includes('NemirtingasGalaxyEmu')) {
+          appID = await self.steamAppIdForGogId(appID);
         }
 
         let game = runningGames.find((g) => String(g.appid) === appID) || (await self.load(appID));
@@ -447,6 +452,26 @@ var app = {
       }
 
       return game;
+    } catch (err) {
+      throw err;
+    }
+  },
+  steamAppIdForGogId: async function (appID) {
+    try {
+      const cacheFile = path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'gog.db');
+      let cache = [];
+
+      if (fs.existsSync(cacheFile)) {
+        cache = JSON.parse(await fs.readFile(cacheFile, { encoding: 'utf8' }));
+      }
+      let cached = cache.find((g) => g.gogid === game.appid);
+      if (cached) return cached.steamid;
+      const url = `https://gamesdb.gog.com/platforms/gog/external_releases/${appID}`;
+      let gameinfo = await request.getJson(url);
+      if (gameinfo) {
+        let steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
+        if (steamid) return steamid;
+      }
     } catch (err) {
       throw err;
     }
