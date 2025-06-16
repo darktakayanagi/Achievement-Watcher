@@ -101,7 +101,7 @@ module.exports.load = () => {
     }
 
     if (typeof options.achievement_source.epic !== 'boolean') {
-      options.achievement_source.gog = true;
+      options.achievement_source.epic = true;
     }
 
     if (typeof options.achievement_source.importCache !== 'boolean') {
