@@ -2,6 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const ffs = require('@xan105/fs');
 const glob = require('fast-glob');
 const request = require('request-zero');
 
@@ -55,7 +56,7 @@ module.exports.scan = async (dir) => {
         data.push(game);
       }
     }
-    fs.writeFile(filePath, JSON.stringify(cache, null, 2));
+    ffs.writeFile(cacheFile, JSON.stringify(cache, null, 2));
     return data;
   } catch (err) {
     throw err;
