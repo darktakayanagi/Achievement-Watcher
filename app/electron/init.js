@@ -43,6 +43,7 @@ const progressQueue = [];
 
 ipcMain.on('get-steam-data', async (event, arg) => {
   const appid = +arg.appid;
+  //TODO: get all necessary data from steamdb pages
   if (arg.type === 'icon') {
     await client.getProductInfo([appid], [], false, async (err, data) => {
       const appInfo = data[appid].appinfo;
@@ -54,6 +55,15 @@ ipcMain.on('get-steam-data', async (event, arg) => {
       const appInfo = data[appid].appinfo;
       event.returnValue = `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
     });
+  }
+  if (arg.type === 'data') {
+    let info = { appid };
+    openSteamDB(info);
+    while (!info.achievements) {
+      await delay(500);
+    }
+    event.returnValue = info;
+    return;
   }
   await delay(5000);
   event.returnValue = {};
@@ -89,6 +99,82 @@ ipcMain.handle('start-watchdog', async (event, arg) => {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * @param {{appid: string}} info
+ */
+function openSteamDB(info = { appid: 269770 }) {
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+  win.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
+  // Inject JS *before* the page starts executing its own scripts
+  win.webContents.on('dom-ready', async () => {
+    await win.webContents.executeJavaScript(`
+      // Override navigator.userAgent
+      Object.defineProperty(navigator, 'userAgent', {
+        get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+      });
+
+      // Override platform
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'Win32'
+      });
+
+      // Override vendor
+      Object.defineProperty(navigator, 'vendor', {
+        get: () => 'Google Inc.'
+      });
+
+      // Fake Chrome object
+      window.chrome = { runtime: {} };
+    `);
+  });
+  win.loadURL(`https://steamdb.info/app/${info.appid}/stats/`);
+  win.webContents.on('did-finish-load', async () => {
+    let achievements = undefined;
+    try {
+      while (!achievements || achievements.length === 0) {
+        achievements = await win.webContents.executeJavaScript(`
+          (() => {
+            const items = document.querySelectorAll('.achievements_list .achievement');
+            const data = [];
+            const appid = document.querySelector('.row.app-row table tbody tr')?.children?.[1]?.innerText.trim() || '';
+            items.forEach(item => {
+              const idRaw = item.getAttribute('id') || '';
+              const id = idRaw.replace(/^achievement-/, '');
+              const name = item.querySelector('.achievement_name')?.innerText.trim() || '';
+              
+              const descContainer = item.querySelector('.achievement_desc');
+              const spoiler = descContainer?.querySelector('.achievement_spoiler');
+              const hidden = !!spoiler;
+              const description = hidden
+                ? spoiler?.innerText.trim()
+                : descContainer?.innerText.trim() || '';
+              const icon = 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/'+appid+'/' + item.querySelector('.achievement_image')?.getAttribute('data-name') || '';
+              const icongray = 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/'+appid+'/' + item.querySelector('.achievement_image_small')?.getAttribute('data-name') || '';
+              data.push({ name: id, default_value:0, displayName: name, hidden: hidden ? 1 : 0, description,  icon, icongray});
+            });
+
+            return data;
+          })()
+        `);
+        await delay(500);
+      }
+      info.achievements = achievements;
+      console.log('Extracted achievements:', achievements.length);
+      //TODO: send this back to renderer
+    } catch (error) {
+      console.error('Failed to extract achievements:', error);
+    }
+  });
 }
 
 function createMainWindow() {
