@@ -140,8 +140,6 @@ async function discover(source, steamAccFilter) {
   return data;
 }
 
-module.exports.getAchievementData = async () => {};
-
 module.exports.getAchievementsForAppid = async (option, requestedAppid, callbackProgress = () => {}) => {
   let appidList = await discover(option.achievement_source, option.steam.main);
   let finds = appidList.filter((app) => app.appid === String(requestedAppid));
@@ -158,6 +156,8 @@ module.exports.getAchievementsForAppid = async (option, requestedAppid, callback
       game = await rpcs3.getGameData(appid.data.path);
     } else if (finds[0].data.type === 'uplay' || finds[0].data.type === 'lumaplay') {
       game = await uplay.getGameData(finds[0].appid, option.achievement.lang);
+    } else if (finds[0].source === 'epic' && epic.isExclusive(finds[0].appid)) {
+      game = await epic.getGameData({ appID: finds[0].appid });
     } else {
       game = await steam.getGameData({
         appID: finds[0].appid,
@@ -309,6 +309,8 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
             game = await rpcs3.getGameData(appid.data.path);
           } else if (appid.data.type === 'uplay' || appid.data.type === 'lumaplay') {
             game = await uplay.getGameData(appid.appid, option.achievement.lang);
+          } else if (appid.source === 'epic' && epic.isExclusive(appid.appid)) {
+            game = await epic.getGameData({ appID: appid.appid, lang: option.achievement.lang });
           } else {
             game = await steam.getGameData({
               appID: appid.appid,

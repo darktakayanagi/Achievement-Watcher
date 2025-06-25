@@ -69,6 +69,36 @@ ipcMain.on('get-steam-data', async (event, arg) => {
   event.returnValue = {};
 });
 
+ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
+  function normalizeTitle(str) {
+    return str
+      .toLowerCase()
+      .normalize('NFKD') // normalize accents
+      .replace(/[\u2018\u2019\u201A\u201B\u2039\u203A']/g, '') // single quotes
+      .replace(/[\u201C\u201D\u201E\u201F\u00AB\u00BB"]/g, '') // double quotes
+      .replace(/[™®©]/g, '') // trademark symbols
+      .replace(/[:.,!?()\\[\\]{}\-]/g, '') // punctuation + hyphens
+      .replace(/\s+/g, ' ') // collapse spaces
+      .trim();
+  }
+
+  let info = { name: arg.title };
+  searchForSteamAppId(info);
+  while (true) {
+    if (info.games) {
+      for (let game of info.games) {
+        if (normalizeTitle(game.title) === normalizeTitle(arg.title)) {
+          event.returnValue = game.appid;
+          return;
+        }
+      }
+      break;
+    }
+    await delay(500);
+  }
+  event.returnValue = undefined;
+});
+
 ipcMain.on('notify-test', async (event, arg) => {
   await createNotificationWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED' });
 });
@@ -140,8 +170,15 @@ function openSteamDB(info = { appid: 269770 }) {
   win.loadURL(`https://steamdb.info/app/${info.appid}/stats/`);
   win.webContents.on('did-finish-load', async () => {
     let achievements = undefined;
+    let name = undefined;
     try {
       while (!achievements || achievements.length === 0) {
+        name = await win.webContents.executeJavaScript(`
+          (() => {
+            const el = document.querySelector('.achievements_game_name');
+            return el?.innerText.trim() || null;
+          })()
+        `);
         achievements = await win.webContents.executeJavaScript(`
           (() => {
             const items = document.querySelectorAll('.achievements_list .achievement');
@@ -168,11 +205,103 @@ function openSteamDB(info = { appid: 269770 }) {
         `);
         await delay(500);
       }
+      info.name = name;
       info.achievements = achievements;
       console.log('Extracted achievements:', achievements.length);
-      //TODO: send this back to renderer
     } catch (error) {
       console.error('Failed to extract achievements:', error);
+    }
+  });
+}
+
+function searchForSteamAppId(info = { name: '' }) {
+  if (info.name.length === 0) {
+    info.appid = undefined;
+    return;
+  }
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+  win.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
+  // Inject JS *before* the page starts executing its own scripts
+  win.webContents.on('dom-ready', async () => {
+    await win.webContents.executeJavaScript(`
+      // Override navigator.userAgent
+      Object.defineProperty(navigator, 'userAgent', {
+        get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+      });
+
+      // Override platform
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'Win32'
+      });
+
+      // Override vendor
+      Object.defineProperty(navigator, 'vendor', {
+        get: () => 'Google Inc.'
+      });
+
+      // Fake Chrome object
+      window.chrome = { runtime: {} };
+    `);
+  });
+  //win.loadURL(`https://steamdb.info/search/?a=app&q=${info.name}&type=1&category=0`);
+  win.loadURL(`https://store.steampowered.com/search/?term=${info.name}&category1=998&ndl=1`);
+  win.webContents.on('did-finish-load', async () => {
+    let games = undefined;
+    try {
+      while (!games) {
+        games = await win.webContents.executeJavaScript(`
+          (() => {
+            const rows = document.querySelectorAll('#search_resultsRows a[data-ds-appid]');
+            const list = [];
+
+            for (const row of rows) {
+              if (list.length >= 10) break;
+
+              const appid = row.getAttribute('data-ds-appid');
+              const title = row.querySelector('.title')?.innerText.trim() || '';
+
+              if (appid && title) {
+                list.push({ appid, title });
+              }
+            }
+
+            return list;
+          })();
+        `);
+
+        /* // this is for steamdb
+        games = await win.webContents.executeJavaScript(`
+          (() => {
+            const rows = document.querySelectorAll('#table-sortable tbody tr.app');
+            const matches = [];
+            console.log(rows);
+            rows.forEach(row => {
+              const appid = row.getAttribute('data-appid');
+              const nameLink = row.querySelector('td:nth-child(3) a');
+              const name = nameLink?.innerText.trim();
+
+              if (appid && name) {
+                matches.push({ appid, name });
+              }
+            });
+
+            return matches;
+          })();
+        `);
+        */
+        await delay(500);
+      }
+      info.games = games;
+    } catch (error) {
+      console.error('Failed to find appid:', error);
     }
   });
 }

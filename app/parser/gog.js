@@ -24,6 +24,7 @@ module.exports.scan = async (dir) => {
   const cacheFile = path.join(cacheRoot, 'steam_cache', 'gog.db');
   let data = [];
   let cache = [];
+  let update_cache = false;
 
   if (fs.existsSync(cacheFile)) {
     cache = JSON.parse(fs.readFileSync(cacheFile, { encoding: 'utf8' }));
@@ -48,7 +49,10 @@ module.exports.scan = async (dir) => {
         let gameinfo = await request.getJson(url);
         if (gameinfo) {
           steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
-          if (steamid) cache.push({ gogid: game.appid, steamid });
+          if (steamid) {
+            cache.push({ gogid: game.appid, steamid });
+            update_cache = true;
+          }
         }
       }
       if (steamid) {
@@ -56,7 +60,7 @@ module.exports.scan = async (dir) => {
         data.push(game);
       }
     }
-    ffs.writeFile(cacheFile, JSON.stringify(cache, null, 2));
+    if (update_cache) ffs.writeFile(cacheFile, JSON.stringify(cache, null, 2));
     return data;
   } catch (err) {
     throw err;
