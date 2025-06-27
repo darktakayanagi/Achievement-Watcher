@@ -57,10 +57,7 @@ module.exports.scan = async (dir) => {
   }
 
   try {
-    for (let dir of await glob(
-      path.join(process.env['APPDATA'] || path.join(os.homedir(), 'Library', 'Application Support'), 'NemirtingasEpicEmu', '*/*/'),
-      { onlyDirectories: true, absolute: true }
-    )) {
+    for (let dir of await glob(path.join(process.env['APPDATA'], 'NemirtingasEpicEmu', '*/*/'), { onlyDirectories: true, absolute: true })) {
       let game = {
         appid: path.parse(dir).name,
         source: 'epic',

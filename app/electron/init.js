@@ -99,6 +99,24 @@ ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
   event.returnValue = undefined;
 });
 
+ipcMain.on('fetch-source-img', async (event, arg) => {
+  switch (arg) {
+    case 'epic':
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'epic.svg');
+      break;
+    case 'gog':
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'gog.svg');
+      break;
+    case 'playstation':
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'playstation.svg');
+      break;
+    case 'steam':
+    default:
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'steam.svg');
+      break;
+  }
+});
+
 ipcMain.on('notify-test', async (event, arg) => {
   await createNotificationWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED' });
 });

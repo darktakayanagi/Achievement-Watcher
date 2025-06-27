@@ -318,7 +318,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
               key: option.steam.apiKey,
             });
           }
-
+          game.source = appid.source;
           if (!option.achievement.mergeDuplicate && appid.source) game.source = appid.source;
 
           let root = {};

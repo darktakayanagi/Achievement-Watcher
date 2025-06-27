@@ -427,6 +427,7 @@ async function getSteamDataFromSRV(appID, lang) {
   const { ipcRenderer } = require('electron');
   const result = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'data' });
   const icon = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'icon' });
+
   return {
     name: result.name,
     appid: appID,

@@ -180,9 +180,15 @@ var app = {
                   </div>
                   
                   <div class="info">
-                       <div class="title">${list[game].name}</div>
-                       <div class="progressBar" data-percent="${progress}"><span class="meter" style="width:${progress}%"></span></div>
-                       ${list[game].source ? `<div class="source">${list[game].source}</div>` : ''}
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <div class="title">${list[game].name}</div>
+                      <img style="height: 1em; vertical-align: middle; line-height: 1;" src="${ipcRenderer.sendSync(
+                        'fetch-source-img',
+                        list[game].source
+                      )}"'>
+                    </div>
+                    <div class="progressBar" data-percent="${progress}"><span class="meter" style="width:${progress}%"></span></div>
+                    <!--${list[game].source ? `<div class="source">${list[game].source}</div>` : ''}-->
                   </div>
                 </div>
             </li>
