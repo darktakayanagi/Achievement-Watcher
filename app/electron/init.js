@@ -4,6 +4,7 @@ const path = require('path');
 const { app } = require('electron');
 app.setName('Achievement Watcher');
 app.setPath('userData', path.join(app.getPath('appData'), app.getName()));
+const puppeteer = require('puppeteer');
 const { BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const remote = require('@electron/remote/main');
@@ -97,6 +98,18 @@ ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
     await delay(500);
   }
   event.returnValue = undefined;
+});
+
+ipcMain.on('get-title-from-epic-id', async (event, arg) => {
+  let info = { appid: arg.appid };
+  await searchForGameName(info);
+  while (true) {
+    if (info.title) {
+      event.returnValue = info.title;
+      return;
+    }
+    await delay(500);
+  }
 });
 
 ipcMain.on('fetch-source-img', async (event, arg) => {
@@ -230,6 +243,72 @@ function openSteamDB(info = { appid: 269770 }) {
       console.error('Failed to extract achievements:', error);
     }
   });
+}
+
+async function searchForGameName(info = { appid: '' }) {
+  if (info.appid.length === 0) {
+    info.title = undefined;
+    return;
+  }
+
+  let locale = 'en-US'; // use AW's languague in the future? does it even make a difference in this context?
+  let startIndex = 0;
+  let matchResult;
+
+  async function scrapePage(startIndex) {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    const url = `https://store.epicgames.com/pt/browse?sortBy=releaseDate&sortDir=DESC&tag=Windows&priceTier=tier3&category=Game&count=40&start=${startIndex}`;
+
+    try {
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+      });
+      await page.setUserAgent(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+      );
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+      await page.waitForFunction(() => !!window.__REACT_QUERY_INITIAL_QUERIES__, { timeout: 15000 });
+      const queries = await page.evaluate(() => window.__REACT_QUERY_INITIAL_QUERIES__);
+      if (queries.queries) {
+        const catalogQuery = queries.queries.find((q) => q?.state?.data?.Catalog?.searchStore?.elements);
+        if (catalogQuery) {
+          const elements = catalogQuery.state.data.Catalog.searchStore.elements;
+          const found = elements.find((el) => el.namespace === info.appid);
+          if (found) {
+            matchResult = found.title;
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`❌ Error on page ${startIndex}:`, err.message);
+    } finally {
+      await page.close();
+      await browser.close();
+    }
+    return matchResult;
+  }
+
+  async function run() {
+    const tasks = [];
+    for (let i = 0; i < 5; i++) {
+      const startIndex = i;
+      tasks.push(scrapePage(startIndex));
+    }
+
+    await Promise.all(tasks);
+    if (matchResult) {
+      console.log('\n🎯 Game found:');
+      console.table(matchResult);
+    } else {
+      console.log('\n🛑 Game not found after checking all pages.');
+    }
+  }
+  await run();
+  info.title = matchResult;
+  return;
 }
 
 function searchForSteamAppId(info = { name: '' }) {

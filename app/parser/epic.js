@@ -72,9 +72,15 @@ module.exports.scan = async (dir) => {
       if (cached) {
         steamid = cached.steamid;
       } else {
-        const title = await getGameTitleFromMapping(gameList[game.appid]);
-        steamid = ipcRenderer.sendSync('get-steam-appid-from-title', { title });
-        cache.push({ epicid: game.appid, steamid });
+        try {
+          const title = await getGameTitleFromMapping(gameList[game.appid]);
+          steamid = ipcRenderer.sendSync('get-steam-appid-from-title', { title });
+          cache.push({ epicid: game.appid, steamid });
+        } catch (err) {
+          //appid not found on mapping, either a new game or using custom appid
+          //lets assume its new and treat it as exclusive
+          cache.push({ epicid: game.appid });
+        }
       }
 
       game.appid = steamid || game.appid;
@@ -90,7 +96,14 @@ module.exports.scan = async (dir) => {
 module.exports.getGameData = async (cfg) => {
   //TODO: look up if is in cache first and if not then save fecthed data to cache
   let list = [];
-  let title = await getGameTitleFromMapping(JSON.parse(await getEpicProductMapping())[cfg.appID]);
+  let title;
+  try {
+    title = await getGameTitleFromMapping(JSON.parse(await getEpicProductMapping())[cfg.appID]);
+  } catch (err) {
+    //appid not found on mapping, either a new game or using custom appid
+    //lets assume its new and search for it on the epic games store
+    title = ipcRenderer.sendSync('get-title-from-epic-id', { appid: cfg.appID }) || 'Unknown game';
+  }
   let achievements;
   try {
     achievements = await request.getJson(
@@ -106,8 +119,8 @@ module.exports.getGameData = async (cfg) => {
       displayName: achievement.achievement.lockedDisplayName,
       hidden: achievement.achievement.hidden ? 1 : 0,
       description: achievement.achievement.lockedDescription,
-      icon: achievement.achievement.unlockedIconLink + '.png',
-      icongray: achievement.achievement.lockedIconLink + '.png',
+      icon: achievement.achievement.unlockedIconLink,
+      icongray: achievement.achievement.lockedIconLink,
     });
   }
 
