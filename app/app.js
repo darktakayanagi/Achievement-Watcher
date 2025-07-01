@@ -523,9 +523,13 @@ var app = {
       if (game.img.background) {
         if (game.system === 'uplay' || game.img?.overlay === true) {
           let gradient = `linear-gradient(to bottom right, rgba(0, 47, 75, .8), rgba(35, 54, 78, 0.9))`;
-          $('body').fadeIn().attr('style', `background: ${gradient}, url('${game.img.background}')`);
+          $('body')
+            .fadeIn()
+            .attr('style', `background: ${gradient}, url('${ipcRenderer.sendSync('fetch-icon', game.img.background, game.appid)}')`);
         } else {
-          $('body').fadeIn().css('background', `url('${game.img.background}')`);
+          $('body')
+            .fadeIn()
+            .css('background', `url('${ipcRenderer.sendSync('fetch-icon', game.img.background, game.appid)}')`);
         }
       } else {
         $('body').fadeIn().css('background', `url('../resources/img/ach_background.jpg')`);
