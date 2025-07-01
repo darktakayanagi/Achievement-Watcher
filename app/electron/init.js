@@ -16,6 +16,10 @@ const ipc = require(path.join(__dirname, 'ipc.js'));
 const player = require('sound-play');
 const { fetchIcon } = require(path.join(__dirname, '../parser/steam.js'));
 const { pathToFileURL } = require('url');
+const fetch = require('node-fetch');
+const BASE_URL = 'https://www.steamgriddb.com/api/v2';
+const API_KEY = '2a9d32ddd0bfe4e1191b4f6ff56fef60'; // TODO: remove this and load from config file
+const sharp = require('sharp');
 const SteamUser = require('steam-user');
 const client = new SteamUser();
 client.logOn({ anonymous: true });
@@ -109,6 +113,74 @@ ipcMain.on('get-title-from-epic-id', async (event, arg) => {
       return;
     }
     await delay(500);
+  }
+});
+
+ipcMain.on('get-images-for-game', async (event, arg) => {
+  const gameName = arg.name;
+  try {
+    const searchRes = await fetch(`${BASE_URL}/search/autocomplete/${encodeURIComponent(gameName)}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` },
+    });
+
+    const searchData = await searchRes.json();
+    const game = searchData.data[0];
+    if (!game) {
+      console.log('Game not found');
+      return;
+    }
+
+    const gameId = game.id;
+
+    const [iconsRes, gridsRes, heroesRes] = await Promise.all([
+      fetch(`${BASE_URL}/icons/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
+      fetch(`${BASE_URL}/grids/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
+      fetch(`${BASE_URL}/heroes/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
+    ]);
+
+    const [icons, grids, heroes] = await Promise.all([iconsRes.json(), gridsRes.json(), heroesRes.json()]);
+
+    const portrait = grids.data.find((g) => g.width === 600 && g.height === 900);
+    const landscape = grids.data.find((g) => g.width === 920 && g.height === 430);
+    const links = { icon: icons.data?.[0]?.url, background: heroes.data?.[0]?.url, portrait: portrait?.url, landscape: landscape?.url };
+    event.returnValue = links;
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+  }
+});
+
+ipcMain.on('stylize-background-for-appid', async (event, arg) => {
+  const imageUrl = arg.background;
+  const t = path.parse(imageUrl).base;
+  const outputPath = path.join(app.getPath('userData'), 'steam_cache', 'icon', arg.appid, t);
+
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) throw new Error(`Failed to fetch image: ${res.statusText}`);
+    const buffer = await res.buffer();
+
+    const metadata = await sharp(buffer).metadata();
+    const { width, height } = metadata;
+
+    const processedBuffer = await sharp(buffer)
+      .blur(5)
+      .modulate({ saturarion: 0.5 })
+      .composite([
+        {
+          input: Buffer.from(
+            `<svg width="${width}" height="${height}">
+              <rect width="100%" height="100%" fill="#3b65a7" fill-opacity="0.8"/>
+              <rect width="100%" height="100%" fill="#000000" fill-opacity="0.4"/>
+             </svg>`
+          ),
+          blend: 'over',
+        },
+      ])
+      .toBuffer();
+
+    fs.writeFileSync(outputPath, processedBuffer);
+  } catch (err) {
+    console.error('❌ Error:', err.message);
   }
 });
 
@@ -299,12 +371,6 @@ async function searchForGameName(info = { appid: '' }) {
     }
 
     await Promise.all(tasks);
-    if (matchResult) {
-      console.log('\n🎯 Game found:');
-      console.table(matchResult);
-    } else {
-      console.log('\n🛑 Game not found after checking all pages.');
-    }
   }
   await run();
   info.title = matchResult;
