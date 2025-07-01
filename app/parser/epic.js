@@ -94,7 +94,17 @@ module.exports.scan = async (dir) => {
 };
 
 module.exports.getGameData = async (cfg) => {
-  //TODO: look up if is in cache first and if not then save fecthed data to cache
+  const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
+  let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
+  let result;
+  try {
+    if (await ffs.existsAndIsYoungerThan(filePath, { timeUnit: 'M', time: 12 })) {
+      result = JSON.parse(await ffs.readFile(filePath));
+      return result;
+    }
+  } catch (err) {
+    debug.log(`Failed to load cache file for ${cfg.appID}. Fetching updated info`);
+  }
   let list = [];
   let title;
   try {
@@ -123,21 +133,23 @@ module.exports.getGameData = async (cfg) => {
       icongray: achievement.achievement.lockedIconLink,
     });
   }
-
-  //TODO: get proper images from somewhere
-  return {
+  const links = ipcRenderer.sendSync('get-images-for-game', { name: title });
+  result = {
     name: title,
     appid: cfg.appID,
     binary: null,
     img: {
-      header: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/header.jpg`,
-      background: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/page_bg_generated_v6b.jpg`,
-      portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/library_600x900.jpg`,
-      icon: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/header.jpg`,
+      header: links.landscape || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/header.jpg`,
+      background: links.background || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/page_bg_generated_v6b.jpg`,
+      portrait: links.portrait || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/library_600x900.jpg`,
+      icon: links.icon || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/header.jpg`,
     },
     achievement: {
       total: achievements.totalAchievements,
       list,
     },
   };
+  ipcRenderer.send('stylize-background-for-appid', { background: links.background, appid: cfg.appID });
+  ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+  return result;
 };
