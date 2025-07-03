@@ -82,8 +82,8 @@ module.exports.scan = async (dir) => {
           cache.push({ epicid: game.appid });
         }
       }
-
-      game.appid = steamid || game.appid;
+      game.steamappid = steamid;
+      game.appid = game.appid;
       data.push(game);
     }
     ffs.writeFile(cacheFile, JSON.stringify(cache, null, 2));
@@ -119,37 +119,56 @@ module.exports.getGameData = async (cfg) => {
     achievements = await request.getJson(
       `https://api.epicgames.dev/epic/achievements/v1/public/achievements/product/${cfg.appID}/locale/en-us?includeAchievements=true`
     );
+    for (let achievement of achievements.achievements) {
+      list.push({
+        name: achievement.achievement.name,
+        default_value: 0,
+        displayName:
+          achievement.achievement.lockedDisplayName.length === 0
+            ? achievement.achievement.unlockedDisplayName
+            : achievement.achievement.lockedDisplayName,
+        hidden: achievement.achievement.hidden ? 1 : 0,
+        description: achievement.achievement.lockedDescription,
+        icon: achievement.achievement.unlockedIconLink,
+        icongray: achievement.achievement.lockedIconLink,
+      });
+    }
   } catch (err) {
-    debug.log(err);
+    // probably hidden achievements, lets try to get steam's data
+    if (err.code !== 404) debug.log(err);
+    if (!cfg.steamappid) return result;
+    const achs = ipcRenderer.sendSync('get-steam-data', { appid: cfg.steamappid, type: 'data' });
+    list = achs.achievements;
   }
-  for (let achievement of achievements.achievements) {
-    list.push({
-      name: achievement.achievement.name,
-      default_value: 0,
-      displayName: achievement.achievement.lockedDisplayName,
-      hidden: achievement.achievement.hidden ? 1 : 0,
-      description: achievement.achievement.lockedDescription,
-      icon: achievement.achievement.unlockedIconLink,
-      icongray: achievement.achievement.lockedIconLink,
-    });
-  }
-  const links = ipcRenderer.sendSync('get-images-for-game', { name: title });
+
   result = {
     name: title,
     appid: cfg.appID,
     binary: null,
-    img: {
-      header: links.landscape || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/header.jpg`,
-      background: links.background || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/page_bg_generated_v6b.jpg`,
-      portrait: links.portrait || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/library_600x900.jpg`,
-      icon: links.icon || `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appID}/header.jpg`,
-    },
     achievement: {
-      total: achievements.totalAchievements,
+      total: list.length,
       list,
     },
   };
-  ipcRenderer.send('stylize-background-for-appid', { background: links.background, appid: cfg.appID });
+  if (!cfg.steamappid) {
+    // if its exclusive then use epic images instead of steam's
+    const links = ipcRenderer.sendSync('get-images-for-game', { name: title });
+    result.img = {
+      header: links.landscape,
+      background: links.background,
+      portrait: links.portrait,
+      icon: links.icon,
+    };
+    ipcRenderer.send('stylize-background-for-appid', { background: links.background, appid: cfg.appID });
+  } else {
+    result.img = {
+      header: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.steamappid}/header.jpg`,
+      background: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.steamappid}/page_bg_generated_v6b.jpg`,
+      portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.steamappid}/library_600x900.jpg`,
+      icon: ipcRenderer.sendSync('get-steam-data', { appid: cfg.steamappid, type: 'icon' }),
+    };
+  }
+
   ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
   return result;
 };

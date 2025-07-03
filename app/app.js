@@ -635,7 +635,7 @@ var app = {
                                 }</div>
                                 <div class="description">${
                                   achievement.hidden == 1 && !app.config.achievement.showHidden && !achievement.Achieved
-                                    ? '...'
+                                    ? '[Hidden description (enable in the settings to show)]'
                                     : achievement.description || '...'
                                 }</div>
                                 <div class="progressBar" data-current="${achievement.CurProgress || '0'}" data-max="${
@@ -734,7 +734,10 @@ var app = {
         $('.achievement .stats .community').hide();
       } else {
         $('.achievement .stats .community').show();
-        getSteamGlobalStat(self.data('appid'));
+        getGlobalStat(
+          game.source === 'epic' && game.steamappid ? game.steamappid : self.data('appid'),
+          game.source === 'epic' ? (game.steamappid ? 'steam' : 'epic') : 'steam'
+        );
       }
 
       $('#achievement').fadeIn(600, function () {

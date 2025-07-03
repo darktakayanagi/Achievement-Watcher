@@ -1,8 +1,11 @@
 'use strict';
 
-function getSteamGlobalStat(appid) {
+function getGlobalStat(appid, source) {
   $.ajax({
-    url: `https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=${appid}&format=json`,
+    url:
+      source === 'epic'
+        ? `https://api.epicgames.dev/epic/achievements/v1/public/achievements/product/${appid}/locale/en-us?includeAchievements=true`
+        : `https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=${appid}&format=json`,
     dataType: 'json',
     ContentType: 'json',
     type: 'GET',
@@ -10,11 +13,11 @@ function getSteamGlobalStat(appid) {
     timeout: 5000,
     beforeSend: () => {},
     success: (data) => {
-      for (const globalStat of data.achievementpercentages.achievements) {
-        const percent = Math.round(globalStat.percent * 10) / 10;
+      for (const globalStat of source === 'epic' ? data.achievements : data.achievementpercentages.achievements) {
+        const percent = Math.round((globalStat.percent || globalStat.achievement?.rarity?.percent) * 10) / 10;
         if (percent > 100) percent = 100;
 
-        const elem = $(`#achievement li .achievement[data-name="${globalStat.name}"]`);
+        const elem = $(`#achievement li .achievement[data-name="${globalStat.name || globalStat.achievement.name}"]`);
 
         elem.find('.stats .community span.data').text(percent);
 

@@ -33,6 +33,7 @@ const userData = app.getPath('userData');
 if (manifest.config['disable-gpu']) app.disableHardwareAcceleration();
 if (manifest.config.appid) app.setAppUserModelId(manifest.config.appid);
 
+let steamDBWindow = null;
 let MainWin = null;
 let progressWindow = null;
 let overlayWindow = null;
@@ -89,6 +90,7 @@ ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
 
   let info = { name: arg.title };
   searchForSteamAppId(info);
+  let possibleMatch;
   while (true) {
     if (info.games) {
       for (let game of info.games) {
@@ -96,12 +98,15 @@ ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
           event.returnValue = game.appid;
           return;
         }
+        if (!possibleMatch && normalizeTitle(game.title).includes(normalizeTitle(arg.title))) {
+          possibleMatch = game.appid;
+        }
       }
       break;
     }
     await delay(500);
   }
-  event.returnValue = undefined;
+  event.returnValue = possibleMatch;
 });
 
 ipcMain.on('get-title-from-epic-id', async (event, arg) => {
@@ -238,19 +243,27 @@ function delay(ms) {
  * @param {{appid: string}} info
  */
 function openSteamDB(info = { appid: 269770 }) {
-  const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    show: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-  win.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
-  // Inject JS *before* the page starts executing its own scripts
-  win.webContents.on('dom-ready', async () => {
-    await win.webContents.executeJavaScript(`
+  if (steamDBWindow) {
+    if (steamDBWindow.isMinimized()) steamDBWindow.restore();
+    steamDBWindow.focus();
+  } else {
+    steamDBWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      show: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        partition: 'persist:cloudflare', // 💡 persist session across loads
+      },
+    });
+
+    steamDBWindow.webContents.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+    );
+    // Inject JS *before* the page starts executing its own scripts
+    steamDBWindow.webContents.on('dom-ready', async () => {
+      await steamDBWindow.webContents.executeJavaScript(`
       // Override navigator.userAgent
       Object.defineProperty(navigator, 'userAgent', {
         get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
@@ -269,20 +282,21 @@ function openSteamDB(info = { appid: 269770 }) {
       // Fake Chrome object
       window.chrome = { runtime: {} };
     `);
-  });
-  win.loadURL(`https://steamdb.info/app/${info.appid}/stats/`);
-  win.webContents.on('did-finish-load', async () => {
+    });
+  }
+  steamDBWindow.loadURL(`https://steamdb.info/app/${info.appid}/stats/`);
+  steamDBWindow.webContents.on('did-finish-load', async () => {
     let achievements = undefined;
     let name = undefined;
     try {
       while (!achievements || achievements.length === 0) {
-        name = await win.webContents.executeJavaScript(`
+        name = await steamDBWindow.webContents.executeJavaScript(`
           (() => {
             const el = document.querySelector('.achievements_game_name');
             return el?.innerText.trim() || null;
           })()
         `);
-        achievements = await win.webContents.executeJavaScript(`
+        achievements = await steamDBWindow.webContents.executeJavaScript(`
           (() => {
             const items = document.querySelectorAll('.achievements_list .achievement');
             const data = [];

@@ -309,8 +309,8 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
             game = await rpcs3.getGameData(appid.data.path);
           } else if (appid.data.type === 'uplay' || appid.data.type === 'lumaplay') {
             game = await uplay.getGameData(appid.appid, option.achievement.lang);
-          } else if (appid.source === 'epic' && epic.isExclusive(appid.appid)) {
-            game = await epic.getGameData({ appID: appid.appid, lang: option.achievement.lang });
+          } else if (appid.source === 'epic') {
+            game = await epic.getGameData({ appID: appid.appid, steamappid: appid.steamappid, lang: option.achievement.lang });
           } else {
             game = await steam.getGameData({
               appID: appid.appid,
@@ -318,6 +318,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
               key: option.steam.apiKey,
             });
           }
+          if (appid.steamappid) game.steamappid = appid.steamappid;
           game.source = appid.source;
           if (!option.achievement.mergeDuplicate && appid.source) game.source = appid.source;
 
