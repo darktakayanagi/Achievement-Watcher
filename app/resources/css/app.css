@@ -1734,7 +1734,9 @@ main {
   max-width: 150px;
 }
 #game-list.view-portrait ul > li .game-box .info .title {
-  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 #game-list.view-portrait ul > li .game-box .info .progressBar {
   height: 4px;
