@@ -47,6 +47,9 @@ extraFiles:
   - from: ../setup/winmedia
     to: resources/userData/Media
 
+  - from: ../setup/Source
+    to: resources/userData/Source
+
   - from: ./presets
     to: resources/userData/Presets
 
