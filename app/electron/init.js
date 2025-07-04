@@ -250,7 +250,7 @@ function openSteamDB(info = { appid: 269770 }) {
     steamDBWindow = new BrowserWindow({
       width: 1200,
       height: 800,
-      show: true,
+      show: false,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -939,6 +939,7 @@ async function createProgressWindow(info) {
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
     },
