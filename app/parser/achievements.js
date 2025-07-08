@@ -282,7 +282,7 @@ module.exports.getAchievementsForAppid = async (option, requestedAppid, callback
       game.achievement.unlocked = game.achievement.list.filter((ach) => ach.Achieved == 1).length;
     }
   } catch (err) {
-    debug.error(`[${app.appid}] Error parsing local achievements data => ${err} > SKIPPING`);
+    debug.error(`[${requestedAppid}] Error parsing local achievements data => ${err} > SKIPPING`);
   }
 
   return game;
