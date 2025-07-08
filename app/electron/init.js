@@ -46,33 +46,39 @@ let isOverlayShowing = false;
 const earnedNotificationQueue = [];
 const playtimeQueue = [];
 const progressQueue = [];
+let debug = new (require('@xan105/log'))({
+  console: manifest.config.debug || false,
+  file: path.join(userData, `logs/renderer.log`),
+});
 
-ipcMain.on('get-steam-data', async (event, arg) => {
-  const appid = +arg.appid;
-  //TODO: get all necessary data from steamdb pages
-  if (arg.type === 'icon') {
+async function getSteamData(appid, type) {
+  if (type === 'icon') {
     await client.getProductInfo([appid], [], false, async (err, data) => {
       const appInfo = data[appid].appinfo;
-      event.returnValue = `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
+      return `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
     });
   }
-  if (arg.type === 'portrait') {
+  if (type === 'portrait') {
     await client.getProductInfo([appid], [], false, async (err, data) => {
       const appInfo = data[appid].appinfo;
-      event.returnValue = `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
+      return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
     });
   }
-  if (arg.type === 'data') {
+  if (type === 'data') {
     let info = { appid };
     openSteamDB(info);
     while (!info.achievements) {
       await delay(500);
     }
-    event.returnValue = info;
-    return;
+    return info;
   }
   await delay(5000);
-  event.returnValue = {};
+  return {};
+}
+
+ipcMain.on('get-steam-data', async (event, arg) => {
+  const appid = +arg.appid;
+  event.returnValue = await getSteamData(appid, arg.type);
 });
 
 ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
