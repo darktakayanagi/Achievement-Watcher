@@ -1,4 +1,12 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
+const args = process.argv.slice(1);
+const isDevArg = args.find((arg) => arg.startsWith('--isDev='));
+const userDataArg = args.find((arg) => arg.startsWith('--userDataPath='));
+
+const isDev = isDevArg ? isDevArg.split('=')[1] === 'true' : false;
+const userDataPath = userDataArg ? userDataArg.split('=')[1] : null;
+const achievementsJS = require('./parser/achievements');
+achievementsJS.initDebug({ isDev, userDataPath });
 
 contextBridge.exposeInMainWorld('customApi', {
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
