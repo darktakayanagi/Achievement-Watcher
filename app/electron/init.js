@@ -1038,7 +1038,7 @@ function checkResources() {
       const srcPath = path.join(src, e.name);
       const dstPath = path.join(dst, e.name);
       if (e.isDirectory()) {
-        copyFolderRecursive();
+        copyFolderRecursive(srcPath, dstPath);
       } else {
         fs.copyFileSync(srcPath, dstPath);
       }
