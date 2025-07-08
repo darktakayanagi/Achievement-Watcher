@@ -158,28 +158,44 @@ module.exports.scanLegit = async (listingType = 0, steamAccFilter = '0') => {
   }
 };
 
-module.exports.getGameData = async (cfg) => {
+module.exports.getCachedData = async (cfg) => {
   if (!steamLanguages.some((language) => language.api === cfg.lang)) {
     throw 'Unsupported API language code';
   }
 
   const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
-
+  let result;
   try {
     let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
 
-    let result;
-
     if (await ffs.existsAndIsYoungerThan(filePath, { timeUnit: 'M', time: 12 })) {
       result = JSON.parse(await ffs.readFile(filePath));
-    } else {
-      if (cfg.key) {
-        result = await getSteamData(cfg);
-      } else {
-        result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
-      }
-      ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
     }
+  } catch (err) {
+    if (err.code) throw `Could not load Steam data: ${err.code} - ${err.message}`;
+    else throw `Could not load Steam data: ${err}`;
+  }
+  return result;
+};
+
+module.exports.getGameData = async (cfg) => {
+  if (!steamLanguages.some((language) => language.api === cfg.lang)) {
+    throw 'Unsupported API language code';
+  }
+  let result;
+  try {
+    result = await this.getCachedData(cfg);
+    if (result) return result;
+    const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
+    let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
+    if (cfg.key) {
+      result = await getSteamData(cfg);
+    } else {
+      result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
+    }
+    ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+    return result;
+    //TODO: data using key is incomplete
     /*
     if (await getMissingAchData(cfg, result)) {
       //updated missing data, resave
@@ -188,8 +204,8 @@ module.exports.getGameData = async (cfg) => {
 */
     return result;
   } catch (err) {
-    if (err.code) throw `Could not load Steam data: ${err.code} - ${err.message}`;
-    else throw `Could not load Steam data: ${err}`;
+    if (error.code) debug.log(`Could not load Steam data: ${err.code} - ${err.message}`);
+    else debug.log(`Could not load Steam data: ${err}`);
   }
 };
 
