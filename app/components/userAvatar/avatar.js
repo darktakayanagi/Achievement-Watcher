@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const regedit = require('regodit');
+const { readRegistryString } = require('../../util/reg');
 const accountms = require('accountpicture-ms-extractor');
 
 async function imageFileToBase64(filePath) {
@@ -13,11 +13,7 @@ async function imageFileToBase64(filePath) {
 }
 
 async function getWindowsProfileAvatar() {
-  const sourceID = await regedit.promises.RegQueryStringValue(
-    'HKCU',
-    'Software/Microsoft/Windows/CurrentVersion/AccountPicture',
-    'SourceId'
-  );
+  const sourceID = readRegistryString('HKCU', 'Software/Microsoft/Windows/CurrentVersion/AccountPicture', 'SourceId');
   if (!sourceID) throw 'No source ID found';
 
   const file = path.join(process.env['APPDATA'], 'Microsoft/Windows/AccountPictures', `${sourceID}.accountpicture-ms`);

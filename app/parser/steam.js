@@ -11,7 +11,7 @@ const moment = require('moment');
 const request = require('request-zero');
 const urlParser = require('url');
 const ffs = require('@xan105/fs');
-const regedit = require('regodit');
+const { readRegistryStringAndExpand, regKeyExists, readRegistryInteger, readRegistryString, listRegistryAllSubkeys } = require('../util/reg');
 const appPath = path.join(__dirname, '../');
 const steamID = require(path.join(appPath, 'util/steamID.js'));
 const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
@@ -53,11 +53,7 @@ module.exports.scan = async (additionalSearch = []) => {
       path.join(process.env['LOCALAPPDATA'], 'SKIDROW'),
     ];
 
-    const mydocs = await regedit.promises.RegQueryStringValueAndExpand(
-      'HKCU',
-      'Software/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders',
-      'Personal'
-    );
+    const mydocs = readRegistryStringAndExpand('HKCU', 'Software/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders', 'Personal');
     if (mydocs) {
       search = search.concat([path.join(mydocs, 'SkidRow')]);
     }
@@ -113,7 +109,7 @@ module.exports.scanLegit = async (listingType = 0, steamAccFilter = '0') => {
   try {
     let data = [];
 
-    if (regedit.RegKeyExists('HKCU', 'Software/Valve/Steam') && listingType > 0) {
+    if (regKeyExists('HKCU', 'Software/Valve/Steam') && listingType > 0) {
       let steamPath = await getSteamPath();
       let publicUsers = await getSteamUsers(steamPath);
       if (steamAccFilter !== '0' && publicUsers.find((p) => p.user === steamAccFilter))
@@ -131,8 +127,7 @@ module.exports.scanLegit = async (listingType = 0, steamAccFilter = '0') => {
       for (let stats of list) {
         let isInstalled = true;
         if (listingType == 1)
-          isInstalled =
-            (await regedit.promises.RegQueryIntegerValue('HKCU', `Software/Valve/Steam/Apps/${stats.appID}`, 'Installed')) === '1' ? true : false;
+          isInstalled = readRegistryInteger('HKCU', `Software/Valve/Steam/Apps/${stats.appID}`, 'Installed') === '1' ? true : false;
 
         let user = publicUsers.find((user) => user.user == stats.userID);
 
@@ -353,7 +348,7 @@ const getSteamPath = (module.exports.getSteamPath = async () => {
   let steamPath;
 
   for (let regHive of regHives) {
-    steamPath = await regedit.promises.RegQueryStringValue(regHive.root, regHive.key, regHive.name);
+    steamPath = readRegistryString(regHive.root, regHive.key, regHive.name);
     if (steamPath) {
       if (await ffs.exists(path.join(steamPath, 'steam.exe'))) {
         break;
@@ -368,7 +363,7 @@ const getSteamPath = (module.exports.getSteamPath = async () => {
 const getSteamUsers = (module.exports.getSteamUsers = async (steamPath) => {
   let result = [];
 
-  let users = await regedit.promises.RegListAllSubkeys('HKCU', 'Software/Valve/Steam/Users');
+  let users = listRegistryAllSubkeys('HKCU', 'Software/Valve/Steam/Users');
   if (!users) users = await glob('*([0-9])', { cwd: path.join(steamPath, 'userdata'), onlyDirectories: true, absolute: false });
 
   if (users.length == 0) throw 'No Steam User ID found';
@@ -397,7 +392,7 @@ const getSteamUsers = (module.exports.getSteamUsers = async (steamPath) => {
 });
 
 const getSteamUsersList = (module.exports.getSteamUsersList = async () => {
-  if (!regedit.RegKeyExists('HKCU', 'Software/Valve/Steam')) return [];
+  if (!regKeyExists('HKCU', 'Software/Valve/Steam')) return [];
   try {
     let steamPath = await getSteamPath();
     let publicUsers = await getSteamUsers(steamPath);

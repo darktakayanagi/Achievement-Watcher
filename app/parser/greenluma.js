@@ -1,21 +1,21 @@
 'use strict';
 
-const regedit = require('regodit');
+const { listRegistryAllSubkeys, readRegistryInteger, ListRegistryAllValues } = require('../util/reg');
 
 module.exports.scan = async () => {
   try {
     let data = [];
 
     const keys = {
-      glr: await regedit.promises.RegListAllSubkeys('HKCU', 'SOFTWARE/GLR/AppID'),
-      gl2020: await regedit.promises.RegListAllSubkeys('HKCU', 'SOFTWARE/GL2020/AppID'),
-      gl2024: await regedit.promises.RegListAllSubkeys('HKCU', 'SOFTWARE/GL2024/AppID'),
+      glr: listRegistryAllSubkeys('HKCU', 'SOFTWARE/GLR/AppID'),
+      gl2020: listRegistryAllSubkeys('HKCU', 'SOFTWARE/GL2020/AppID'),
+      gl2024: listRegistryAllSubkeys('HKCU', 'SOFTWARE/GL2024/AppID'),
     };
 
     if (keys.glr) {
       for (let key of keys.glr) {
         try {
-          let glr_ach_enable = parseInt(await regedit.promises.RegQueryIntegerValue('HKCU', `SOFTWARE/GLR/AppID/${key}`, 'SkipStatsAndAchievements'));
+          let glr_ach_enable = parseInt(readRegistryInteger('HKCU', `SOFTWARE/GLR/AppID/${key}`, 'SkipStatsAndAchievements'));
           if (glr_ach_enable === 0) {
             data.push({
               appid: key,
@@ -34,9 +34,7 @@ module.exports.scan = async () => {
     if (keys.gl2020) {
       for (let key of keys.gl2020) {
         try {
-          let glr_ach_enable = parseInt(
-            await regedit.promises.RegQueryIntegerValue('HKCU', `SOFTWARE/GL2020/AppID/${key}`, 'SkipStatsAndAchievements')
-          );
+          let glr_ach_enable = parseInt(readRegistryInteger('HKCU', `SOFTWARE/GL2020/AppID/${key}`, 'SkipStatsAndAchievements'));
           if (glr_ach_enable === 0) {
             data.push({
               appid: key,
@@ -54,9 +52,7 @@ module.exports.scan = async () => {
     if (keys.gl2020) {
       for (let key of keys.gl2020) {
         try {
-          let glr_ach_enable = parseInt(
-            await regedit.promises.RegQueryIntegerValue('HKCU', `SOFTWARE/GL2024/AppID/${key}`, 'SkipStatsAndAchievements')
-          );
+          let glr_ach_enable = parseInt(readRegistryInteger('HKCU', `SOFTWARE/GL2024/AppID/${key}`, 'SkipStatsAndAchievements'));
           if (glr_ach_enable === 0) {
             data.push({
               appid: key,
@@ -80,7 +76,7 @@ module.exports.scan = async () => {
 
 module.exports.getAchievements = async (root, key) => {
   try {
-    let achievements = await regedit.promises.RegListAllValues(root, key);
+    let achievements = ListRegistryAllValues(root, key);
     if (!achievements) throw 'No achievement found in registry';
 
     let result = [];
@@ -89,8 +85,8 @@ module.exports.getAchievements = async (root, key) => {
       if (!achievement.endsWith('_Time')) {
         result.push({
           id: achievement,
-          Achieved: parseInt(await regedit.promises.RegQueryIntegerValue(root, key, achievement)),
-          UnlockTime: parseInt(await regedit.promises.RegQueryIntegerValue(root, key, achievement + '_Time')),
+          Achieved: parseInt(readRegistryInteger(root, key, achievement)),
+          UnlockTime: parseInt(readRegistryInteger(root, key, achievement + '_Time')),
         });
       }
     }

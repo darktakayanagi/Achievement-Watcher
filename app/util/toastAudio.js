@@ -1,8 +1,7 @@
 'use strict';
 
 const path = require('path');
-const regedit = require('regodit');
-
+const { readRegistryString, writeRegistryString } = require('./reg');
 let userDataPath;
 
 module.exports.setUserDataPath = (p) => {
@@ -13,7 +12,7 @@ module.exports.getDefault = () => {
   const _default_ = 'Windows Notify System Generic.wav';
 
   try {
-    const filepath = regedit.RegQueryStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Default/.Current', '');
+    const filepath = readRegistryString('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Default/.Current', '');
 
     if (filepath) {
       return path.parse(filepath).base;
@@ -25,12 +24,12 @@ module.exports.getDefault = () => {
   }
 };
 
-module.exports.setCustom = (filename) => {
+module.exports.setCustom = async (filename) => {
   try {
     const file = path.join(userDataPath, 'Media', filename);
 
-    regedit.RegWriteStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Current', '', file);
-    regedit.RegWriteStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Default', '', file);
+    await writeRegistryString('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Current', '', file);
+    await writeRegistryString('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Default', '', file);
   } catch {
     /*Do nothing*/
   }
@@ -38,7 +37,7 @@ module.exports.setCustom = (filename) => {
 
 module.exports.getCustom = () => {
   try {
-    const filepath = regedit.RegQueryStringValue('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Current', '');
+    const filepath = readRegistryString('HKCU', 'AppEvents/Schemes/Apps/.Default/Notification.Achievement/.Current', '');
 
     if (filepath) {
       return filepath;

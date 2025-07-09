@@ -5,7 +5,7 @@ const yaml = require('js-yaml');
 const glob = require('fast-glob');
 const zip = require('adm-zip');
 const ffs = require('@xan105/fs');
-const regedit = require('regodit');
+const { listRegistryAllSubkeys, readRegistryString, readRegistryInteger } = require('../util/reg');
 const request = require('request-zero');
 const steamLanguages = require(path.join(__dirname, '../locale/steam.json'));
 
@@ -20,14 +20,14 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
 module.exports.scan = () => {
   //LumaPlay
   try {
-    let users = regedit.RegListAllSubkeys('HKCU', 'SOFTWARE/LumaPlay');
+    let users = listRegistryAllSubkeys('HKCU', 'SOFTWARE/LumaPlay');
     if (!users) throw 'LumaPlay no user found';
 
     let data = [];
 
     for (let user of users) {
       try {
-        let appidList = regedit.RegListAllSubkeys('HKCU', `SOFTWARE/LumaPlay/${user}`);
+        let appidList = listRegistryAllSubkeys('HKCU', `SOFTWARE/LumaPlay/${user}`);
         if (!appidList) throw `No achievements found for LumaPlay user: ${user}`;
 
         for (let appid of appidList) {
@@ -55,13 +55,13 @@ module.exports.scan = () => {
 module.exports.scanLegit = async (onlyInstalled = false) => {
   //Uplay /*Unused function; As of writing there is no way to get legit user ach unlocked data*/
   try {
-    const uplayPath = regedit.RegQueryStringValue('HKLM', 'Software/WOW6432Node/Ubisoft/Launcher', 'InstallDir');
+    const uplayPath = readRegistryString('HKLM', 'Software/WOW6432Node/Ubisoft/Launcher', 'InstallDir');
     if (!uplayPath) throw 'Uplay Path not found';
 
     let data = [];
 
     if (onlyInstalled) {
-      let installedList = regedit.RegListAllSubkeys('HKLM', 'SOFTWARE/WOW6432Node/Ubisoft/Launcher/Installs');
+      let installedList = listRegistryAllSubkeys('HKLM', 'SOFTWARE/WOW6432Node/Ubisoft/Launcher/Installs');
       if (!installedList) throw 'Uplay has no game installed';
 
       for (let appid of installedList) {
@@ -117,7 +117,7 @@ module.exports.getGameData = async (appid, lang) => {
       } catch (err) {
         debug.log(`Failed to get schema from server for UPLAY${appid}; Trying to generate from local Uplay installation ...`);
 
-        let uplayPath = regedit.RegQueryStringValue('HKLM', 'Software/WOW6432Node/Ubisoft/Launcher', 'InstallDir');
+        let uplayPath = readRegistryString('HKLM', 'Software/WOW6432Node/Ubisoft/Launcher', 'InstallDir');
         if (!uplayPath) throw "Uplay not found : can't generate schema if uplay is not installed.";
         schema = await generateSchemaFromLocalCache(appid, uplayPath);
         try {
@@ -144,13 +144,13 @@ module.exports.getGameData = async (appid, lang) => {
 
 module.exports.getAchievementsFromLumaPlay = (root, key) => {
   try {
-    let result = regedit.RegListAllValues(root, key);
+    let result = listRegistryAllValues(root, key);
     if (!result) throw 'No achievement found in registry';
 
     return result.map((name) => {
       return {
         id: name.replace('ACH_', ''),
-        Achieved: parseInt(regedit.RegQueryIntegerValue(root, key, name)),
+        Achieved: parseInt(readRegistryInteger(root, key, name)),
       };
     });
   } catch (err) {
@@ -210,8 +210,7 @@ async function generateSchemaFromLocalCache(appid, uplayPath) {
 
           debug.log(`Bind to steam lang: ${lang.webapi}`);
 
-          if (game.achievement.list.hasOwnProperty(lang.api))
-            throw `Ach list for ${lang.api} has already been set ! (Discarding ${isoCode})`;
+          if (game.achievement.list.hasOwnProperty(lang.api)) throw `Ach list for ${lang.api} has already been set ! (Discarding ${isoCode})`;
 
           let content = archive.readAsText(entry.entryName).trim().split('\r\n');
 
@@ -377,8 +376,7 @@ let indexDB = {
                   game.header = doc.root.logo_image;
                   game.icon = doc.root.icon_image;
 
-                  if (!game.background || game.background == 'BACKGROUNDIMAGE')
-                    game.background = doc.localizations['default'].BACKGROUNDIMAGE;
+                  if (!game.background || game.background == 'BACKGROUNDIMAGE') game.background = doc.localizations['default'].BACKGROUNDIMAGE;
                   if (!game.header || game.header == 'LOGOIMAGE') game.header = doc.localizations['default'].LOGOIMAGE;
                   if (!game.icon || game.icon == 'ICONIMAGE') game.icon = doc.localizations['default'].ICONIMAGE;
                 } catch (err) {
