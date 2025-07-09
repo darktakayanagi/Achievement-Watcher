@@ -53,6 +53,11 @@ jobs:
         run: |
           npm ci || npm install --verbose
 
+      - name: Rebuild native modules for Electron
+        working-directory: app
+        run: |
+          npx electron-rebuild
+
       - name: Build (no publish)
         run: npx electron-builder --config ../electron-builder.yml --windows --publish never
         working-directory: app
