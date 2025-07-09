@@ -46,6 +46,8 @@
     "node-html-parser": "^4.0.0",
     "normalize-path": "^3.0.0",
     "puppeteer": "^19.11.1",
+    "puppeteer-extra": "^3.3.4",
+    "puppeteer-extra-plugin-stealth": "^2.11.1",
     "registry-js": "^1.16.1",
     "request-zero": "^0.3.2",
     "sharp": "^0.30.7",
