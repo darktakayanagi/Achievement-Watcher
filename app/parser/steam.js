@@ -2,6 +2,7 @@
 
 //const axios = require('axios');
 //const cheerio = require('cheerio');
+const os = require('os');
 const path = require('path');
 const glob = require('fast-glob');
 const normalize = require('normalize-path');
@@ -39,18 +40,18 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
 module.exports.scan = async (additionalSearch = []) => {
   try {
     let search = [
-      path.join(process.env['Public'], 'Documents/Steam/CODEX'),
-      path.join(process.env['Public'], 'Documents/Steam/RUNE'),
-      path.join(process.env['Public'], 'Documents/OnlineFix'),
-      path.join(process.env['Public'], 'Documents/EMPRESS'),
+      //path.join(process.env['Public'], 'Documents/Steam/CODEX'),
+      //path.join(process.env['Public'], 'Documents/Steam/RUNE'),
+      //path.join(process.env['Public'], 'Documents/OnlineFix'),
+      //path.join(process.env['Public'], 'Documents/EMPRESS'),
       path.join(process.env['APPDATA'], 'Goldberg SteamEmu Saves'),
       path.join(process.env['APPDATA'], 'GSE Saves'),
       path.join(process.env['APPDATA'], 'EMPRESS'),
       path.join(process.env['APPDATA'], 'Steam/CODEX'),
       path.join(process.env['APPDATA'], 'SmartSteamEmu'),
       path.join(process.env['APPDATA'], 'CreamAPI'),
-      path.join(process.env['PROGRAMDATA'], 'Steam') + '/*',
-      path.join(process.env['LOCALAPPDATA'], 'SKIDROW'),
+      //path.join(process.env['PROGRAMDATA'], 'Steam') + '/*',
+      //path.join(process.env['LOCALAPPDATA'], 'SKIDROW'),
     ];
 
     const mydocs = readRegistryStringAndExpand('HKCU', 'Software/Microsoft/Windows/CurrentVersion/Explorer/User Shell Folders', 'Personal');
@@ -435,6 +436,9 @@ async function getSteamUserStats(cfg) {
 }
 
 async function getSteamDataFromSRV(appID, lang) {
+  //try to use puppeteer on a few sites
+  //before doing the ipcrenderer
+  //or, run python script to get the data
   const { ipcRenderer } = require('electron');
   const result = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'data' });
   const icon = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'icon' });

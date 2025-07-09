@@ -5,7 +5,9 @@ const ini = require('@xan105/ini');
 const parentFind = require('find-up');
 const omit = require('lodash.omit');
 const fs = require('@xan105/fs');
-const regedit = require('regodit');
+if (process.platform === 'win32') {
+  const regedit = require('regodit');
+}
 const sse = require('./sse.js');
 
 const files = {
@@ -328,7 +330,7 @@ module.exports.parse = async (filePath) => {
           }
 
           let result = {
-            name: local[achievement].id || local[achievement].apiname || local[achievement].name || achievement,
+            name: local[achievement].id || local[achievement].apiname || local[achievement].name || local[achievement].AchievementId || achievement,
             Achieved:
               local[achievement].Achieved == 1 ||
               local[achievement].achieved == 1 ||
@@ -357,7 +359,7 @@ module.exports.parse = async (filePath) => {
             (!result.Achieved && result.MaxProgress != 0 && result.CurProgress != 0 && result.MaxProgress == result.CurProgress) ||
             (result.UnlockTime && +result.UnlockTime !== '0')
           ) {
-            //CODEX Gears5 (09/2019)  && Gears tactics (05/2020) && Nemirtingas Galaxy Emu
+            //CODEX Gears5 (09/2019)  && Gears tactics (05/2020) && Nemirtingas Galaxy/Epic Emu
             result.Achieved = true;
           }
 
@@ -378,4 +380,35 @@ module.exports.parse = async (filePath) => {
   } catch (err) {
     throw err;
   }
+};
+
+module.exports.getFoldersLuma = async () => {
+  let data = [];
+
+  let users = regedit.RegListAllSubkeys('HKCU', 'SOFTWARE/LumaPlay');
+  if (!users) return data;
+
+  for (let user of users) {
+    try {
+      let appidList = regedit.RegListAllSubkeys('HKCU', `SOFTWARE/LumaPlay/${user}`);
+      if (!appidList) continue;
+
+      for (let appid of appidList) {
+        data.push({
+          dir: `SOFTWARE/LumaPlay/${user}/${appid}/Achievements`,
+          options: {
+            appid,
+            disableCheckIfProcessIsRunning: true,
+            disableCheckTimestamp: true,
+            recursive: false,
+            file: [files.achievement[1]],
+          },
+        });
+      }
+    } catch (err) {
+      debug.log(err);
+    }
+  }
+
+  return data;
 };

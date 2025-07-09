@@ -19,6 +19,7 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
 module.exports.setUserDataPath = (p) => {
   cacheRoot = p;
 };
+//process.env['APPDATA'] = path.join(os.homedir(), 'Library', 'Application Support');
 
 module.exports.scan = async (dir) => {
   const cacheFile = path.join(cacheRoot, 'steam_cache', 'gog.db');

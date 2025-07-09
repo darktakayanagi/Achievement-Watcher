@@ -1,13 +1,16 @@
 'use strict';
 
 const instance = new (require('single-instance'))('Achievement Watchdog');
-const hotkeys = require('node-hotkeys');
+if (process.platform === 'win32') {
+  const hotkeys = require('node-hotkeys');
+  const getStartApps = require('get-startapps');
+  const tasklist = require('win-tasklist');
+  const { isWinRTAvailable } = require('powertoast');
+}
 const os = require('os');
 const { spawn } = require('child_process');
 const path = require('path');
-const getStartApps = require('get-startapps');
 const watch = require('node-watch');
-const tasklist = require('win-tasklist');
 const moment = require('moment');
 const websocket = require('./websocket.js');
 const processPriority = require('./util/priority.js');
@@ -21,7 +24,6 @@ const playtimeMonitor = require('./playtime/monitor.js');
 const notify = require('./notification/toaster.js');
 const debug = require('./util/log.js');
 const { crc32 } = require('crc');
-const { isWinRTAvailable } = require('powertoast');
 const { isFullscreenAppRunning } = require('./queryUserNotificationState.js');
 const { startObs, recordGame, setRecordPath, setRecordResolution } = require('./obsHandler.js');
 const userShellFolder = require('./util/userShellFolder.js');
@@ -433,6 +435,9 @@ var app = {
       }
     });
   },
+  watch_lumaPlay: async function () {
+    console.log(`watching changes in LumaPlay`);
+  },
   load: async function (appID) {
     try {
       let self = this;
@@ -472,6 +477,20 @@ var app = {
         let steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
         if (steamid) return steamid;
       }
+    } catch (err) {
+      throw err;
+    }
+  },
+  steamAppIdForEpicId: async function (appID) {
+    try {
+      const cacheFile = path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'epic.db');
+      let cache = [];
+
+      if (fs.existsSync(cacheFile)) {
+        cache = JSON.parse(await fs.readFile(filePath, { encoding: 'utf8' }));
+      }
+      let cached = cache.find((g) => g.gogid === game.appid);
+      if (cached) return cached.steamid;
     } catch (err) {
       throw err;
     }

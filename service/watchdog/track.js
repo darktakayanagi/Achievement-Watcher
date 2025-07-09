@@ -2,8 +2,9 @@
 
 const path = require('path');
 const fs = require('@xan105/fs');
+const os = require('os');
 
-const cache = path.join(process.env['APPDATA'], 'Achievement Watcher/steam_cache/data');
+const cache = path.join(process.env['APPDATA'] || path.join(os.homedir(), 'Library', 'Application Support'), 'Achievement Watcher/steam_cache/data');
 
 module.exports.load = async (appID) => {
   try {

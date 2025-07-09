@@ -4,11 +4,13 @@ const os = require('os');
 const path = require('path');
 const fs = require('@xan105/fs');
 const request = require('request-zero');
-const regedit = require('regodit');
-const WQL = require('wql-process-monitor');
+if (process.platform === 'win32') {
+  const regedit = require('regodit');
+  const WQL = require('wql-process-monitor');
+  const tasklist = require('win-tasklist');
+}
 const humanizeDuration = require('humanize-duration');
 const EventEmitter = require('emittery');
-const tasklist = require('win-tasklist');
 const Timer = require('./timer.js');
 const TimeTrack = require('./track.js');
 const { findByReadingContentOfKnownConfigfilesIn } = require('./steam_appid_find.js');
@@ -16,7 +18,7 @@ const { loadSteamData } = require('../steam.js');
 
 const debug = new (require('@xan105/log'))({
   console: true,
-  file: path.join(process.env['APPDATA'], 'Achievement Watcher/logs/playtime.log'),
+  file: path.join(process.env['APPDATA'] || path.join(os.homedir(), 'Library', 'Application Support'), 'Achievement Watcher/logs/playtime.log'),
 });
 
 const appdataPath = process.env['APPDATA'];
@@ -31,14 +33,13 @@ const filter = {
     dir: [
       systemTempDir,
       process.env['USERPROFILE'],
-      process.env['APPDATA'],
-      path.join(__dirname, '../..'),
-      process.env['LOCALAPPDATA'],
-      process.env['ProgramFiles'],
-      process.env['ProgramFiles(x86)'],
-      path.join(process.env['SystemRoot'], 'System32'),
-      path.join(process.env['SystemRoot'], 'SysWOW64'),
-      path.join(process.env['SystemRoot']),
+      //process.env['APPDATA'],
+      //process.env['LOCALAPPDATA'],
+      //process.env['ProgramFiles'],
+      //process.env['ProgramFiles(x86)'],
+      //path.join(process.env['SystemRoot'], 'System32'),
+      //path.join(process.env['SystemRoot'], 'SysWOW64'),
+      //path.join(process.env['SystemRoot']),
     ],
     file: blacklist.mute,
   },

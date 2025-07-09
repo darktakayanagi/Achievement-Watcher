@@ -1,10 +1,14 @@
 'use strict';
-
+const os = require('os');
 const path = require('path');
 const { app } = require('electron');
 app.setName('Achievement Watcher');
 app.setPath('userData', path.join(app.getPath('appData'), app.getName()));
-const puppeteer = require('puppeteer');
+process.env['APPDATA'] = path.join(os.homedir(), 'Library', 'Application Support');
+const puppeteerCore = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
 const { BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const remote = require('@electron/remote/main');
@@ -23,7 +27,7 @@ const sharp = require('sharp');
 const SteamUser = require('steam-user');
 const client = new SteamUser();
 client.logOn({ anonymous: true });
-client.on('loggedOn', () => {
+client.on('loggedOn', async () => {
   console.log('logged on');
 });
 
@@ -66,7 +70,11 @@ async function getSteamData(appid, type) {
   }
   if (type === 'data') {
     let info = { appid };
-    openSteamDB(info);
+    //TODO: steamdb might throw captcha
+    //lets try a few other sites first
+    await openSteamHunters(info);
+    //openSteamHunters(info);
+    //openSteamDB(info);
     while (!info.achievements) {
       await delay(500);
     }
@@ -224,6 +232,14 @@ ipcMain.on('progress-test', async (event, arg) => {
   await createProgressWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED', description: 'Testing progress', count: '50/100' });
 });
 
+ipcMain.on('achievement-data-ready', () => {
+  progressWindow.showInactive();
+});
+
+ipcMain.handle('get-achievements', async (event, appid) => {
+  return await getSteamData(appid, 'data');
+});
+
 ipcMain.handle('start-watchdog', async (event, arg) => {
   event.sender.send('reset-watchdog-status');
   console.log('starting watchdog');
@@ -335,6 +351,78 @@ function openSteamDB(info = { appid: 269770 }) {
       console.error('Failed to extract achievements:', error);
     }
   });
+}
+
+async function openSteamHunters(info = { appid: 269770 }) {
+  try {
+    const url = `https://steamhunters.com/apps/${info.appid}/achievements`;
+    const browser = await puppeteer.launch({ headless: 'new', executablePath: puppeteerCore.executablePath() });
+    const page = await browser.newPage();
+
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
+
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('li.check-item');
+    const achievements = await page.evaluate(() => {
+      const items = Array.from(document.querySelectorAll('li.check-item'));
+      return items.map((item) => {
+        const name = item.querySelector('.achievement-name a')?.textContent.trim() || '';
+        const description = item.querySelector('.media-body .small')?.textContent.trim() || '';
+        const lockedIcon = item.querySelector('.media-left img')?.src || '';
+        const unlockedIcon = item.querySelector('.media-right img')?.src || '';
+        const imageSpan = item.querySelector('.media-left span.image');
+        let apiName = '';
+        if (imageSpan?.title) {
+          // The title attribute is multiline, find the line starting with "API Name:"
+          const lines = imageSpan.title.split('\n');
+          const apiLine = lines.find((line) => line.trim().startsWith('API Name:'));
+          if (apiLine) {
+            apiName = apiLine.replace('API Name:', '').trim();
+          }
+        }
+
+        // Hidden if name or description is missing or matches common "hidden" indicators
+        const ishidden = !name || name.toLowerCase().includes('secret') || !description;
+
+        return {
+          name: apiName,
+          default_value: 0,
+          displayName: name,
+          description,
+          hidden: ishidden ? 1 : 0,
+          icon: unlockedIcon,
+          icongray: lockedIcon,
+        };
+      });
+    });
+
+    const url2 = `https://steamdb.info/app/${info.appid}/stats/`;
+    const page2 = await browser.newPage();
+    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
+
+    await page2.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'userAgent', {
+        get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+      });
+      Object.defineProperty(navigator, 'platform', {
+        get: () => 'Win32',
+      });
+      Object.defineProperty(navigator, 'vendor', {
+        get: () => 'Google Inc.',
+      });
+      window.chrome = { runtime: {} };
+    });
+
+    await page2.goto(url2, { waitUntil: 'domcontentloaded' });
+    const c2 = await page2.content();
+    await page.waitForTimeout(6000);
+    const c4 = await page2.content();
+    await browser.close();
+    info.achievements = achievements;
+    return achievements;
+  } catch (err) {
+    debug.log(err);
+  }
 }
 
 async function searchForGameName(info = { appid: '' }) {
@@ -637,6 +725,7 @@ function createOverlayWindow(selectedConfig) {
     fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
       devTools: manifest.config.debug || false,
@@ -782,6 +871,7 @@ async function createNotificationWindow(info) {
     hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -822,8 +912,9 @@ async function createNotificationWindow(info) {
   if (configJS.notification_toast.customToastAudio === '2' || configJS.notification_toast.customToastAudio === '1') {
     let toastAudio = require(path.join(__dirname, '../util/toastAudio.js'));
     let soundFile = configJS.notification_toast.customToastAudio === '1' ? toastAudio.getDefault() : toastAudio.getCustom();
-    player.play(soundFile);
+    //player.play(soundFile);
   }
+
   notificationWindow.webContents.on('did-finish-load', () => {
     notificationWindow.showInactive();
     notificationWindow.webContents.send('set-window-scale', scale);
@@ -841,6 +932,10 @@ async function createNotificationWindow(info) {
     isNotificationShowing = false;
     notificationWindow = null;
     if (earnedNotificationQueue.length > 0) createNotificationWindow(earnedNotificationQueue.shift());
+  });
+
+  notificationWindow.webContents.on('console-message', (e, level, message, line, sourceID) => {
+    debug.log(message, sourceID, line);
   });
 
   notificationWindow.loadFile(presetHtml);
@@ -875,6 +970,7 @@ async function createPlaytimeWindow(info) {
     fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -890,7 +986,7 @@ async function createPlaytimeWindow(info) {
   ).href;
   playtimeWindow.once('ready-to-show', () => {
     if (playtimeWindow && !playtimeWindow.isDestroyed()) {
-      playtimeWindow.show();
+      playtimeWindow.showInactive();
 
       //const prefs = fs.existsSync(preferencesPath) ? JSON.parse(fs.readFileSync(preferencesPath, 'utf8')) : {};
       const scale = 1; //prefs.notificationScale || 1;
@@ -914,8 +1010,8 @@ async function createPlaytimeWindow(info) {
       createPlaytimeWindow(playtimeQueue.shift());
     }
   });
-
-  playtimeWindow.loadFile(path.join(manifest.config.debug ? path.join(__dirname, '..') : userData, '\\view\\playtime.html'));
+  const p = path.join(manifest.config.debug ? path.join(__dirname, '..') : userData, 'view', 'playtime.html');
+  playtimeWindow.loadFile(p);
 }
 
 async function createProgressWindow(info) {

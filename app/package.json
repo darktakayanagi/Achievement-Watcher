@@ -57,8 +57,9 @@
     "windows-focus-assist": "^1.2.1",
     "xml2js": "^0.4.23"
   },
+  "optionalDependencies": {},
   "config": {
-    "debug": false,
+    "debug": true,
     "user-agent": "Chrome/",
     "disable-gpu": false,
     "window": {

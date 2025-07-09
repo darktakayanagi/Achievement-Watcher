@@ -19,6 +19,7 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
 module.exports.setUserDataPath = (p) => {
   cacheRoot = p;
 };
+//process.env['APPDATA'] = path.join(os.homedir(), 'Library', 'Application Support');
 
 async function getEpicProductMapping() {
   const res = await request.get('https://store-content.ak.epicgames.com/api/content/productmapping');
