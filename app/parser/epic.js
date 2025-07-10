@@ -98,7 +98,7 @@ module.exports.getGameData = async (cfg) => {
   let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
   let result;
   try {
-    if (await ffs.existsAndIsYoungerThan(filePath, { timeUnit: 'M', time: 12 })) {
+    if (await ffs.exists(filePath)) {
       result = JSON.parse(await ffs.readFile(filePath));
       return result;
     }

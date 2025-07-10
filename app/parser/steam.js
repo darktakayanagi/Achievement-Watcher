@@ -163,7 +163,7 @@ module.exports.getCachedData = async (cfg) => {
   try {
     let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
 
-    if (await ffs.existsAndIsYoungerThan(filePath, { timeUnit: 'M', time: 12 })) {
+    if (await ffs.exists(filePath)) {
       result = JSON.parse(await ffs.readFile(filePath));
     }
   } catch (err) {
