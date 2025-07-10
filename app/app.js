@@ -110,7 +110,7 @@ var app = {
           $('#game-list .isEmpty').show();
           return;
         }
-
+        ipcRenderer.sendSync('close-puppeteer');
         debug.log('Populating game list ...');
 
         let elem = $('#game-list ul');
