@@ -199,7 +199,7 @@ module.exports.getGameData = async (cfg) => {
 */
     return result;
   } catch (err) {
-    if (error.code) debug.log(`Could not load Steam data: ${err.code} - ${err.message}`);
+    if (err.code) debug.log(`Could not load Steam data: ${err.code} - ${err.message}`);
     else debug.log(`Could not load Steam data: ${err}`);
   }
 };
