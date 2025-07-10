@@ -786,6 +786,7 @@ function createOverlayWindow(selectedConfig) {
     fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
       devTools: manifest.config.debug || false,
@@ -931,6 +932,7 @@ async function createNotificationWindow(info) {
     hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -1024,6 +1026,7 @@ async function createPlaytimeWindow(info) {
     fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -1039,7 +1042,7 @@ async function createPlaytimeWindow(info) {
   ).href;
   playtimeWindow.once('ready-to-show', () => {
     if (playtimeWindow && !playtimeWindow.isDestroyed()) {
-      playtimeWindow.show();
+      playtimeWindow.showInactive();
 
       //const prefs = fs.existsSync(preferencesPath) ? JSON.parse(fs.readFileSync(preferencesPath, 'utf8')) : {};
       const scale = 1; //prefs.notificationScale || 1;
@@ -1064,7 +1067,7 @@ async function createPlaytimeWindow(info) {
     }
   });
 
-  playtimeWindow.loadFile(path.join(manifest.config.debug ? path.join(__dirname, '..') : userData, '\\view\\playtime.html'));
+  playtimeWindow.loadFile(path.join(manifest.config.debug ? path.join(__dirname, '..') : userData, 'view', 'playtime.html'));
 }
 
 async function createProgressWindow(info) {
