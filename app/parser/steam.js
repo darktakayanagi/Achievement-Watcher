@@ -181,6 +181,7 @@ module.exports.getGameData = async (cfg) => {
   try {
     result = await this.getCachedData(cfg);
     if (result) return result;
+    if (!(await findInAppList(+cfg.appID))) throw `Error trying to load steam data for ${cfg.appID}`;
     const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
     let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
     if (cfg.key) {
@@ -454,59 +455,6 @@ async function getSteamDataFromSRV(appID, lang) {
       list: result.achievements,
     },
   };
-}
-
-async function getMissingAchData(cfg, achievements) {
-  // some achievements dont have description if they are hidden so let's try to get them from a few other websites
-  {
-    let needUpdate = false;
-    for (const main of achievements.achievement.list) {
-      if (!main.description || main.description.length < 1) {
-        needUpdate = true;
-        break;
-      }
-    }
-    if (!needUpdate) return true;
-  }
-  {
-    try {
-      let url = `https://completionist.me/steam/app/${cfg.appID}/achievements`;
-      const { data: html } = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        },
-      });
-
-      const $ = cheerio.load(html);
-      const achs = [];
-
-      $('.explorer-list.achievements-list tr').each((_, el) => {
-        const name = $(el).find('td strong').text().trim();
-        const description = $(el).find('td span').text().trim().split('\n')[0].trim();
-
-        if (name) {
-          achs.push({ name, description });
-        }
-      });
-
-      for (const main of achievements.achievement.list) {
-        const match = achs.find((item) => item.name === main.displayName);
-        if (match && match.description && (!main.description || main.description.length <= 1)) {
-          main.description = match.description;
-        }
-      }
-
-      return true;
-    } catch (err) {
-      console.error('❌ Failed to fetch achievements:', err.message);
-    }
-  } // completionist.me
-
-  {
-  }
-
-  //each one failed
-  return false;
 }
 
 async function getSteamData(cfg) {

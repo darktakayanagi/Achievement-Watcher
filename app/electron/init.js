@@ -26,7 +26,7 @@ const sharp = require('sharp');
 const SteamUser = require('steam-user');
 const client = new SteamUser();
 client.logOn({ anonymous: true });
-client.on('loggedOn', () => {
+client.on('loggedOn', async () => {
   console.log('logged on');
 });
 
