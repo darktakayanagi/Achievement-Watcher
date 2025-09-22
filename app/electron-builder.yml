@@ -9,6 +9,7 @@ publish:
 win:
   icon: ../setup/resources/icon.ico
   target: nsis
+  artifactName: 'Achievement.Watcher.Setup.${version}.${ext}'
 
 nsis:
   oneClick: false
