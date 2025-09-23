@@ -5,7 +5,9 @@ const ini = require('@xan105/ini');
 const parentFind = require('find-up');
 const omit = require('lodash.omit');
 const fs = require('@xan105/fs');
-const regedit = require('regodit');
+if (process.platform === 'win32') {
+  const regedit = require('regodit');
+}
 const sse = require('./sse.js');
 
 const files = {

@@ -1,9 +1,10 @@
 'use strict';
-
+const os = require('os');
 const path = require('path');
 const { app } = require('electron');
 app.setName('Achievement Watcher');
 app.setPath('userData', path.join(app.getPath('appData'), app.getName()));
+process.env['APPDATA'] = path.join(os.homedir(), 'Library', 'Application Support');
 const puppeteerCore = require('puppeteer');
 const ChromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer-extra');
@@ -378,7 +379,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
   //  lastScrape = Date.now();
   //}
   try {
-    const chromePath = ChromeLauncher.Launcher.getInstallations()[0];
+    const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'; //ChromeLauncher.Launcher.getInstallations()[0];
     const url = `https://steamhunters.com/apps/${info.appid}/achievements`;
     if (!puppeteerWindow.browser)
       puppeteerWindow.browser = await puppeteer.launch({
@@ -1010,8 +1011,9 @@ async function createNotificationWindow(info) {
   if (configJS.notification_toast.customToastAudio === '2' || configJS.notification_toast.customToastAudio === '1') {
     let toastAudio = require(path.join(__dirname, '../util/toastAudio.js'));
     let soundFile = configJS.notification_toast.customToastAudio === '1' ? toastAudio.getDefault() : toastAudio.getCustom();
-    player.play(soundFile);
+    //player.play(soundFile);
   }
+
   notificationWindow.webContents.on('did-finish-load', () => {
     notificationWindow.showInactive();
     notificationWindow.webContents.send('set-window-scale', scale);

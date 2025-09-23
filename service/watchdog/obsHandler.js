@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const debug = require('./util/log.js');
-
+process.env['APPDATA'] = path.join(os.homedir(), 'Library', 'Application Support');
 const obs_path = path.join(process.env.APPDATA, 'obs-studio');
 const crash_file = path.join(obs_path, 'safe_mode');
 const settings_file = path.join(obs_path, 'plugin_config/obs-websocket', 'config.json');

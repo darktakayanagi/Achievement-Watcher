@@ -1,5 +1,6 @@
 'use strict';
 
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -9,7 +10,7 @@ const ws = require('ws');
 const moment = require('moment');
 const debug = new (require('@xan105/log'))({
   console: true,
-  file: path.join(process.env['APPDATA'], 'Achievement Watcher/logs/websocket.log'),
+  file: path.join(process.env['APPDATA'] || path.join(os.homedir(), 'Library', 'Application Support'), 'Achievement Watcher/logs/websocket.log'),
 });
 
 const test = require('./notification-test.js');

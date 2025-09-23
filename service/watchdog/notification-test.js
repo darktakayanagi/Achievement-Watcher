@@ -2,15 +2,21 @@
 
 const os = require('os');
 const path = require('path');
-const toast = require('powertoast');
-const balloon = require('powerballoon');
-const getStartApps = require('get-startapps');
-const regedit = require('regodit');
+if (process.platform === 'win32') {
+  const toast = require('powertoast');
+  const balloon = require('powerballoon');
+  const getStartApps = require('get-startapps');
+  const regedit = require('regodit');
+  const xinput = require('xinput-ffi');
+}
 const gntp = require('./notification/transport/gntp.js');
 const settings = require('./settings.js');
-const xinput = require('xinput-ffi');
 
-const cfg_file = path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'options.ini');
+const cfg_file = path.join(
+  process.env['APPDATA'] || path.join(os.homedir(), 'Library', 'Application Support'),
+  'Achievement Watcher/cfg',
+  'options.ini'
+);
 
 let winRT;
 try {

@@ -3,15 +3,15 @@
 const path = require('path');
 const fs = require('@xan105/fs');
 const userShellFolder = require('../util/userShellFolder.js');
-const videoCapture = require('@xan105/video-capture');
-const screenshot = require('@xan105/screenshot');
-const toast = require('./transport/toast.js');
-const balloon = require('powerballoon');
+//const videoCapture = require('@xan105/video-capture');
+//const screenshot = require('@xan105/screenshot');
+//const toast = require('./transport/toast.js');
+//const balloon = require('powerballoon');
 const gntp = require('./transport/gntp.js');
-const xinput = require('xinput-ffi');
+//const xinput = require('xinput-ffi');
 const fetch = require('./prefetch.js');
 const { broadcast } = require('../websocket.js');
-const regedit = require('regodit');
+//const regedit = require('regodit');
 const { takeScreenshot, saveAndMoveReplay, setRecordPath } = require('../obsHandler.js');
 
 const debug = require('../util/log.js');
