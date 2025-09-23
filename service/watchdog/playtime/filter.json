@@ -28,7 +28,8 @@
     "QuickSFV.exe",
     "achievementwatcher.exe",
     "generate_emu_config.exe",
-    "ui32.exe"
+    "ui32.exe",
+    "crs-handler.exe"
   ],
   "mute": [
     "nw.exe",
