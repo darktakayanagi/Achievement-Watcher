@@ -81,7 +81,7 @@ async function getSteamData(appid, type) {
   return {};
 }
 
-ipcMain.on('close-puppeteer', async (event, arg) => {
+async function closePuppeteer() {
   if (!puppeteerWindow) puppeteerWindow = {};
   if (puppeteerWindow.page) await puppeteerWindow.page.close();
   if (puppeteerWindow.context) await puppeteerWindow.context.close();
@@ -89,6 +89,10 @@ ipcMain.on('close-puppeteer', async (event, arg) => {
   puppeteerWindow.browser = undefined;
   puppeteerWindow.page = undefined;
   puppeteerWindow.context = undefined;
+}
+
+ipcMain.on('close-puppeteer', async (event, arg) => {
+  await closePuppeteer();
   event.returnValue = true;
 });
 
