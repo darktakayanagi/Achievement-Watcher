@@ -165,7 +165,8 @@ module.exports = async (message, option = {}) => {
         }, duration * 1000 * message.delay || 0);
       }
     }
-    if (options.souvenir.screenshot) {
+    if (false) {
+      //options.souvenir.screenshot) {
       debug.log('Souvenir: screenshot');
       try {
         const filePath = path.join(
