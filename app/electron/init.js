@@ -33,6 +33,9 @@ client.on('loggedOn', async () => {
 
 const manifest = require('../package.json');
 const userData = app.getPath('userData');
+let settingsJS = null;
+let configJS = null;
+let achievementsJS = null;
 
 if (manifest.config['disable-gpu']) app.disableHardwareAcceleration();
 if (manifest.config.appid) app.setAppUserModelId(manifest.config.appid);
@@ -864,17 +867,40 @@ async function createNotificationWindow(info) {
     return;
   }
   isNotificationShowing = true;
-  const settingsJS = require(path.join(__dirname, '../settings.js'));
-  settingsJS.setUserDataPath(userData);
-  let configJS = await settingsJS.load();
-  configJS.achievement_source.greenLuma = false;
-  configJS.achievement_source.importCache = false;
-  configJS.achievement_source.rpcs3 = false;
-  const achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
-  achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: userData });
-  let aa = await getSteamData(info.appid, 'data');
-  let a = aa.achievements.find((ac) => ac.name === String(info.ach)); //ach.achievement.list.find((ac) => ac.name === String(info.ach));
-  await closePuppeteer();
+  if (!settingsJS) {
+    settingsJS = require(path.join(__dirname, '../settings.js'));
+    settingsJS.setUserDataPath(userData);
+  }
+  if (!configJS) configJS = await settingsJS.load();
+  //configJS.achievement_source.greenLuma = false;
+  //configJS.achievement_source.importCache = false;
+  //configJS.achievement_source.rpcs3 = false;
+  if (!achievementsJS) {
+    achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
+    achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: userData });
+  }
+  let a;
+  if (!info.source) info.source = 'steam';
+  let g = await achievementsJS.getGameFromCache(info.appid, info.source, configJS);
+  switch (info.source.toLowerCase()) {
+    case 'epic':
+    case 'gog':
+    case 'luma':
+    case 'steam':
+    default:
+      if (g) {
+        a = g.achievement.list.find((ac) => ac.name === String(info.ach));
+        info.game = g.name;
+        info.description = a.displayName;
+        break;
+      }
+      a = await getSteamData(info.appid, 'data');
+      info.game = a.name;
+      a = a.achievements.find((ac) => ac.name === String(info.ach));
+      info.description = a.displayName;
+  }
+
+  closePuppeteer();
   const message = {
     displayName: a.displayName || '',
     description: a.description || '',
@@ -971,6 +997,7 @@ async function createNotificationWindow(info) {
   notificationWindow.setFullScreenable(false);
   notificationWindow.setFocusable(true);
   notificationWindow.setIgnoreMouseEvents(true, { forward: true });
+  notificationWindow.info = info;
 
   if (configJS.notification_toast.customToastAudio === '2' || configJS.notification_toast.customToastAudio === '1') {
     let toastAudio = require(path.join(__dirname, '../util/toastAudio.js'));
@@ -1115,9 +1142,11 @@ async function createProgressWindow(info) {
   progressWindow.setFocusable(true);
   progressWindow.setIgnoreMouseEvents(true, { forward: true });
 
-  const settingsJS = require(path.join(__dirname, '../settings.js'));
-  settingsJS.setUserDataPath(userData);
-  let configJS = await settingsJS.load();
+  if (!settingsJS) {
+    settingsJS = require(path.join(__dirname, '../settings.js'));
+    settingsJS.setUserDataPath(userData);
+  }
+  if (!configJS) configJS = await settingsJS.load();
   info.option = configJS;
   progressWindow.once('ready-to-show', () => {
     progressWindow.webContents.send('init-achievement', info);
