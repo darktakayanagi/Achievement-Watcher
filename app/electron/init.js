@@ -5,6 +5,7 @@ const { app } = require('electron');
 app.setName('Achievement Watcher');
 app.setPath('userData', path.join(app.getPath('appData'), app.getName()));
 const puppeteerCore = require('puppeteer');
+const ChromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
@@ -367,28 +368,18 @@ function openSteamDB(info = { appid: 269770 }) {
 
 async function scrapeWithPuppeteer(info = { appid: 269770 }) {
   try {
+    const chromePath = ChromeLauncher.Launcher.getInstallations()[0];
     const url = `https://steamhunters.com/apps/${info.appid}/achievements`;
     if (!puppeteerWindow.browser)
-      puppeteerWindow.browser = await puppeteer.launch({ headless: false, executablePath: puppeteerCore.executablePath() });
+      puppeteerWindow.browser = await puppeteer.launch({
+        headless: false,
+        executablePath: chromePath,
+      });
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();
     //if (info.achievements) return;
     const url2 = `https://steamdb.info/app/${info.appid}/stats/`;
     const page2 = puppeteerWindow.page;
-    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
-
-    await page2.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'userAgent', {
-        get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-      });
-      Object.defineProperty(navigator, 'platform', {
-        get: () => 'Win32',
-      });
-      Object.defineProperty(navigator, 'vendor', {
-        get: () => 'Google Inc.',
-      });
-      window.chrome = { runtime: {} };
-    });
 
     await page2.goto(url2, { waitUntil: 'domcontentloaded' });
     const pageText = await page2.evaluate(() => document.body.innerText || '');
@@ -508,8 +499,7 @@ async function searchForGameName(info = { appid: '' }) {
   let matchResult;
 
   async function scrapePage(startIndex) {
-    if (!puppeteerWindow.browser)
-      puppeteerWindow.browser = await puppeteer.launch({ headless: false, executablePath: puppeteerCore.executablePath() });
+    if (!puppeteerWindow.browser) puppeteerWindow.browser = await puppeteer.launch({ headless: false, executablePath: puppeteer.executablePath() });
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     const page = await puppeteerWindow.context.newPage();
 
@@ -882,9 +872,9 @@ async function createNotificationWindow(info) {
   configJS.achievement_source.rpcs3 = false;
   const achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
   achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: userData });
-  let ach = await achievementsJS.getAchievementsForAppid(configJS, info.appid);
-  let a = ach.achievement.list.find((ac) => ac.name === String(info.ach));
-
+  let aa = await getSteamData(info.appid, 'data');
+  let a = aa.achievements.find((ac) => ac.name === String(info.ach)); //ach.achievement.list.find((ac) => ac.name === String(info.ach));
+  await closePuppeteer();
   const message = {
     displayName: a.displayName || '',
     description: a.description || '',
@@ -1004,6 +994,10 @@ async function createNotificationWindow(info) {
     isNotificationShowing = false;
     notificationWindow = null;
     if (earnedNotificationQueue.length > 0) createNotificationWindow(earnedNotificationQueue.shift());
+  });
+
+  notificationWindow.webContents.on('console-message', (e, level, message, line, sourceID) => {
+    debug.log(message, sourceID, line);
   });
 
   notificationWindow.loadFile(presetHtml);
