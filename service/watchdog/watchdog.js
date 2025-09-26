@@ -433,6 +433,9 @@ var app = {
       }
     });
   },
+  watch_lumaPlay: async function () {
+    console.log(`watching changes in LumaPlay`);
+  },
   load: async function (appID) {
     try {
       let self = this;
@@ -472,6 +475,20 @@ var app = {
         let steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
         if (steamid) return steamid;
       }
+    } catch (err) {
+      throw err;
+    }
+  },
+  steamAppIdForEpicId: async function (appID) {
+    try {
+      const cacheFile = path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'epic.db');
+      let cache = [];
+
+      if (fs.existsSync(cacheFile)) {
+        cache = JSON.parse(await fs.readFile(filePath, { encoding: 'utf8' }));
+      }
+      let cached = cache.find((g) => g.gogid === game.appid);
+      if (cached) return cached.steamid;
     } catch (err) {
       throw err;
     }
