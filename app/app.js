@@ -435,6 +435,9 @@ var app = {
               })
             );
 
+            menu.append(new MenuItem({ label: 'Re-Generate database entry' }));
+            //TODO: continue this
+
             menu.append(new MenuItem({ type: 'separator' }));
             menu.append(
               new MenuItem({
