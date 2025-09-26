@@ -1,91 +1,115 @@
 const { execFile } = require('child_process');
-const { HKEY, getValue, listKeys, listValues } = require('registry-js');
+const { HKEY, enumerateValues, enumerateKeys, setValue } = require('registry-js');
+
+function hkeyFromString(hive) {
+  const map = {
+    hkcr: HKEY.HKEY_CLASSES_ROOT,
+    hkcu: HKEY.HKEY_CURRENT_USER,
+    hklm: HKEY.HKEY_LOCAL_MACHINE,
+    hku: HKEY.HKEY_USERS,
+    hkcc: HKEY.HKEY_CURRENT_CONFIG,
+  };
+  return map[hive.toLowerCase()];
+}
 
 function writeRegistryString(hive, keyPath, valueName, value) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        `Set-ItemProperty -Path "${hive}:\\${keyPath.replace(/\//g, '\\')}" -Name "${valueName || '(default)'}" -Value "${value}"`,
-      ],
-      { windowsHide: true },
-      (error) => (error ? reject(error) : resolve())
-    );
-  });
+  const hiveEnum = hkeyFromString(hive);
+  if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
+
+  const normalizedKey = keyPath.replace(/\//g, '\\');
+
+  // Default value is represented by "" (empty string) not "(default)"
+  const name = valueName || '';
+
+  const ok = setValue(hiveEnum, normalizedKey, name, 'REG_SZ', String(value));
+  if (!ok) throw new Error(`Failed to set registry value ${hive}\\${keyPath}\\${name}`);
 }
 
 function writeRegistryDword(hive, keyPath, valueName, value) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        `Set-ItemProperty -Path "${hive}:\\${keyPath.replace(/\//g, '\\')}" -Name "${valueName}" -Value ${value} -Type DWord`,
-      ],
-      { windowsHide: true },
-      (error) => (error ? reject(error) : resolve())
-    );
-  });
+  const hiveEnum = hkeyFromString(hive);
+  if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
+
+  const normalizedKey = keyPath.replace(/\//g, '\\');
+
+  const name = valueName || ''; // "" = (Default) value
+
+  // REG_DWORD expects a string, even though it’s numeric
+  const ok = setValue(hiveEnum, normalizedKey, name, 'REG_DWORD', String(value));
+  if (!ok) {
+    throw new Error(`Failed to set DWORD value ${hive}\\${keyPath}\\${name} = ${value}`);
+  }
 }
 
 function ListRegistryAllValues(hive, key) {
-  const hiveEnum = HKEY[hive];
+  const hiveEnum = hkeyFromString(hive);
   if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
+
   const normalizedKey = key.replace(/\//g, '\\');
-  return listValues(hiveEnum, normalizedKey).map((v) => v.name);
+
+  // enumerateValues returns an array of objects: { name, type, data }
+  const values = enumerateValues(hiveEnum, normalizedKey);
+
+  // Return just the names
+  return values.map((v) => v.name);
 }
 
 function listRegistryAllSubkeys(hive, key) {
-  const hiveEnum = HKEY[hive];
+  const hiveEnum = hkeyFromString(hive);
   if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
 
   const normalizedKey = key.replace(/\//g, '\\');
-  return listKeys(hiveEnum, normalizedKey).map((k) => k.name);
+
+  // enumerateKeys returns an array of strings
+  return enumerateKeys(hiveEnum, normalizedKey);
 }
 
 function readRegistryInteger(hive, key, valueName) {
-  const hiveEnum = HKEY[hive];
+  const hiveEnum = hkeyFromString(hive);
   if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
+
   const normalizedKey = key.replace(/\//g, '\\');
-  const val = getValue(hiveEnum, normalizedKey, valueName);
-  if (!val || (val.type !== 'REG_DWORD' && val.type !== 'REG_QWORD')) return null;
+
+  const values = listValues(hiveEnum, normalizedKey);
+  const val = values.find((v) => v.name === valueName);
+
+  if (!val || (val.type !== 'REG_DWORD' && val.type !== 'REG_QWORD')) {
+    return null;
+  }
+
   return Number(val.data);
 }
 
 function readRegistryString(hive, key, valueName) {
-  // Normalize hive string to HKEY enum
-  const hiveEnum = HKEY[hive];
+  const hiveEnum = hkeyFromString(hive);
   if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
 
-  // Normalize key path: replace '/' with '\'
   const normalizedKey = key.replace(/\//g, '\\');
 
-  // If valueName is empty string, use '(default)' for PowerShell convention,
-  // but registry-js expects '' for default value (just pass '')
-  const val = getValue(hiveEnum, normalizedKey, valueName);
+  // Default value in registry-js is ''
+  const name = valueName || '';
 
-  if (!val || val.type !== 'REG_SZ') return null; // Only accept string values
+  const values = enumerateValues(hiveEnum, normalizedKey);
+  const val = values.find((v) => v.name === name);
+
+  if (!val || val.type !== 'REG_SZ') return null;
 
   return val.data;
 }
 
 function readRegistryStringAndExpand(hive, key, valueName) {
-  const hiveEnum = HKEY[hive];
+  const hiveEnum = hkeyFromString(hive);
   if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
 
   const normalizedKey = key.replace(/\//g, '\\');
 
-  const val = getValue(hiveEnum, normalizedKey, valueName);
+  const name = valueName || ''; // default value is empty string
+
+  const values = enumerateValues(hiveEnum, normalizedKey);
+  const val = values.find((v) => v.name === name);
+
   if (!val || (val.type !== 'REG_EXPAND_SZ' && val.type !== 'REG_SZ')) return null;
 
-  // Expand environment variables if REG_EXPAND_SZ, or just return string
+  // Expand environment variables if REG_EXPAND_SZ
   if (val.type === 'REG_EXPAND_SZ') {
     return expandEnvVariables(val.data);
   } else {
@@ -94,17 +118,15 @@ function readRegistryStringAndExpand(hive, key, valueName) {
 }
 
 function regKeyExists(hive, key) {
-  const hiveEnum = HKEY[hive];
+  const hiveEnum = hkeyFromString(hive);
   if (!hiveEnum) throw new Error(`Unsupported hive: ${hive}`);
 
-  const parentKey = key.replace(/\//g, '\\');
-  try {
-    // Attempt to list subkeys (will throw if the key doesn't exist)
-    listKeys(hiveEnum, parentKey);
-    return true;
-  } catch {
-    return false;
-  }
+  const normalizedKey = key.replace(/\//g, '\\');
+
+  const subkeys = enumerateKeys(hiveEnum, normalizedKey);
+
+  // If the key doesn't exist, enumerateKeys returns an empty array
+  return subkeys.length > 0 || listValuesSafe(hiveEnum, normalizedKey).length > 0;
 }
 
 // Helper to expand %VAR% env vars in a string (Windows style)
