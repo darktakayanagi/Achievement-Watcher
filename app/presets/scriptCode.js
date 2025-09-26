@@ -94,6 +94,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const durationMeta = document.querySelector('meta[name="duration"]');
     const duration = parseInt(durationMeta?.content, 10) || 4000;
     setTimeout(() => {
+      window.api.captureScreen();
+    }, duration * 0.75);
+    setTimeout(() => {
       container.classList.remove('active');
       window.api.closeNotificationWindow();
     }, duration);
