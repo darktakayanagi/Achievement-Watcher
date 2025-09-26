@@ -95,6 +95,19 @@ async function closePuppeteer() {
   puppeteerWindow.context = undefined;
 }
 
+ipcMain.on('capture-screen', async (event, { image, filename }) => {
+  if (!configJS.souvenir_screenshot.screenshot) return;
+  const buffer = Buffer.from(image, 'base64');
+  const savePath = path.join(
+    configJS.souvenir_screenshot.custom_dir || app.getPath('pictures'),
+    notificationWindow.info.game,
+    notificationWindow.info.description + '.png'
+  );
+  fs.mkdirSync(path.dirname(savePath), { recursive: true });
+  if (!configJS.souvenir_screenshot.overwrite_image && fs.existsSync(savePath)) return;
+  fs.writeFileSync(savePath, buffer);
+});
+
 ipcMain.on('close-puppeteer', async (event, arg) => {
   await closePuppeteer();
   event.returnValue = true;
