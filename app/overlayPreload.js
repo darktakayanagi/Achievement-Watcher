@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, webFrame } = require('electron');
+const { contextBridge, ipcRenderer, webFrame, desktopCapturer, screen } = require('electron');
 const args = process.argv.slice(1);
 const isDevArg = args.find((arg) => arg.startsWith('--isDev='));
 const userDataArg = args.find((arg) => arg.startsWith('--userDataPath='));
@@ -82,6 +82,19 @@ contextBridge.exposeInMainWorld('api', {
   on: (channel, callback) => ipcRenderer.on(channel, (_, data) => callback(data)),
   onImageWindowStatus: (callback) => ipcRenderer.on('image-window-status', (event, status) => callback(status)),
   setZoom: (zoomFactor) => ipcRenderer.send('set-zoom', zoomFactor),
+  captureScreen: async () => {
+    const { width, height } = window.screen;
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width, height },
+    });
+
+    // Use the first screen (primary display)
+    const screenshot = sources[0].thumbnail.toPNG();
+    const base64 = screenshot.toString('base64');
+    ipcRenderer.send('capture-screen', { image: base64 });
+  },
 
   // language
   refreshUILanguage: (language) => ipcRenderer.send('refresh-ui-after-language-change', language),
