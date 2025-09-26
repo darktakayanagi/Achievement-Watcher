@@ -1212,6 +1212,10 @@ function checkResources() {
     const view = path.join(resourcesPath, 'view');
     copyFolderRecursive(view, path.join(userData, 'view'));
   }
+  if (!fs.existsSync(path.join(userData, 'Source'))) {
+    const source = path.join(resourcesPath, 'Source');
+    copyFolderRecursive(source, path.join(userData, 'Source'));
+  }
 
   if (!fs.existsSync(path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'))) {
     const profile = path.join(resourcesPath, 'obs', 'AW');
