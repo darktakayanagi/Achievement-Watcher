@@ -140,6 +140,22 @@ async function discover(source, steamAccFilter) {
   return data;
 }
 
+module.exports.getGameFromCache = async (appid, source, option) => {
+  let result;
+  switch (source) {
+    case 'gog':
+      return gog.getGameFromCache(appid);
+    case 'epic':
+      return epic.getGameFromCache(appid);
+    case 'uplay':
+      return uplay.getGameFromCache(appid);
+    case 'steam':
+    default:
+      result = await steam.getCachedData({ appID: appid, lang: option.achievement.lang, key: option.steam.apiKey });
+  }
+  return result;
+};
+
 module.exports.getAchievementsForAppid = async (option, requestedAppid) => {
   try {
     let game;
