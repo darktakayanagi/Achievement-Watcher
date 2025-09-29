@@ -20,6 +20,30 @@ module.exports.setUserDataPath = (p) => {
   cacheRoot = p;
 };
 
+module.exports.getCachedData = async (cfg) => {
+  const cacheFile = path.join(cacheRoot, 'steam_cache', 'gog.db');
+  let cache;
+  if (fs.existsSync(cacheFile)) {
+    cache = JSON.parse(fs.readFileSync(cacheFile, { encoding: 'utf8' }));
+  }
+  let cached = cache.find((g) => g.gogid === cfg.appID);
+  if (!cached) return;
+
+  cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
+  let result;
+  try {
+    let filePath = path.join(`${cache}`, `${cached.steamid}.db`);
+
+    if (await ffs.exists(filePath)) {
+      result = JSON.parse(await ffs.readFile(filePath));
+    }
+  } catch (err) {
+    if (err.code) throw `Could not load GOG data: ${err.code} - ${err.message}`;
+    else throw `Could not load GOG data: ${err}`;
+  }
+  return result;
+};
+
 module.exports.scan = async (dir) => {
   const cacheFile = path.join(cacheRoot, 'steam_cache', 'gog.db');
   let data = [];

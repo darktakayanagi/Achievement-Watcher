@@ -144,14 +144,14 @@ module.exports.getGameFromCache = async (appid, source, option) => {
   let result;
   switch (source) {
     case 'gog':
-      return gog.getGameFromCache(appid);
+      return gog.getCachedData({ appID: appid, lang: option.achievement.lang });
     case 'epic':
-      return epic.getGameFromCache(appid);
+      return epic.getCachedData({ appID: appid, lang: option.achievement.lang });
     case 'uplay':
       return uplay.getGameFromCache(appid);
     case 'steam':
     default:
-      result = await steam.getCachedData({ appID: appid, lang: option.achievement.lang, key: option.steam.apiKey });
+      result = await steam.getCachedData({ appID: appid, lang: option.achievement.lang });
   }
   return result;
 };

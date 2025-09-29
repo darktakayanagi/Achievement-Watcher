@@ -93,6 +93,11 @@ module.exports.scan = async (dir) => {
   }
 };
 
+module.exports.getCachedData = async (cfg) => {
+  let result;
+  return result;
+};
+
 module.exports.getGameData = async (cfg) => {
   const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
   let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
