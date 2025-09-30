@@ -156,6 +156,16 @@ module.exports.getGameFromCache = async (appid, source, option) => {
   return result;
 };
 
+module.exports.saveGameToCache = async (info, lang) => {
+  switch (info.source) {
+    case 'steam':
+    default:
+      let cfg = info.game;
+      cfg.lang = lang;
+      steam.saveGameToCache(cfg);
+  }
+};
+
 module.exports.getAchievementsForAppid = async (option, requestedAppid) => {
   try {
     let game;

@@ -60,28 +60,32 @@ let debug = new (require('@xan105/log'))({
 });
 
 async function getSteamData(appid, type) {
-  if (type === 'icon') {
-    await client.getProductInfo([appid], [], false, async (err, data) => {
-      const appInfo = data[appid].appinfo;
-      return `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
-    });
-  }
-  if (type === 'portrait') {
-    await client.getProductInfo([appid], [], false, async (err, data) => {
-      const appInfo = data[appid].appinfo;
-      return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
-    });
-  }
-  if (type === 'data') {
-    let info = { appid };
-    await scrapeWithPuppeteer(info);
-    //openSteamDB(info);
-    while (!info.achievements) {
-      await delay(500);
+  try {
+    if (type === 'icon') {
+      await client.getProductInfo([appid], [], false, async (err, data) => {
+        const appInfo = data[appid].appinfo;
+        return `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
+      });
     }
-    return info;
+    if (type === 'portrait') {
+      await client.getProductInfo([appid], [], false, async (err, data) => {
+        const appInfo = data[appid].appinfo;
+        return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
+      });
+    }
+    if (type === 'data') {
+      let info = { appid };
+      await scrapeWithPuppeteer(info);
+      //openSteamDB(info);
+      while (!info.achievements) {
+        await delay(500);
+      }
+      return info;
+    }
+    await delay(5000);
+  } catch (err) {
+    console.log(err);
   }
-  await delay(5000);
   return {};
 }
 
@@ -93,6 +97,42 @@ async function closePuppeteer() {
   puppeteerWindow.browser = undefined;
   puppeteerWindow.page = undefined;
   puppeteerWindow.context = undefined;
+}
+
+async function startEngines() {
+  if (!settingsJS) {
+    settingsJS = require(path.join(__dirname, '../settings.js'));
+    settingsJS.setUserDataPath(userData);
+  }
+  if (!configJS) configJS = await settingsJS.load();
+  if (!achievementsJS) {
+    achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
+    achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: userData });
+  }
+}
+
+async function getCachedData(info) {
+  if (!info.source) info.source = 'steam';
+  let g = await achievementsJS.getGameFromCache(info.appid, info.source, configJS);
+  switch (info.source.toLowerCase()) {
+    case 'epic':
+    case 'gog':
+    case 'luma':
+    case 'steam':
+    default:
+      if (g) {
+        info.a = g.achievement.list.find((ac) => ac.name === String(info.ach));
+        info.game = g.name;
+        info.description = info.a.displayName;
+        break;
+      }
+      let data = await getSteamData(info.appid, 'data');
+      info.game = data;
+      //info.icon = await getSteamData(info.appid, 'icon');
+      await achievementsJS.saveGameToCache(info, configJS.achievement.lang);
+      info.a = info.game.achievements.find((ac) => ac.name === String(info.ach));
+      info.description = info.a.displayName;
+  }
 }
 
 ipcMain.on('capture-screen', async (event, { image, filename }) => {
@@ -880,43 +920,15 @@ async function createNotificationWindow(info) {
     return;
   }
   isNotificationShowing = true;
-  if (!settingsJS) {
-    settingsJS = require(path.join(__dirname, '../settings.js'));
-    settingsJS.setUserDataPath(userData);
-  }
-  if (!configJS) configJS = await settingsJS.load();
-  //configJS.achievement_source.greenLuma = false;
-  //configJS.achievement_source.importCache = false;
-  //configJS.achievement_source.rpcs3 = false;
-  if (!achievementsJS) {
-    achievementsJS = require(path.join(__dirname, '../parser/achievements.js'));
-    achievementsJS.initDebug({ isDev: app.isDev || false, userDataPath: userData });
-  }
-  let a;
-  if (!info.source) info.source = 'steam';
-  let g = await achievementsJS.getGameFromCache(info.appid, info.source, configJS);
-  switch (info.source.toLowerCase()) {
-    case 'epic':
-    case 'gog':
-    case 'luma':
-    case 'steam':
-    default:
-      if (g) {
-        a = g.achievement.list.find((ac) => ac.name === String(info.ach));
-        info.game = g.name;
-        info.description = a.displayName;
-        break;
-      }
-      a = await getSteamData(info.appid, 'data');
-      info.game = a.name;
-      a = a.achievements.find((ac) => ac.name === String(info.ach));
-      info.description = a.displayName;
-  }
+
+  await startEngines();
+  await getCachedData(info);
+  if (!info.a) await getServerData(info);
 
   closePuppeteer();
   const message = {
-    displayName: a.displayName || '',
-    description: a.description || '',
+    displayName: info.a.displayName || '',
+    description: info.a.description || '',
     icon: pathToFileURL(await fetchIcon(a.icon, info.appid)).href,
     icon_gray: pathToFileURL(await fetchIcon(a.icongray, info.appid)).href,
     preset: configJS.overlay.preset,
