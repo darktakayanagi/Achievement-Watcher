@@ -175,17 +175,17 @@ module.exports.getCachedData = async (cfg) => {
 
 module.exports.saveGameToCache = async (cfg) => {
   const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
-  const filePath = -path.join(`${cache}`, `${cfg.appid}.db`);
-  const res = await getDataFromSteamStore(cfg.appid);
+  const filePath = path.join(`${cache}`, `${cfg.appid}.db`);
+
   const result = {
     name: cfg.name,
     appid: cfg.appid,
     binary: null,
     img: {
-      header: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.game.appid}/header.jpg`,
-      background: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.game.appid}/page_bg_generated_v6b.jpg`,
-      portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.game.appid}/library_600x900.jpg`,
-      icon: cfg.icon,
+      header: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appid}/header.jpg`,
+      background: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appid}/page_bg_generated_v6b.jpg`,
+      portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appid}/library_600x900.jpg`,
+      icon: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.appid}/${cfg.icon}.jpg`,
     },
     achievement: {
       total: cfg.achievements.length,

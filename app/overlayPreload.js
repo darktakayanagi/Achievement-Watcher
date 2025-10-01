@@ -58,12 +58,8 @@ contextBridge.exposeInMainWorld('api', {
   getSounds: () => ipcRenderer.invoke('get-sound-files'),
   getSoundFullPath: (fileName) => ipcRenderer.invoke('get-sound-path', fileName),
   onPlaySound: (callback) => ipcRenderer.on('play-sound', (event, sound) => callback(sound)),
-  onInitData: (callback) =>
-    ipcRenderer.on('init-achievement', async (event, info) => {
-      const ach = await achievementsJS.getAchievementsForAppid(info.option, info.appid);
-      ipcRenderer.send('achievement-data-ready');
-      callback({ info, ach });
-    }),
+  onProgress: (callback) => ipcRenderer.on('show-progress', (event, info) => callback(info)),
+
   getAchievementsForAppid: (option, appid) => achievementsJS.getAchievementsForAppid(option, appid),
   onProgressUpdate: (callback) => ipcRenderer.on('show-progress', (event, data) => callback(data)),
   closeNotificationWindow: () => ipcRenderer.send('close-notification-window'),

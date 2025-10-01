@@ -128,7 +128,6 @@ async function getCachedData(info) {
       }
       let data = await getSteamData(info.appid, 'data');
       info.game = data;
-      //info.icon = await getSteamData(info.appid, 'icon');
       await achievementsJS.saveGameToCache(info, configJS.achievement.lang);
       info.a = info.game.achievements.find((ac) => ac.name === String(info.ach));
       info.description = info.a.displayName;
@@ -434,6 +433,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }) {
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();
     //if (info.achievements) return;
+    const url1 = `https://steamdb.info/app/${info.appid}/info/`;
     const url2 = `https://steamdb.info/app/${info.appid}/stats/`;
     const page2 = puppeteerWindow.page;
 
@@ -493,6 +493,16 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }) {
       });
 
       return data;
+    });
+
+    await page2.goto(url1, { waitUntil: 'domcontentloaded' });
+    info.icon = await page2.evaluate(() => {
+      const el = document.querySelector('#js-assets-table');
+      const row = Array.from(el.rows).find((r) => r.cells[0].textContent.trim() === 'icon');
+
+      if (row) {
+        return row.cells[1].querySelector('a').textContent.trim();
+      }
     });
     return;
     const page = await puppeteerWindow.newPage();
@@ -923,14 +933,13 @@ async function createNotificationWindow(info) {
 
   await startEngines();
   await getCachedData(info);
-  if (!info.a) await getServerData(info);
 
   closePuppeteer();
   const message = {
     displayName: info.a.displayName || '',
     description: info.a.description || '',
-    icon: pathToFileURL(await fetchIcon(a.icon, info.appid)).href,
-    icon_gray: pathToFileURL(await fetchIcon(a.icongray, info.appid)).href,
+    icon: pathToFileURL(await fetchIcon(info.a.icon, info.appid)).href,
+    icon_gray: pathToFileURL(await fetchIcon(info.a.icongray, info.appid)).href,
     preset: configJS.overlay.preset,
     position: configJS.overlay.position,
     scale: parseFloat(configJS.overlay.scale),
@@ -1167,14 +1176,14 @@ async function createProgressWindow(info) {
   progressWindow.setFocusable(true);
   progressWindow.setIgnoreMouseEvents(true, { forward: true });
 
-  if (!settingsJS) {
-    settingsJS = require(path.join(__dirname, '../settings.js'));
-    settingsJS.setUserDataPath(userData);
-  }
-  if (!configJS) configJS = await settingsJS.load();
-  info.option = configJS;
-  progressWindow.once('ready-to-show', () => {
-    progressWindow.webContents.send('init-achievement', info);
+  await startEngines();
+  await getCachedData(info);
+  closePuppeteer();
+  info.a.icongray = pathToFileURL(await fetchIcon(info.a.icongray, info.appid)).href;
+
+  progressWindow.webContents.on('did-finish-load', () => {
+    progressWindow.showInactive();
+    progressWindow.webContents.send('show-progress', info);
     //createOverlayWindow({ appid: info.appid, description: 'refresh' });
   });
 

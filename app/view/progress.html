@@ -98,8 +98,8 @@
           return;
         }
 
-        window.api.onInitData((info, ach) => {
-          let a = ach.achievement.list.find((ac) => ac.name === info.ach);
+        window.api.onProgress((info) => {
+          let a = info.a;
           let [count, max_count] = info.count.split('/').map(Number);
 
           const titleEl = document.querySelector('.title');
@@ -110,28 +110,12 @@
             progress: count,
             max_progress: max_count,
             displayName: a?.displayName || 'Unknown Achievement',
-            icon: '',
+            icon: a?.icongray || '',
           };
           const percent = (data.progress / data.max_progress) * 100;
 
           titleEl.textContent = `${data.displayName}: ${data.progress}/${data.max_progress}`;
           imgEl.src = `${data.icon}`;
-          console.log(imgEl.src);
-          fill.style.width = `${percent}%`;
-        });
-
-        window.api.onProgressUpdate((data) => {
-          if (!data) return;
-
-          const titleEl = document.querySelector('.title');
-          const imgEl = document.querySelector('.progress-icon img');
-          const fill = document.querySelector('.progress-fill');
-
-          const percent = (data.progress / data.max_progress) * 100;
-
-          titleEl.textContent = `${data.displayName}: ${data.progress}/${data.max_progress}`;
-          imgEl.src = `${data.icon}`;
-          console.log(imgEl.src);
           fill.style.width = `${percent}%`;
         });
 
