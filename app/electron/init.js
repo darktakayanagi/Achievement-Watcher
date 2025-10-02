@@ -121,9 +121,9 @@ async function getCachedData(info) {
     default:
       if (g) {
         info.a = g.achievement.list.find((ac) => ac.name === String(info.ach));
-        info.game = g.name;
+        info.game = g;
         info.description = info.a?.displayName;
-        break;
+        return;
       }
       let data = await getSteamData(info.appid, 'data');
       info.game = data;
@@ -748,6 +748,7 @@ async function createOverlayWindow(info) {
 
   await startEngines();
   await getCachedData(info);
+  info.game = await achievementsJS.getSavedAchievementsForAppid(configJS, info.appid);
 
   overlayWindow = new BrowserWindow({
     width: 450,
@@ -815,16 +816,6 @@ async function createOverlayWindow(info) {
   overlayWindow.webContents.on('did-finish-load', () => {
     overlayWindow.webContents.send('show-overlay', info.game);
     overlayWindow.webContents.send('set-language', selectedLanguage);
-  });
-
-  const isReady = [
-    new Promise(function (resolve) {
-      overlayWindow.once('ready-to-show', () => {
-        return resolve();
-      }); //Window is loaded and ready to be drawn
-    }),
-  ];
-  Promise.all(isReady).then(() => {
     overlayWindow.showInactive();
   });
 

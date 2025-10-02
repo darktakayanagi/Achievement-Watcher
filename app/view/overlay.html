@@ -153,10 +153,10 @@
         isLoading = true;
 
         const tableBody = document.querySelector('#overlayTableBody');
-        const achievementsDataObj = game;
+        const achievementsDataObj = game.achievements || game.achievement.list;
         const lang = overlayLang;
 
-        if (!Array.isArray(achievementsDataObj.achievements)) {
+        if (!Array.isArray(achievementsDataObj)) {
           isLoading = false;
           return;
         }
@@ -193,7 +193,7 @@
             }
         });
 
-        const sortedAchievements = sortAchievements(achievementsDataObj.achievements);
+        const sortedAchievements = sortAchievements(achievementsDataObj);
         sortedAchievements.forEach((achievement) => {
           if (!achievement.name || uniqueAchievements.has(achievement.name)) return;
           uniqueAchievements.add(achievement.name);
