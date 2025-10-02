@@ -76,7 +76,6 @@ async function getSteamData(appid, type) {
     if (type === 'data') {
       let info = { appid };
       await scrapeWithPuppeteer(info);
-      //openSteamDB(info);
       while (!info.achievements) {
         await delay(500);
       }
@@ -123,14 +122,14 @@ async function getCachedData(info) {
       if (g) {
         info.a = g.achievement.list.find((ac) => ac.name === String(info.ach));
         info.game = g.name;
-        info.description = info.a.displayName;
+        info.description = info.a?.displayName;
         break;
       }
       let data = await getSteamData(info.appid, 'data');
       info.game = data;
       await achievementsJS.saveGameToCache(info, configJS.achievement.lang);
       info.a = info.game.achievements.find((ac) => ac.name === String(info.ach));
-      info.description = info.a.displayName;
+      info.description = info.a?.displayName;
   }
 }
 
@@ -327,98 +326,6 @@ ipcMain.handle('start-watchdog', async (event, arg) => {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * @param {{appid: string}} info
- */
-function openSteamDB(info = { appid: 269770 }) {
-  if (steamDBWindow) {
-    if (steamDBWindow.isMinimized()) steamDBWindow.restore();
-    steamDBWindow.focus();
-  } else {
-    steamDBWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      show: false,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        partition: 'persist:cloudflare', // 💡 persist session across loads
-      },
-    });
-
-    steamDBWindow.webContents.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
-    );
-    // Inject JS *before* the page starts executing its own scripts
-    steamDBWindow.webContents.on('dom-ready', async () => {
-      await steamDBWindow.webContents.executeJavaScript(`
-      // Override navigator.userAgent
-      Object.defineProperty(navigator, 'userAgent', {
-        get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
-      });
-
-      // Override platform
-      Object.defineProperty(navigator, 'platform', {
-        get: () => 'Win32'
-      });
-
-      // Override vendor
-      Object.defineProperty(navigator, 'vendor', {
-        get: () => 'Google Inc.'
-      });
-
-      // Fake Chrome object
-      window.chrome = { runtime: {} };
-    `);
-    });
-  }
-  steamDBWindow.loadURL(`https://steamdb.info/app/${info.appid}/stats/`);
-  steamDBWindow.webContents.on('did-finish-load', async () => {
-    let achievements = undefined;
-    let name = undefined;
-    try {
-      while (!achievements || achievements.length === 0) {
-        name = await steamDBWindow.webContents.executeJavaScript(`
-          (() => {
-            const el = document.querySelector('.achievements_game_name');
-            return el?.innerText.trim() || null;
-          })()
-        `);
-        achievements = await steamDBWindow.webContents.executeJavaScript(`
-          (() => {
-            const items = document.querySelectorAll('.achievements_list .achievement');
-            const data = [];
-            const appid = document.querySelector('.row.app-row table tbody tr')?.children?.[1]?.innerText.trim() || '';
-            items.forEach(item => {
-              const idRaw = item.getAttribute('id') || '';
-              const id = idRaw.replace(/^achievement-/, '');
-              const name = item.querySelector('.achievement_name')?.innerText.trim() || '';
-              
-              const descContainer = item.querySelector('.achievement_desc');
-              const spoiler = descContainer?.querySelector('.achievement_spoiler');
-              const hidden = !!spoiler;
-              const description = hidden
-                ? spoiler?.innerText.trim()
-                : descContainer?.innerText.trim() || '';
-              const icon = 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/'+appid+'/' + item.querySelector('.achievement_image')?.getAttribute('data-name') || '';
-              const icongray = 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/'+appid+'/' + item.querySelector('.achievement_image_small')?.getAttribute('data-name') || '';
-              data.push({ name: id, default_value:0, displayName: name, hidden: hidden ? 1 : 0, description,  icon, icongray});
-            });
-
-            return data;
-          })()
-        `);
-        await delay(500);
-      }
-      info.name = name;
-      info.achievements = achievements;
-      console.log('Extracted achievements:', achievements.length);
-    } catch (error) {
-      console.error('Failed to extract achievements:', error);
-    }
-  });
 }
 
 async function scrapeWithPuppeteer(info = { appid: 269770 }) {
@@ -821,23 +728,26 @@ function createMainWindow() {
 }
 
 /**
- * @param {{appid: string, description:string}} selectedConfig
+ * @param {{appid: string, action:string}} info
  */
-function createOverlayWindow(selectedConfig) {
-  if (!selectedConfig.description) selectedConfig.description = 'open';
+async function createOverlayWindow(info) {
+  if (!info.action) info.action = 'open';
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    if (String(selectedConfig.appid) === '0' || selectedConfig.description == 'close') {
+    if (String(info.appid) === '0' || info.action == 'close') {
       overlayWindow.close();
       return;
     }
-    if (selectedConfig.description === 'refresh') {
-      overlayWindow.webContents.send('refresh-achievements-table', String(selectedConfig.appid));
+    if (info.action === 'refresh') {
+      overlayWindow.webContents.send('refresh-achievements-table', String(info.appid));
       return;
     }
   }
-  if (String(selectedConfig.appid) === '0' || selectedConfig.description === 'refresh') return;
+  if (String(info.appid) === '0' || info.action === 'refresh') return;
   const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   isOverlayShowing = true;
+
+  await startEngines();
+  await getCachedData(info);
 
   overlayWindow = new BrowserWindow({
     width: 450,
@@ -903,7 +813,7 @@ function createOverlayWindow(selectedConfig) {
   overlayWindow.loadFile(path.join(manifest.config.debug ? '' : userData, 'view\\overlay.html'));
   let selectedLanguage = 'english';
   overlayWindow.webContents.on('did-finish-load', () => {
-    overlayWindow.webContents.send('load-overlay-data', selectedConfig.appid);
+    overlayWindow.webContents.send('show-overlay', info.game);
     overlayWindow.webContents.send('set-language', selectedLanguage);
   });
 
@@ -1048,7 +958,7 @@ async function createNotificationWindow(info) {
       iconPath: message.icon,
       scale,
     });
-    createOverlayWindow({ appid: info.appid, description: 'refresh' });
+    createOverlayWindow({ appid: info.appid, action: 'refresh' });
   });
 
   notificationWindow.on('closed', async () => {
@@ -1184,7 +1094,6 @@ async function createProgressWindow(info) {
   progressWindow.webContents.on('did-finish-load', () => {
     progressWindow.showInactive();
     progressWindow.webContents.send('show-progress', info);
-    //createOverlayWindow({ appid: info.appid, description: 'refresh' });
   });
 
   progressWindow.on('closed', () => {
@@ -1232,7 +1141,7 @@ function parseArgs(args) {
       createPlaytimeWindow({ appid, source, description });
       break;
     case 'overlay':
-      createOverlayWindow({ appid, source, description });
+      createOverlayWindow({ appid, source, action: description });
       break;
     case 'progress':
       createProgressWindow({ appid, source, ach, count });

@@ -82,7 +82,6 @@
     <script>
       let overlayLang = 'english';
       let currentConfigName = null;
-      let currentDataHash = null;
       let isLoading = false;
       const headers = document.querySelectorAll('thead th');
       // Track sorting for status and achievement only
@@ -127,20 +126,6 @@
         return date.toLocaleString();
       }
 
-      function computeAchievementsHash(achievements, saved, lang) {
-        return achievements
-          .map((ach) => {
-            const name = ach.name;
-            const display = getSafeLocalizedText(ach.displayName, lang);
-            const savedData = saved?.achievements?.[name] || {};
-            const earned = savedData.earned ? '1' : '0';
-            const progress = savedData.progress ?? '';
-            const max = savedData.max_progress ?? '';
-            return `${name}-${display}-${earned}-${progress}-${max}`;
-          })
-          .join('|');
-      }
-
       function sortAchievements(l) {
         return l.slice().sort((a, b) => {
           // Enforce status sorting first if active
@@ -163,28 +148,18 @@
         });
       }
 
-      async function loadTableData(configName) {
-        if (!configName || isLoading) return;
+      async function loadTableData(game) {
+        if (!game || isLoading) return;
         isLoading = true;
 
         const tableBody = document.querySelector('#overlayTableBody');
-        const achievementsDataObj = await window.api.loadAchievementData(configName);
-        //const savedAchievementsObj = await window.api.loadSavedAchievements(configName);
+        const achievementsDataObj = game;
         const lang = overlayLang;
 
         if (!Array.isArray(achievementsDataObj.achievements)) {
           isLoading = false;
           return;
         }
-
-        //const newHash = computeAchievementsHash(achievementsDataObj, savedAchievementsObj, lang);
-        //const isSameConfig = currentConfigName === configName;
-        //const isSameHash = currentDataHash === newHash;
-
-        //if (isSameConfig && isSameHash) {
-        //  isLoading = false;
-        //  return;
-        //}
 
         tableBody.innerHTML = '';
         const uniqueAchievements = new Set();
@@ -204,7 +179,7 @@
             if (!headers[i].hasClick) {
               headers[i].addEventListener('click', () => {
                 sortState.achievement = cycleSortState(sortState.achievement);
-                loadTableData(configName);
+                loadTableData(game);
               });
               headers[i].hasClick = true;
             }
@@ -212,7 +187,7 @@
             if (!headers[i].hasClick) {
               headers[i].addEventListener('click', () => {
                 sortState.status = cycleSortState(sortState.status);
-                loadTableData(configName);
+                loadTableData(game);
               });
               headers[i].hasClick = true;
             }
@@ -232,8 +207,6 @@
           let status = `<span style="color: red; font-weight: bold;">Locked</span>`;
           let earnedTimeText = '';
           let progressText = '';
-
-          //const saved = savedAchievementsObj?.achievements?.[achievement.name];
 
           if (achievement.Achieved) {
             imagePath = icon;
@@ -260,8 +233,7 @@
           tableBody.appendChild(row);
         });
 
-        currentConfigName = configName;
-        //currentDataHash = newHash;
+        currentConfigName = game;
         isLoading = false;
       }
 
@@ -272,20 +244,19 @@
         }
       });
 
-      window.api.onLoadOverlayData((configName) => {
+      window.api.onOverlay((game) => {
         const tableBody = document.querySelector('#overlayTableBody');
         const messageRow = document.getElementById('noConfigMessageRow');
 
-        if (!configName) {
+        if (!game) {
           tableBody.innerHTML = '';
           if (messageRow) messageRow.style.display = '';
           currentConfigName = null;
-          currentDataHash = null;
           return;
         }
 
         if (messageRow) messageRow.style.display = 'none';
-        loadTableData(configName);
+        loadTableData(game);
       });
 
       window.api.onRefreshAchievementsTable(() => {
