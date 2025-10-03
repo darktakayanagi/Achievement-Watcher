@@ -172,7 +172,11 @@ async function startObs(kill = false) {
   while (true) {
     if (isRunning()) {
       if (!kill) break;
-      execSync('taskkill /IM obs64.exe /F');
+      try {
+        execSync('taskkill /IM obs64.exe /F');
+      } catch (e) {
+        execSync('wmic process where "name=\'obs64.exe\'" delete');
+      }
     }
     deleteCrashFile();
 
