@@ -1201,22 +1201,23 @@ function getPresetDimensions(presetFolder) {
 function parseArgs(args) {
   let windowType = args['wintype'] || 'main'; // overlay, playtime, progress, achievement
   let appid = args['appid']; // appid
+  let source = args['source'] || 'steam'; // source: steam, epic, gog, luma
   let ach = args['ach']; // achievement name
   let description = args['description']; // text
   let count = args['count'] || '0/100'; // count / max_count
   console.log('opening ' + windowType + ' window');
   switch (windowType) {
     case 'playtime':
-      createPlaytimeWindow({ appid, description });
+      createPlaytimeWindow({ appid, source, description });
       break;
     case 'overlay':
-      createOverlayWindow({ appid, description });
+      createOverlayWindow({ appid, source, description });
       break;
     case 'progress':
-      createProgressWindow({ appid, ach, count });
+      createProgressWindow({ appid, source, ach, count });
       break;
     case 'achievement':
-      createNotificationWindow({ appid, ach });
+      createNotificationWindow({ appid, source, ach });
       break;
     case 'main':
     default:
