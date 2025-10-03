@@ -1220,6 +1220,7 @@ function parseArgs(args) {
       break;
     case 'main':
     default:
+      checkResources();
       createMainWindow();
       break;
   }
@@ -1235,29 +1236,34 @@ function checkResources() {
       if (e.isDirectory()) {
         copyFolderRecursive(srcPath, dstPath);
       } else {
-        fs.copyFileSync(srcPath, dstPath);
+        let shouldCopy = false;
+        if (!fs.existsSync(dstPath)) shouldCopy = true;
+        else {
+          try {
+            fs.accessSync(dstPath, fs.constants.W_OK);
+            const srcStat = fs.statSync(srcPath);
+            const dstStat = fs.statSync(dstPath);
+            if (srcStat.size !== dstStat.size || srcStat.mtimeMs > dstStat.mtimeMs) shouldCopy = true;
+          } catch {}
+        }
+        if (shouldCopy) fs.copyFileSync(srcPath, dstPath);
       }
     }
   }
 
   const resourcesPath = path.join(manifest.config.debug ? path.join(__dirname, '..') : path.join(process.resourcesPath, 'userdata'));
-  if (!fs.existsSync(path.join(userData, 'Presets'))) {
-    const presets = path.join(resourcesPath, 'presets');
-    copyFolderRecursive(presets, path.join(userData, 'Presets'));
-  }
 
-  if (!fs.existsSync(path.join(userData, 'Media'))) {
-    const media = path.join(resourcesPath, 'Media');
-    copyFolderRecursive(media, path.join(userData, 'Media'));
-  }
-  if (!fs.existsSync(path.join(userData, 'view'))) {
-    const view = path.join(resourcesPath, 'view');
-    copyFolderRecursive(view, path.join(userData, 'view'));
-  }
-  if (!fs.existsSync(path.join(userData, 'Source'))) {
-    const source = path.join(resourcesPath, 'Source');
-    copyFolderRecursive(source, path.join(userData, 'Source'));
-  }
+  const presets = path.join(resourcesPath, 'presets');
+  copyFolderRecursive(presets, path.join(userData, 'Presets'));
+
+  const media = path.join(resourcesPath, 'Media');
+  copyFolderRecursive(media, path.join(userData, 'Media'));
+
+  const view = path.join(resourcesPath, 'view');
+  copyFolderRecursive(view, path.join(userData, 'view'));
+
+  const source = path.join(resourcesPath, 'Source');
+  copyFolderRecursive(source, path.join(userData, 'Source'));
 
   if (!fs.existsSync(path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'))) {
     const profile = path.join(resourcesPath, 'obs', 'AW');
@@ -1268,7 +1274,6 @@ function checkResources() {
 
 try {
   if (app.requestSingleInstanceLock() !== true) app.quit();
-  checkResources();
   app
     .on('ready', async function () {
       autoUpdater.checkForUpdatesAndNotify();
