@@ -153,7 +153,7 @@ module.exports.scanLegit = async (listingType = 0, steamAccFilter = '0') => {
   }
 };
 
-module.exports.getCachedData = async (cfg) => {
+module.exports.getCachedData = (cfg) => {
   if (!steamLanguages.some((language) => language.api === cfg.lang)) {
     throw 'Unsupported API language code';
   }
@@ -162,9 +162,8 @@ module.exports.getCachedData = async (cfg) => {
   let result;
   try {
     let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
-
-    if (await ffs.exists(filePath)) {
-      result = JSON.parse(await ffs.readFile(filePath));
+    if (fs.existsSync(filePath)) {
+      result = JSON.parse(fs.readFileSync(filePath));
     }
   } catch (err) {
     if (err.code) throw `Could not load Steam data: ${err.code} - ${err.message}`;
@@ -192,7 +191,7 @@ module.exports.saveGameToCache = async (cfg) => {
       list: cfg.achievements,
     },
   };
-  ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+  fs.writeFileSync(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
 };
 
 module.exports.getGameData = async (cfg) => {
@@ -201,7 +200,7 @@ module.exports.getGameData = async (cfg) => {
   }
   let result;
   try {
-    result = await this.getCachedData(cfg);
+    result = this.getCachedData(cfg);
     if (result) return result;
     if (!(await findInAppList(+cfg.appID))) throw `Error trying to load steam data for ${cfg.appID}`;
     const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
@@ -211,7 +210,7 @@ module.exports.getGameData = async (cfg) => {
     } else {
       result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
     }
-    ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
     return result;
     //TODO: data using key is incomplete
     /*
@@ -248,11 +247,11 @@ module.exports.getAchievementsFromFile = async (filePath) => {
     for (let file of files) {
       try {
         if (path.parse(file).ext == '.json') {
-          local = JSON.parse(await ffs.readFile(path.join(filePath, file), 'utf8'));
+          local = JSON.parse(fs.readFileSync(path.join(filePath, file), 'utf8'));
         } else if (file === 'stats.bin') {
-          local = sse.parse(await ffs.readFile(path.join(filePath, file)));
+          local = sse.parse(fs.readFileSync(path.join(filePath, file)));
         } else {
-          local = ini.parse(await ffs.readFile(path.join(filePath, file), 'utf8'));
+          local = ini.parse(fs.readFileSync(path.join(filePath, file), 'utf8'));
         }
         break;
       } catch (e) {}
@@ -344,9 +343,9 @@ module.exports.getAchievementsFromAPI = async (cfg) => {
       } else {
         result = await getSteamUserStatsFromSRV(cfg.user.id, cfg.appID);
       }
-      ffs.writeFile(cache.local, JSON.stringify(result, null, 2)).catch((err) => {});
+      fs.writeFileSync(cache.local, JSON.stringify(result, null, 2)).catch((err) => {});
     } else {
-      result = JSON.parse(await ffs.readFile(cache.local));
+      result = JSON.parse(fs.readFileSync(cache.local));
     }
 
     return result;

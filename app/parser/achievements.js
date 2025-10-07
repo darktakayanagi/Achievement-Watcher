@@ -30,8 +30,6 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
 };
 
 async function discover(source, steamAccFilter) {
-  debug.log('Scanning for games ...');
-
   let data = [];
 
   //UserCustomDir
@@ -181,12 +179,11 @@ module.exports.getAchievementsForAppid = async (option, requestedAppid) => {
   }
 };
 
-module.exports.getSavedAchievementsForAppid = async (option, requestedAppid) => {
+module.exports.getSavedAchievementsForAppid = async (option, requestedAppid, cachedList) => {
   let game;
-  let result = [];
 
   try {
-    let appidList = await discover(option.achievement_source, option.steam.main);
+    let appidList = cachedList || (await discover(option.achievement_source, option.steam.main));
     let appid = appidList.find((a) => a.appid == requestedAppid);
 
     if (appid.data.type === 'rpcs3') {
@@ -304,6 +301,8 @@ module.exports.getSavedAchievementsForAppid = async (option, requestedAppid) => 
 
 module.exports.makeList = async (option, callbackProgress = () => {}) => {
   try {
+    debug.log('Scanning for games ...');
+
     let result = [];
 
     let appidList = await discover(option.achievement_source, option.steam.main);
@@ -312,7 +311,16 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
       let count = 0;
 
       for (let appid of appidList) {
-        this.getSavedAchievementsForAppid(option, appid);
+        let game = await this.getSavedAchievementsForAppid(option, appid.appid, appidList);
+        if (game && game.achievement && game.achievement.total > 0) {
+          let duplicate = result.find((a) => a.appid == game.appid);
+          if (duplicate && option.achievement.mergeDuplicate) {
+          } else {
+            result.push(game);
+          }
+        }
+        count++;
+        callbackProgress(Math.floor((count / appidList.length) * 100));
       }
     }
 

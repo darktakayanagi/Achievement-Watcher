@@ -69,7 +69,7 @@ function readRegistryInteger(hive, key, valueName) {
 
   const normalizedKey = key.replace(/\//g, '\\');
 
-  const values = listValues(hiveEnum, normalizedKey);
+  const values = enumerateValues(hiveEnum, normalizedKey);
   const val = values.find((v) => v.name === valueName);
 
   if (!val || (val.type !== 'REG_DWORD' && val.type !== 'REG_QWORD')) {
