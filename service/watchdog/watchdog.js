@@ -11,7 +11,8 @@ const tasklist = require('win-tasklist');
 const moment = require('moment');
 const websocket = require('./websocket.js');
 const processPriority = require('./util/priority.js');
-const fs = require('@xan105/fs');
+const fs = require('fs');
+const reg = require('native-reg');
 const request = require('request-zero');
 const settings = require('./settings.js');
 const monitor = require('./monitor.js');
@@ -89,6 +90,7 @@ var app = {
   cache: [],
   options: {},
   watcher: [],
+  luma_keys: [],
   tick: 0,
   toastID: 'Microsoft.XboxApp_8wekyb3d8bbwe!Microsoft.XboxApp',
   start: async function () {
@@ -160,6 +162,7 @@ var app = {
           if (evt === 'update') {
             debug.log('option file change detected -> reloading');
             self.watcher.forEach((watcher) => watcher.close());
+            self.stop_lumaPlay();
             self.start();
           }
         });
@@ -170,7 +173,7 @@ var app = {
       let i = 1;
       for (let folder of await monitor.getFolders(cfg_file.userDir)) {
         try {
-          if (await fs.exists(folder.dir)) {
+          if (fs.existsSync(folder.dir)) {
             self.watch(i, folder.dir, folder.options);
             i = i + 1;
           }
@@ -178,6 +181,7 @@ var app = {
           debug.log(err);
         }
       }
+      self.watch_lumaPlay();
     } catch (err) {
       debug.error(err);
       instance.unlock();
@@ -193,7 +197,7 @@ var app = {
         if (evt !== 'update') return;
 
         const currentTime = Date.now();
-        const fileLastModified = (await fs.stats(name)).mtimeMs || 0;
+        const fileLastModified = fs.stat(name).mtimeMs || 0;
         if (currentTime - fileLastModified > 1000) return;
 
         let filePath = path.parse(name);
@@ -294,7 +298,7 @@ var app = {
                       try {
                         if (self.options.action.target) {
                           debug.log(`Action: ${self.options.action.target}`);
-                          if (await fs.exists(self.options.action.target)) {
+                          if (fs.existsSync(self.options.action.target)) {
                             const exec = spawn(self.options.action.target, {
                               cwd: self.options.action.cwd || path.parse(self.options.action.target).dir,
                               stdio: 'ignore',
@@ -434,7 +438,81 @@ var app = {
     });
   },
   watch_lumaPlay: async function () {
-    console.log(`watching changes in LumaPlay`);
+    let self = this;
+    debug.log(`watching changes in LumaPlay`);
+    const BASE_PATH = 'SOFTWARE\\LumaPlay';
+    const HIVE = reg.HKEY.HKEY_CURRENT_USER;
+    const baseKey = reg.openKey(HIVE, BASE_PATH, reg.Access.ALL_ACCESS);
+
+    // Watch for changes under SOFTWARE\LumaPlay
+    this.luma_keys.push(baseKey);
+    reg.watch(baseKey, (change) => {
+      console.log('Registry change detected at LumaPlay');
+
+      // enumerate subkeys
+      const userKeys = reg.subKeys(baseKey);
+      userKeys.forEach((userId) => {
+        const userKey = reg.openKey(HIVE, `${BASE_PATH}\\${userId}`, reg.Access.ALL_ACCESS);
+        const gameKeys = reg.subKeys(userKey);
+
+        gameKeys.forEach((gameId) => {
+          const gamePath = `${BASE_PATH}\\${userId}\\${gameId}\\Achievements`;
+          try {
+            const gameKey = reg.openKey(HIVE, gamePath, reg.Access.ALL_ACCESS);
+            const values = reg.values(gameKey);
+
+            const dwordValues = values
+              .filter((v) => v.type === 'REG_DWORD')
+              .reduce((acc, v) => {
+                acc[v.name] = v.value;
+                return acc;
+              }, {});
+
+            //update achievements.json (cached file in aw folder luma_cache)
+            const folderPath = path.join(process.cwd(), gameId);
+            if (!fs.existsSync(folderPath)) {
+              fs.mkdirSync(folderPath, { recursive: true });
+            }
+
+            const jsonFile = path.join(folderPath, 'achievements.json');
+            let existingData = {};
+
+            if (fs.existsSync(jsonFile)) {
+              try {
+                existingData = JSON.parse(fs.readFileSync(jsonFile, 'utf-8'));
+              } catch {
+                existingData = {};
+              }
+            }
+
+            const newKeys = [];
+            for (const key of Object.keys(dwordValues)) {
+              if (!(key in existingData)) {
+                existingData[key] = {
+                  earned: true,
+                  earned_time: Math.floor(Date.now() / 1000),
+                };
+                newKeys.push(key);
+              }
+            }
+
+            if (newKeys.length) {
+              fs.writeFileSync(jsonFile, JSON.stringify(existingData, null, 2), 'utf-8');
+              fs.utimesSync(folderPath, new Date(), new Date());
+              console.log(`\n${gameId}: ${newKeys.join(', ')}`);
+            }
+          } catch (err) {
+            // ignore if Achievements key doesn’t exist
+          }
+        });
+      });
+    });
+  },
+  stop_lumaPlay: function () {
+    for (const key of this.luma_keys) {
+      reg.closeKey(key);
+    }
+    this.luma_keys = [];
   },
   load: async function (appID) {
     try {
@@ -465,7 +543,7 @@ var app = {
       let cache = [];
 
       if (fs.existsSync(cacheFile)) {
-        cache = JSON.parse(await fs.readFile(cacheFile, { encoding: 'utf8' }));
+        cache = JSON.parse(fs.readFileSync(cacheFile, { encoding: 'utf8' }));
       }
       let cached = cache.find((g) => g.gogid === game.appid);
       if (cached) return cached.steamid;
@@ -485,7 +563,7 @@ var app = {
       let cache = [];
 
       if (fs.existsSync(cacheFile)) {
-        cache = JSON.parse(await fs.readFile(filePath, { encoding: 'utf8' }));
+        cache = JSON.parse(fs.readFileSync(filePath, { encoding: 'utf8' }));
       }
       let cached = cache.find((g) => g.gogid === game.appid);
       if (cached) return cached.steamid;
