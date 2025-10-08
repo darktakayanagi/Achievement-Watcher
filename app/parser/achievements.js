@@ -199,6 +199,8 @@ module.exports.getSavedAchievementsForAppid = async (option, requestedAppid, cac
         key: option.steam.apiKey,
       });
     }
+    if (!game) return;
+
     if (appid.steamappid) game.steamappid = appid.steamappid;
     game.source = appid.source;
     if (!option.achievement.mergeDuplicate && appid.source) game.source = appid.source;

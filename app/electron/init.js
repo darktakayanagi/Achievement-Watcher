@@ -26,13 +26,19 @@ const API_KEY = '2a9d32ddd0bfe4e1191b4f6ff56fef60'; // TODO: remove this and loa
 const sharp = require('sharp');
 const SteamUser = require('steam-user');
 const client = new SteamUser();
-client.logOn({ anonymous: true });
-client.on('loggedOn', async () => {
-  console.log('logged on');
-});
+
+function clientLogOn() {
+  return new Promise((resolve) => {
+    client.logOn({ anonymous: true });
+    client.on('loggedOn', () => {
+      resolve();
+    });
+  });
+}
 
 const manifest = require('../package.json');
 const userData = app.getPath('userData');
+let lastScrape = Date.now();
 let settingsJS = null;
 let configJS = null;
 let achievementsJS = null;
@@ -41,7 +47,6 @@ if (manifest.config['disable-gpu']) app.disableHardwareAcceleration();
 if (manifest.config.appid) app.setAppUserModelId(manifest.config.appid);
 
 let puppeteerWindow = {};
-let steamDBWindow = null;
 let MainWin = null;
 let progressWindow = null;
 let overlayWindow = null;
@@ -59,6 +64,27 @@ let debug = new (require('@xan105/log'))({
   file: path.join(userData, `logs/renderer.log`),
 });
 
+async function getUserAchievements(appid) {
+  let steamid = 76561198152618007;
+
+  const url = `https://steamcommunity.com/profiles/${steamid}`;
+  const res = await fetch(url, { redirect: 'manual', headers: { userAgent: 'node-fecth' } });
+  const l = res.headers.get('location');
+  const data = await res.json();
+
+  if (!data.playerstats || !data.playerstats.achievements) {
+    throw new Error('No achievements found or stats are private');
+  }
+
+  return data.playerstats.achievements.map((a) => ({
+    apiName: a.apiname,
+    unlocked: a.achieved === 1,
+    name: a.name,
+    description: a.description,
+    unlockTime: a.unlocktime,
+  }));
+}
+
 async function getSteamData(appid, type) {
   try {
     if (type === 'icon') {
@@ -73,6 +99,11 @@ async function getSteamData(appid, type) {
         return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
       });
     }
+    if (type === 'full') {
+      const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
+      return apps;
+    }
+
     if (type === 'data') {
       let info = { appid };
       await scrapeWithPuppeteer(info);
@@ -81,7 +112,7 @@ async function getSteamData(appid, type) {
       }
       return info;
     }
-    await delay(5000);
+    await delay(10000);
   } catch (err) {
     console.log(err);
   }
@@ -328,7 +359,11 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function scrapeWithPuppeteer(info = { appid: 269770 }) {
+async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
+  if (Date.now() - lastScrape < 1500) {
+    await delay(Math.floor(Math.random() * (1500 - 800 + 1)) + 800);
+    lastScrape = Date.now();
+  }
   try {
     const chromePath = ChromeLauncher.Launcher.getInstallations()[0];
     const url = `https://steamhunters.com/apps/${info.appid}/achievements`;
@@ -340,6 +375,18 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }) {
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();
     //if (info.achievements) return;
+    if (alternate) {
+      const url = `https://steamcommunity.com/profiles/${alternate.steamid}`;
+      const page = puppeteerWindow.page;
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+      } catch (e) {
+        console.log(e);
+      }
+      const url3 = page.url();
+      await page.goto(`${url3}/stats/${info.appid}/?tab=achievements`, { waitUntil: 'domcontentloaded' });
+      return;
+    }
     const url1 = `https://steamdb.info/app/${info.appid}/info/`;
     const url2 = `https://steamdb.info/app/${info.appid}/stats/`;
     const page2 = puppeteerWindow.page;
@@ -401,7 +448,8 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }) {
 
       return data;
     });
-
+    await delay(Math.floor(Math.random() * (1500 - 800 + 1)) + 800);
+    lastScrape = Date.now();
     await page2.goto(url1, { waitUntil: 'domcontentloaded' });
     info.icon = await page2.evaluate(() => {
       const el = document.querySelector('#js-assets-table');
@@ -412,50 +460,6 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }) {
       }
     });
     return;
-    const page = await puppeteerWindow.newPage();
-
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
-
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
-    const pageContent = await page.content();
-    if (pageContent.includes('0 games found matching')) {
-      info.achievements = [];
-    } else {
-      await page.waitForSelector('li.check-item');
-      info.achievements = await page.evaluate(() => {
-        const items = Array.from(document.querySelectorAll('li.check-item'));
-        return items.map((item) => {
-          const name = item.querySelector('.achievement-name a')?.textContent.trim() || '';
-          const description = item.querySelector('.media-body .small')?.textContent.trim() || '';
-          const lockedIcon = item.querySelector('.media-left img')?.src || '';
-          const unlockedIcon = item.querySelector('.media-right img')?.src || '';
-          const imageSpan = item.querySelector('.media-left span.image');
-          let apiName = '';
-          if (imageSpan?.title) {
-            // The title attribute is multiline, find the line starting with "API Name:"
-            const lines = imageSpan.title.split('\n');
-            const apiLine = lines.find((line) => line.trim().startsWith('API Name:'));
-            if (apiLine) {
-              apiName = apiLine.replace('API Name:', '').trim();
-            }
-          }
-
-          // Hidden if name or description is missing or matches common "hidden" indicators
-          const ishidden = !name || name.toLowerCase().includes('secret') || !description;
-
-          return {
-            name: apiName,
-            default_value: 0,
-            displayName: name,
-            description,
-            hidden: ishidden ? 1 : 0,
-            icon: unlockedIcon,
-            icongray: lockedIcon,
-          };
-        });
-      });
-    }
-    await page.close();
   } catch (err) {
     debug.log(err);
   }
@@ -476,7 +480,9 @@ async function searchForGameName(info = { appid: '' }) {
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     const page = await puppeteerWindow.context.newPage();
 
-    const url = `https://store.epicgames.com/pt/browse?sortBy=releaseDate&sortDir=DESC&tag=Windows&priceTier=tier3&category=Game&count=40&start=${startIndex}`;
+    const url = `https://store.epicgames.com/pt/browse?sortBy=releaseDate&sortDir=DESC&tag=Windows&priceTier=tier3&category=Game&count=40&start=${
+      40 * startIndex
+    }`;
 
     try {
       await page.setExtraHTTPHeaders({
@@ -507,17 +513,21 @@ async function searchForGameName(info = { appid: '' }) {
     return matchResult;
   }
 
-  async function run() {
+  async function run(start) {
     const tasks = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = start; i < start + 5; i++) {
       const startIndex = i;
       tasks.push(scrapePage(startIndex));
     }
 
     await Promise.all(tasks);
   }
-  await run();
-  info.title = matchResult;
+
+  while (!info.title) {
+    await run(startIndex);
+    info.title = matchResult;
+    startIndex += 5;
+  }
   return;
 }
 
@@ -833,6 +843,15 @@ async function createNotificationWindow(info) {
   isNotificationShowing = true;
 
   await startEngines();
+  await clientLogOn();
+  //try {
+  //  let d = await getSteamData(3489700, 'full');
+  //} catch (err) {
+  //  console.log(err);
+  //}
+
+  //let d = await scrapeWithPuppeteer({ appid: 3489700 }, { steamid: '76561198152618007' });
+
   await getCachedData(info);
 
   closePuppeteer();

@@ -103,8 +103,8 @@ module.exports.getGameData = async (cfg) => {
   let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
   let result;
   try {
-    if (await ffs.exists(filePath)) {
-      result = JSON.parse(await ffs.readFile(filePath));
+    if (fs.existsSync(filePath)) {
+      result = JSON.parse(fs.readFileSync(filePath));
       return result;
     }
   } catch (err) {
@@ -112,6 +112,7 @@ module.exports.getGameData = async (cfg) => {
   }
   let list = [];
   let title;
+  let icon;
   try {
     title = await getGameTitleFromMapping(JSON.parse(await getEpicProductMapping())[cfg.appID]);
   } catch (err) {
@@ -144,6 +145,7 @@ module.exports.getGameData = async (cfg) => {
     if (!cfg.steamappid) return result;
     const achs = ipcRenderer.sendSync('get-steam-data', { appid: cfg.steamappid, type: 'data' });
     list = achs.achievements;
+    icon = achs.icon;
   }
 
   result = {
@@ -170,10 +172,10 @@ module.exports.getGameData = async (cfg) => {
       header: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.steamappid}/header.jpg`,
       background: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.steamappid}/page_bg_generated_v6b.jpg`,
       portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${cfg.steamappid}/library_600x900.jpg`,
-      icon: ipcRenderer.sendSync('get-steam-data', { appid: cfg.steamappid, type: 'icon' }),
+      icon: `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${cfg.steamappid}/${icon}.jpg`,
     };
   }
 
-  ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+  fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
   return result;
 };

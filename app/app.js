@@ -544,6 +544,13 @@ var app = {
         $('#achievement .wrapper > .header').removeAttr('data-system');
       }
 
+      //TODO: icon url might not exist, replace with a different "cache" server akamai/cloudflare
+      //cdn.akamai.steamstatic.com
+      //cdn.cloudflare.steamstatic.com
+      //shared.fastly.steamstatic.com
+      //cdn.edgecast.steamstatic.com
+      //steampipe.akamaized.net
+      //google2.cdn.steampipe.steamcontent.com
       if (game.img.icon) {
         $('#achievement .wrapper > .header .title .icon').css('background', `url('${game.img.icon}')`);
       }

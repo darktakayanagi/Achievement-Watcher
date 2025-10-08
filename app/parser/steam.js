@@ -191,7 +191,7 @@ module.exports.saveGameToCache = async (cfg) => {
       list: cfg.achievements,
     },
   };
-  fs.writeFileSync(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+  fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
 };
 
 module.exports.getGameData = async (cfg) => {
@@ -201,7 +201,7 @@ module.exports.getGameData = async (cfg) => {
   let result;
   try {
     result = this.getCachedData(cfg);
-    if (result) return result;
+    if (result && result.name) return result;
     if (!(await findInAppList(+cfg.appID))) throw `Error trying to load steam data for ${cfg.appID}`;
     const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
     let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
@@ -210,7 +210,7 @@ module.exports.getGameData = async (cfg) => {
     } else {
       result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
     }
-    fs.writeFileSync(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
     return result;
     //TODO: data using key is incomplete
     /*
@@ -343,7 +343,7 @@ module.exports.getAchievementsFromAPI = async (cfg) => {
       } else {
         result = await getSteamUserStatsFromSRV(cfg.user.id, cfg.appID);
       }
-      fs.writeFileSync(cache.local, JSON.stringify(result, null, 2)).catch((err) => {});
+      fs.writeFileSync(cache.local, JSON.stringify(result, null, 2));
     } else {
       result = JSON.parse(fs.readFileSync(cache.local));
     }
@@ -459,7 +459,6 @@ async function getSteamUserStats(cfg) {
 async function getSteamDataFromSRV(appID, lang) {
   const { ipcRenderer } = require('electron');
   const result = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'data' });
-  const icon = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'icon' });
 
   return {
     name: result.name,
@@ -469,7 +468,7 @@ async function getSteamDataFromSRV(appID, lang) {
       header: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/header.jpg`,
       background: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/page_bg_generated_v6b.jpg`,
       portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/library_600x900.jpg`,
-      icon,
+      icon: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/${result.icon}.jpg`,
     },
     achievement: {
       total: result.achievements.length,
