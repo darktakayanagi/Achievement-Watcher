@@ -397,6 +397,10 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
       info.achievements = [];
       return;
     }
+    if (!page2.url().includes('/stats')) {
+      info.achievements = [];
+      return;
+    }
     info.name = await page2.evaluate(() => {
       const el = document.querySelector('.pagehead-title h1');
       return el?.innerText.trim() || null;
