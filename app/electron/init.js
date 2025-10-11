@@ -28,6 +28,7 @@ const SteamUser = require('steam-user');
 const client = new SteamUser();
 
 function clientLogOn() {
+  if (client.steamID) return Promise.resolve();
   return new Promise((resolve) => {
     client.logOn({ anonymous: true });
     client.on('loggedOn', () => {
@@ -87,23 +88,6 @@ async function getUserAchievements(appid) {
 
 async function getSteamData(appid, type) {
   try {
-    if (type === 'icon') {
-      await client.getProductInfo([appid], [], false, async (err, data) => {
-        const appInfo = data[appid].appinfo;
-        return `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
-      });
-    }
-    if (type === 'portrait') {
-      await client.getProductInfo([appid], [], false, async (err, data) => {
-        const appInfo = data[appid].appinfo;
-        return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
-      });
-    }
-    if (type === 'full') {
-      const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
-      return apps;
-    }
-
     if (type === 'data') {
       let info = { appid };
       await scrapeWithPuppeteer(info);
@@ -112,6 +96,20 @@ async function getSteamData(appid, type) {
       }
       return info;
     }
+    await clientLogOn();
+    const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
+    const appInfo = apps[appid].appinfo || apps[0].appinfo;
+    switch (type) {
+      case 'header':
+        return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_header.image.english}`;
+      case 'icon':
+        return `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
+      case 'portrait':
+        return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
+      case 'full':
+        return apps;
+    }
+
     await delay(10000);
   } catch (err) {
     console.log(err);

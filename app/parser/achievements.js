@@ -325,7 +325,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
         callbackProgress(Math.floor((count / appidList.length) * 100));
       }
     }
-
+    callbackProgress(100);
     return result;
   } catch (err) {
     debug.error(err);
