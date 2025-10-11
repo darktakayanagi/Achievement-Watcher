@@ -438,6 +438,7 @@ var app = {
     });
   },
   watch_lumaPlay: async function () {
+    return;
     let self = this;
     debug.log(`watching changes in LumaPlay`);
     const BASE_PATH = 'SOFTWARE\\LumaPlay';
