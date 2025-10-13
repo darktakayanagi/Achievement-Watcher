@@ -544,16 +544,12 @@ var app = {
         $('#achievement .wrapper > .header').removeAttr('data-system');
       }
 
-      //TODO: icon url might not exist, replace with a different "cache" server akamai/cloudflare
-      //cdn.akamai.steamstatic.com
-      //cdn.cloudflare.steamstatic.com
-      //shared.fastly.steamstatic.com
-      //cdn.edgecast.steamstatic.com
-      //steampipe.akamaized.net
-      //google2.cdn.steampipe.steamcontent.com
       if (game.img.icon) {
         const iconEl = $('#achievement .wrapper > .header .title .icon');
-        iconEl.css('background', `url('${ipcRenderer.sendSync('fetch-icon', game.img.icon, game.appid)}')`);
+        iconEl.css('background', `url('file://${path.join(__dirname, '../resources/img/loading.gif')}')`);
+        ipcRenderer.invoke('fetch-icon', game.img.icon, game.appid).then((localPath) => {
+          if (localPath) iconEl.css('background', `url('${localPath}')`);
+        });
       }
 
       $('#achievement .wrapper > .header .title span').text(game.name);

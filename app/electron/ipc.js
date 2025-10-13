@@ -40,6 +40,10 @@ ipcMain.on('get-steam-user-list', async (event) => {
 ipcMain.on('fetch-icon', async (event, url, appid) => {
   await fetchIcon(url, appid).then((p) => (event.returnValue = pathToFileURL(p).href));
 });
+ipcMain.handle('fetch-icon', async (event, url, appid) => {
+  const p = await fetchIcon(url, appid);
+  return pathToFileURL(p).href;
+});
 
 ipcMain.on('close-notification-window', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
