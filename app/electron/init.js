@@ -106,7 +106,13 @@ async function getSteamData(appid, type) {
     const appInfo = apps[appid].appinfo || apps[0].appinfo;
     switch (type) {
       case 'common':
-        return { name: appInfo.common.name, isGame: appInfo.common.type.toLowerCase() === 'game', icon: appInfo.common.icon };
+        return {
+          name: appInfo.common.name,
+          isGame: appInfo.common.type.toLowerCase() === 'game',
+          icon: appInfo.common.icon,
+          header: appInfo.common.header_image.english || appInfo.common.library_assets_full?.library_header?.image?.english,
+          portrait: appInfo.common.library_assets_full?.library_capsule?.image?.english,
+        };
       case 'header':
         return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_header.image.english}`;
       case 'icon':
@@ -365,8 +371,8 @@ function delay(ms) {
 }
 
 async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
-  if (Date.now() - lastScrape < 1500) {
-    await delay(Math.floor(Math.random() * (1500 - 800 + 1)) + 800);
+  if (Date.now() - lastScrape < 3000) {
+    await delay(Math.floor(Math.random() * 1500) + (Date.now() - lastScrape));
     lastScrape = Date.now();
   }
   try {
@@ -385,14 +391,16 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
         const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
         const page = puppeteerWindow.page;
         try {
-          await page.goto(url, { waitUntil: 'networkidle2' });
-          const achievements =
-            (await page.evaluate(() => {
-              const scripts = Array.from(document.querySelectorAll('script'));
-              const target = scripts.find((s) => s.textContent.includes('var sh'));
-              eval(target.textContent);
-              return sh.model.listData.pagedList.items;
-            })) || [];
+          await page.goto(url, { waitUntil: 'domcontentloaded' });
+          await page.waitForFunction(() => {
+            return Array.from(document.querySelectorAll('script')).some((s) => s.textContent.includes('var sh'));
+          });
+          await page.evaluate(() => {
+            const scripts = Array.from(document.querySelectorAll('script'));
+            const target = scripts.find((s) => s.textContent.includes('var sh'));
+            eval(target.textContent);
+          });
+          const achievements = (await page.evaluate(() => sh.model.listData.pagedList.items)) || [];
           const results = [];
           achievements.forEach((item) => {
             results.push({

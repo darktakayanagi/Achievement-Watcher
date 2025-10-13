@@ -199,26 +199,22 @@ module.exports.getGameData = async (cfg) => {
     throw 'Unsupported API language code';
   }
   let result;
+  let needSaving = false;
+  const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
+  let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
   try {
     result = this.getCachedData(cfg);
-    if (result && result.name) return result;
-    if (!(await findInAppList(+cfg.appID))) throw `Error trying to load steam data for ${cfg.appID}`;
-    const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
-    let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
-    if (cfg.key) {
-      result = await getSteamData(cfg);
-    } else {
-      result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
+    if (!result || !result.name) {
+      if (!(await findInAppList(+cfg.appID))) throw `Error trying to load steam data for ${cfg.appID}`;
+      if (cfg.key && false) {
+        result = await getSteamData(cfg);
+      } else {
+        result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
+      }
+      needSaving = true;
     }
-    fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
-    return result;
-    //TODO: data using key is incomplete
-    /*
-    if (await getMissingAchData(cfg, result)) {
-      //updated missing data, resave
-      ffs.writeFile(filePath, JSON.stringify(result, null, 2)).catch((err) => {});
-    }
-*/
+    needSaving = needSaving || GetMissingData(result);
+    if (needSaving) fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
     return result;
   } catch (err) {
     if (err.code) debug.log(`Could not load Steam data: ${err.code} - ${err.message}`);
@@ -610,23 +606,49 @@ const cdnProviders = [
   'https://steamcdn-a.akamaihd.net/steam/apps/',
   'https://shared.fastly.steamstatic.com/steam/apps/',
   'https://shared.fastly.steamstatic.com/community_assets/images/apps/',
+  'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/',
   'https://steampipe.akamaized.net/steam/apps/',
   'https://google2.cdn.steampipe.steamcontent.com/steam/apps/',
   'https://steamcdn-a.akamaihd.net/steam/apps/',
   'https://media.steampowered.com/steam/apps/',
 ];
 async function findWorkingLink(appid, basename) {
-  for (const cdn of cdnProviders) {
-    const url = `${cdn}${appid}/${basename}.jpg`;
-    try {
-      const res = await request(url, { method: 'HEAD' });
-      if (res.code === 200) {
-        const contentType = res.headers['content-type'];
-        if (contentType) return url;
-      }
-    } catch (e) {}
+  for (const ext of ['.jpg', '.png']) {
+    for (const cdn of cdnProviders) {
+      const url = `${cdn}${appid}/${basename}${ext}`;
+      try {
+        const res = await request(url, { method: 'HEAD' });
+        if (res.code === 200) {
+          const contentType = res.headers['content-type'];
+          if (contentType) return url;
+        }
+      } catch (e) {}
+    }
   }
   return null;
+}
+
+function GetMissingData(data) {
+  let updated = false;
+  const { ipcRenderer } = require('electron');
+  let updatedImgs, updatedDesc;
+  if (Object.values(data.img).some((im) => !im)) {
+    updated = true;
+    updatedImgs = ipcRenderer.sendSync('get-steam-data', { appid: data.appid, type: 'full' });
+    for (let [type, value] of Object.entries(data.img)) {
+      if (!value) data.img[type] = updatedImgs[type];
+    }
+  }
+  if (data.achievement.list.some((ac) => !ac.description || ac.description === '')) {
+    updated = true;
+    const missing = data.achievement.list.filter((ac) => !ac.description || ac.description === '');
+    updatedDesc = ipcRenderer.sendSync('get-steam-data', { appid: data.appid, type: 'desc' });
+    const map = new Map(updatedDesc.achievements.map((item) => [item.title, item.desc]));
+    for (let ach of data.achievement.list) {
+      if (!ach.description && (map.has(ach.displayName) || map.has(ach.name))) ach.description = map.get(ach.displayName) || map.get(ach.name);
+    }
+  }
+  return updated;
 }
 
 const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
@@ -652,6 +674,8 @@ const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
               .pop()
               .split('?')[0]
               .replace(/\.[^.]+$/, '')
+          : url.endsWith('.jpg') || url.endsWith('.png')
+          ? url.slice(0, url.length - 4)
           : url
       );
 
