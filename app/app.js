@@ -144,27 +144,18 @@ var app = {
             let portrait = self.config.achievement.thumbnailPortrait;
 
             portrait ? $('#game-list').addClass('view-portrait') : $('#game-list').removeClass('view-portrait');
-
+            let isPortrait = portrait && list[game].img.portrait;
+            let imgName = isPortrait ? list[game].img.portrait : list[game].img.header;
             let template = `
             <li>
                 <div class="game-box" data-index="${game}" data-appid="${list[game].appid}" data-time="${timeMostRecent > 0 ? timeMostRecent : 0}" ${
               list[game].system ? `data-system="${list[game].system}"` : ''
             }>
                   <div class="loading-overlay"><div class="content"><i class="fas fa-spinner fa-spin"></i></div></div>
-                  ${
-                    portrait && list[game].img.portrait
-                      ? `<div class="header glow" style="background: url('${ipcRenderer.sendSync(
-                          'fetch-icon',
-                          list[game].img.portrait,
-                          list[game].appid
-                        )}');">`
-                      : `<div class="header" style="background: url('${ipcRenderer.sendSync(
-                          'fetch-icon',
-                          list[game].img.header,
-                          list[game].appid
-                        )}');">`
-                  }
-
+                  <div class="header ${isPortrait ? 'glow' : ''}" id="game-header-${list[game].appid}" style="background: url('file://${path.join(
+              __dirname,
+              '../resources/img/loading.gif'
+            )}');">
                   <!-- Play Button -->
                   <div class="play-button"><i class="fas fa-play"></i></div>
                   </div>
@@ -195,6 +186,15 @@ var app = {
             `;
 
             elem.append(template);
+
+            setTimeout(() => {
+              ipcRenderer.invoke('fetch-icon', imgName, list[game].appid).then((localPath) => {
+                if (localPath) {
+                  const el = $(`#game-header-${list[game].appid}`);
+                  el.css('background', `url('${localPath}')`);
+                }
+              });
+            }, 0);
           }
         }
 
