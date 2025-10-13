@@ -603,18 +603,66 @@ async function findInAppList(appID) {
   }
 }
 
+const cdnProviders = [
+  'https://cdn.akamai.steamstatic.com/steam/apps/',
+  'https://cdn.cloudflare.steamstatic.com/steam/apps/',
+  'https://media.steampowered.com/steam/apps/',
+  'https://steamcdn-a.akamaihd.net/steam/apps/',
+  'https://shared.fastly.steamstatic.com/steam/apps/',
+  'https://shared.fastly.steamstatic.com/community_assets/images/apps/',
+  'https://steampipe.akamaized.net/steam/apps/',
+  'https://google2.cdn.steampipe.steamcontent.com/steam/apps/',
+  'https://steamcdn-a.akamaihd.net/steam/apps/',
+  'https://media.steampowered.com/steam/apps/',
+];
+async function findWorkingLink(appid, basename) {
+  for (const cdn of cdnProviders) {
+    const url = `${cdn}${appid}/${basename}.jpg`;
+    try {
+      const res = await request(url, { method: 'HEAD' });
+      if (res.code === 200) {
+        const contentType = res.headers['content-type'];
+        if (contentType) return url;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
 const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
   try {
     const cache = path.join(process.env['APPDATA'], `Achievement Watcher/steam_cache/icon/${appID}`);
 
-    const filename = path.parse(urlParser.parse(url).pathname).base;
+    //legacy url are full urls, check if they are still valid
+    let isValid = false;
+    let validUrl = url;
+    try {
+      new URL(url);
+      const res = await request(url, { method: 'HEAD' });
+      isValid = res.code !== 200 ? false : true;
+      isValid = isValid ? res.headers['content-type'] : isValid;
+    } catch (e) {}
+
+    if (!isValid)
+      validUrl = await findWorkingLink(
+        appID,
+        url.startsWith('http')
+          ? url
+              .split('/')
+              .pop()
+              .split('?')[0]
+              .replace(/\.[^.]+$/, '')
+          : url
+      );
+
+    const filename = path.parse(urlParser.parse(validUrl).pathname).base;
 
     let filePath = path.join(cache, filename);
 
     if (fs.existsSync(filePath)) {
       return filePath;
     } else {
-      return (await request.download(url, cache)).path;
+      return (await request.download(validUrl, cache)).path;
     }
   } catch (err) {
     return url;
