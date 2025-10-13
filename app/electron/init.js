@@ -96,10 +96,17 @@ async function getSteamData(appid, type) {
       }
       return info;
     }
+    if (type === 'steamhunters') {
+      let info = { appid };
+      await scrapeWithPuppeteer(info, { steamhunters: true });
+      return info;
+    }
     await clientLogOn();
     const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
     const appInfo = apps[appid].appinfo || apps[0].appinfo;
     switch (type) {
+      case 'common':
+        return { name: appInfo.common.name, isGame: appInfo.common.type.toLowerCase() === 'game', icon: appInfo.common.icon };
       case 'header':
         return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_header.image.english}`;
       case 'icon':
@@ -374,6 +381,37 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
     if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();
     //if (info.achievements) return;
     if (alternate) {
+      if (alternate.steamhunters) {
+        const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
+        const page = puppeteerWindow.page;
+        try {
+          await page.goto(url, { waitUntil: 'networkidle2' });
+          const achievements =
+            (await page.evaluate(() => {
+              const scripts = Array.from(document.querySelectorAll('script'));
+              const target = scripts.find((s) => s.textContent.includes('var sh'));
+              eval(target.textContent);
+              return sh.model.listData.pagedList.items;
+            })) || [];
+          const results = [];
+          achievements.forEach((item) => {
+            results.push({
+              name: item.apiName,
+              default_value: 0,
+              displayName: item.name,
+              hidden: item.hidden ? 1 : 0,
+              description: item.description,
+              icon: item.icon,
+              icongray: item.iconGray,
+            });
+          });
+          info.achievements = results;
+        } catch (e) {
+          console.log(e);
+        }
+        return;
+      }
+
       const url = `https://steamcommunity.com/profiles/${alternate.steamid}`;
       const page = puppeteerWindow.page;
       try {

@@ -552,7 +552,8 @@ var app = {
       //steampipe.akamaized.net
       //google2.cdn.steampipe.steamcontent.com
       if (game.img.icon) {
-        $('#achievement .wrapper > .header .title .icon').css('background', `url('${game.img.icon}')`);
+        const iconEl = $('#achievement .wrapper > .header .title .icon');
+        iconEl.css('background', `url('${ipcRenderer.sendSync('fetch-icon', game.img.icon, game.appid)}')`);
       }
 
       $('#achievement .wrapper > .header .title span').text(game.name);

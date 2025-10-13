@@ -458,21 +458,22 @@ async function getSteamUserStats(cfg) {
 
 async function getSteamDataFromSRV(appID, lang) {
   const { ipcRenderer } = require('electron');
-  const result = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'data' });
+  const result = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'common' });
+  const achievements = result.isGame ? ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'steamhunters' }).achievements : [];
 
   return {
     name: result.name,
     appid: appID,
     binary: null,
     img: {
-      header: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/header.jpg`,
-      background: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/page_bg_generated_v6b.jpg`,
-      portrait: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/library_600x900.jpg`,
-      icon: `https://cdn.akamai.steamstatic.com/steam/apps/${appID}/${result.icon}.jpg`,
+      header: result.header || 'header',
+      background: result.background || 'page_bg_generated_v6b',
+      portrait: result.portrait || 'library_600x900',
+      icon: result.icon,
     },
     achievement: {
-      total: result.achievements.length,
-      list: result.achievements,
+      total: achievements.length,
+      list: achievements,
     },
   };
 }
