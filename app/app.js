@@ -428,9 +428,6 @@ var app = {
               })
             );
 
-            menu.append(new MenuItem({ label: 'Re-Generate database entry' }));
-            //TODO: continue this
-
             menu.append(new MenuItem({ type: 'separator' }));
             menu.append(
               new MenuItem({
@@ -456,24 +453,6 @@ var app = {
                 label: 'PCGamingWiki',
                 click() {
                   remote.shell.openExternal(`https://pcgamingwiki.com/api/appid.php?appid=${appid}`);
-                },
-              })
-            );
-            menu.append(
-              new MenuItem({
-                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
-                label: 'API (Achievement schema)',
-                click() {
-                  remote.shell.openExternal(`https://api.xan105.com/steam/ach/${appid}?lang=${app.config.achievement.lang}`);
-                },
-              })
-            );
-            menu.append(
-              new MenuItem({
-                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
-                label: 'API (App info)',
-                click() {
-                  remote.shell.openExternal(`https://api.xan105.com/v2/steam/appinfo/${appid}`);
                 },
               })
             );
