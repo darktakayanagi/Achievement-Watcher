@@ -470,7 +470,7 @@ async function getSteamDataFromSRV(appID, lang) {
     img: {
       header: result.header || 'header',
       background: result.background || 'page_bg_generated_v6b',
-      portrait: result.portrait || 'library_600x900',
+      portrait: result.portrait || 'portrait',
       icon: result.icon,
     },
     achievement: {
