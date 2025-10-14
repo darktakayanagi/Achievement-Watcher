@@ -181,7 +181,7 @@ var app = {
             elem.append(template);
 
             setTimeout(() => {
-              ipcRenderer.invoke('fetch-icon', imgName, list[game].appid).then((localPath) => {
+              ipcRenderer.invoke('fetch-icon', imgName, list[game].steamappid || list[game].appid).then((localPath) => {
                 if (localPath) {
                   const el = $(`#game-header-${list[game].appid}`);
                   el.css('background', `url('${localPath}')`);
@@ -518,7 +518,7 @@ var app = {
     $('#home').fadeOut(function () {
       $('body').fadeIn().css('background', `url('../resources/img/ach_background.jpg')`);
       if (game.img.background) {
-        ipcRenderer.invoke('fetch-icon', game.img.background, game.appid).then((localPath) => {
+        ipcRenderer.invoke('fetch-icon', game.img.background, game.steamappid || game.appid).then((localPath) => {
           if (game.system === 'uplay' || game.img?.overlay === true) {
             let gradient = `linear-gradient(to bottom right, rgba(0, 47, 75, .8), rgba(35, 54, 78, 0.9))`;
             $('body').fadeIn().attr('style', `background: ${gradient}, url('${localPath}')`);
@@ -537,7 +537,7 @@ var app = {
       if (game.img.icon) {
         const iconEl = $('#achievement .wrapper > .header .title .icon');
         iconEl.css('background', `url('${pathToFileURL(path.join(appPath, 'resources/img/loading.gif')).href}')`);
-        ipcRenderer.invoke('fetch-icon', game.img.icon, game.appid).then((localPath) => {
+        ipcRenderer.invoke('fetch-icon', game.img.icon, game.steamappid || game.appid).then((localPath) => {
           if (localPath) iconEl.css('background', `url('${localPath}')`);
         });
       }
@@ -692,7 +692,7 @@ var app = {
         if (imageCache.has(hash)) {
           localPathPromise = imageCache.get(hash);
         } else {
-          localPathPromise = ipcRenderer.invoke('fetch-icon', hash, game.appid);
+          localPathPromise = ipcRenderer.invoke('fetch-icon', hash, game.steamappid || game.appid);
           imageCache.set(hash, localPathPromise);
         }
         const localPath = await localPathPromise;
