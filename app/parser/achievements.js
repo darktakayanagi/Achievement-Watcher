@@ -323,6 +323,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
         }
         count++;
         callbackProgress(Math.floor((count / appidList.length) * 100));
+        await new Promise((r) => setTimeout(r, 10));
       }
     }
     callbackProgress(100);
