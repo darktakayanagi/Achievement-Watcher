@@ -180,7 +180,7 @@ ipcMain.on('capture-screen', async (event, { image, filename }) => {
   const buffer = Buffer.from(image, 'base64');
   const savePath = path.join(
     configJS.souvenir_screenshot.custom_dir || app.getPath('pictures'),
-    notificationWindow.info.game,
+    notificationWindow.info.game.name,
     notificationWindow.info.description + '.png'
   );
   fs.mkdirSync(path.dirname(savePath), { recursive: true });
