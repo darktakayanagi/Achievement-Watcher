@@ -380,8 +380,8 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
     const url = `https://steamhunters.com/apps/${info.appid}/achievements`;
     if (!puppeteerWindow.browser)
       puppeteerWindow.browser = await puppeteer.launch({
-        headless: false,
-        executablePath: chromePath,
+        headless: alternate && alternate.steamhunters ? 'new' : false,
+        executablePath: chromePath || puppeteer.executablePath(),
       });
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();

@@ -327,6 +327,7 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
       }
     }
     callbackProgress(100);
+    await new Promise((r) => setTimeout(r, 10));
     return result;
   } catch (err) {
     debug.error(err);
