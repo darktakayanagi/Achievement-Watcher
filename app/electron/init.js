@@ -110,15 +110,15 @@ async function getSteamData(appid, type) {
           name: appInfo.common.name,
           isGame: appInfo.common.type.toLowerCase() === 'game',
           icon: appInfo.common.icon,
-          header: appInfo.common.header_image.english || appInfo.common.library_assets_full?.library_header?.image?.english,
+          header: appInfo.common.header_image?.english || appInfo.common.library_assets_full?.library_header?.image?.english,
           portrait: appInfo.common.library_assets_full?.library_capsule?.image?.english,
         };
       case 'header':
-        return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_header.image.english}`;
+        return appInfo.common.header_image.english || appInfo.common.library_assets_full?.library_header?.image?.english;
       case 'icon':
-        return `https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/${appid}/${appInfo.common.icon}.jpg`;
+        return appInfo.common.icon;
       case 'portrait':
-        return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/${appInfo.common.library_assets_full.library_capsule.image.english}`;
+        return appInfo.common.library_assets_full?.library_capsule?.image?.english;
       case 'full':
         return apps;
     }
@@ -167,7 +167,7 @@ async function getCachedData(info) {
         info.description = info.a?.displayName;
         return;
       }
-      let data = await getSteamData(info.appid, 'data');
+      let data = await getSteamData(info.appid, 'steamhunters');
       info.game = data;
       await achievementsJS.saveGameToCache(info, configJS.achievement.lang);
       info.a = info.game.achievements.find((ac) => ac.name === String(info.ach));
@@ -346,7 +346,7 @@ ipcMain.on('achievement-data-ready', () => {
 });
 
 ipcMain.handle('get-achievements', async (event, appid) => {
-  return await getSteamData(appid, 'data');
+  return await getSteamData(appid, 'steamhunters');
 });
 
 ipcMain.handle('start-watchdog', async (event, arg) => {
