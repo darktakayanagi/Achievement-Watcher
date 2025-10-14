@@ -206,7 +206,7 @@ module.exports.getGameData = async (cfg) => {
     result = this.getCachedData(cfg);
     if (!result || !result.name) {
       if (!(await findInAppList(+cfg.appID))) throw `Error trying to load steam data for ${cfg.appID}`;
-      if (cfg.key && false) {
+      if (cfg.key) {
         result = await getSteamData(cfg);
       } else {
         result = await getSteamDataFromSRV(cfg.appID, cfg.lang);
