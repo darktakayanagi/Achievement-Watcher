@@ -84,6 +84,10 @@ contextBridge.exposeInMainWorld('api', {
     const base64 = screenshot.toString('base64');
     ipcRenderer.send('capture-screen', { image: base64 });
   },
+  fetchIcon: async (icon, appid) => {
+    const p = await ipcRenderer.invoke('fetch-icon', icon, appid);
+    return p;
+  },
 
   // language
   refreshUILanguage: (language) => ipcRenderer.send('refresh-ui-after-language-change', language),

@@ -194,7 +194,7 @@
         });
 
         const sortedAchievements = sortAchievements(achievementsDataObj);
-        sortedAchievements.forEach((achievement) => {
+        sortedAchievements.forEach(async (achievement) => {
           if (!achievement.name || uniqueAchievements.has(achievement.name)) return;
           uniqueAchievements.add(achievement.name);
 
@@ -203,13 +203,13 @@
           const iconGray = achievement.icon_gray || achievement.icongray;
           const icon = achievement.icon || iconGray;
 
-          let imagePath = iconGray;
+          let imagePath = await window.api.fetchIcon(iconGray, game.appid);
           let status = `<span style="color: red; font-weight: bold;">Locked</span>`;
           let earnedTimeText = '';
           let progressText = '';
 
           if (achievement.Achieved) {
-            imagePath = icon;
+            imagePath = await window.api.fetchIcon(icon, game.appid);
             status = `<span style="color: green; font-weight: bold;">Unlocked</span>`;
             earnedTimeText = `<br>${formatTimestamp(achievement.UnlockTime)}`;
           }
@@ -223,7 +223,7 @@
           const row = document.createElement('tr');
           row.innerHTML = `
   <td class="image">
-	<img src="${imagePath.replace(/\\/g, '/')}" alt="Icon"
+	<img src="${imagePath}" alt="Icon"
 		 onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/11455/11455431.png';" /></td>
   <td class="displayName"><strong>${displayName}</strong><br>
 	<span class="description"><em>${description}</em>${progressText}</span>
