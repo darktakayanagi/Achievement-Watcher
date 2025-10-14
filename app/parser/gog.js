@@ -2,7 +2,6 @@
 
 const path = require('path');
 const fs = require('fs');
-const ffs = require('@xan105/fs');
 const glob = require('fast-glob');
 const request = require('request-zero');
 
@@ -34,8 +33,8 @@ module.exports.getCachedData = async (cfg) => {
   try {
     let filePath = path.join(`${cache}`, `${cached.steamid}.db`);
 
-    if (await ffs.exists(filePath)) {
-      result = JSON.parse(await ffs.readFile(filePath));
+    if (fs.existsSync(filePath)) {
+      result = JSON.parse(fs.readFileSync(filePath));
     }
   } catch (err) {
     if (err.code) throw `Could not load GOG data: ${err.code} - ${err.message}`;
@@ -84,7 +83,8 @@ module.exports.scan = async (dir) => {
         data.push(game);
       }
     }
-    if (update_cache) ffs.writeFile(cacheFile, JSON.stringify(cache, null, 2));
+    fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+    if (update_cache) fs.writeFileSync(cacheFile, JSON.stringify(cache, null, 2));
     return data;
   } catch (err) {
     throw err;

@@ -375,7 +375,6 @@ var app = {
                   self.css('pointer-events', 'none');
                   try {
                     const request = require('request-zero');
-                    const ffs = require('@xan105/fs');
 
                     let dialog = await remote.dialog.showSaveDialog(remote.getCurrentWindow(), {
                       title: 'Choose where to generate achievements.json',
@@ -418,7 +417,8 @@ var app = {
                       }
 
                       if (result.length > 0) {
-                        await ffs.writeFile(filePath, JSON.stringify(result, null, 2));
+                        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+                        fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
                       }
                     }
                   } catch (err) {

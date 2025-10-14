@@ -19,6 +19,7 @@ const steam_emu_cfg_file_supported = ['ALI213.ini', 'valve.ini', 'hlm.ini', 'ds.
 
 module.exports.get = async () => {
   try {
+    if (!fs.existsSync(file)) await this.save([]);
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (err) {
     throw err;
@@ -27,6 +28,7 @@ module.exports.get = async () => {
 
 module.exports.save = async (data) => {
   try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
   } catch (err) {
     throw err;

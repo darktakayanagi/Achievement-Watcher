@@ -305,7 +305,7 @@ ipcMain.on('stylize-background-for-appid', async (event, arg) => {
         },
       ])
       .toBuffer();
-
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, processedBuffer);
   } catch (err) {
     console.error('❌ Error:', err.message);

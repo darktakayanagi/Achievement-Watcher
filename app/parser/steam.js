@@ -191,6 +191,7 @@ module.exports.saveGameToCache = async (cfg) => {
       list: cfg.achievements,
     },
   };
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
 };
 
@@ -202,6 +203,7 @@ module.exports.getGameData = async (cfg) => {
   let needSaving = false;
   const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
   let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
+
   try {
     result = this.getCachedData(cfg);
     if (!result || !result.name) {
@@ -214,7 +216,10 @@ module.exports.getGameData = async (cfg) => {
       needSaving = true;
     }
     needSaving = needSaving || GetMissingData(result);
-    if (needSaving) fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
+    if (needSaving) {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
+    }
     return result;
   } catch (err) {
     if (err.code) debug.log(`Could not load Steam data: ${err.code} - ${err.message}`);
@@ -339,6 +344,7 @@ module.exports.getAchievementsFromAPI = async (cfg) => {
       } else {
         result = await getSteamUserStatsFromSRV(cfg.user.id, cfg.appID);
       }
+      fs.mkdirSync(path.dirname(cache.local), { recursive: true });
       fs.writeFileSync(cache.local, JSON.stringify(result, null, 2));
     } else {
       result = JSON.parse(fs.readFileSync(cache.local));
@@ -584,9 +590,10 @@ async function findInAppList(appID) {
     if (!app) throw 'ERR_NAME_NOT_FOUND';
     return app.name;
   } catch {
-    if (Date.now() - fs.statSync(filepath).mtimeMs < 60 * 60 * 1000) {
-      throw 'ERR_NAME_NOT_FOUND';
-    }
+    if (fs.existsSync(filepath))
+      if (Date.now() - fs.statSync(filepath).mtimeMs < 60 * 60 * 1000) {
+        throw 'ERR_NAME_NOT_FOUND';
+      }
     const url = 'http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json';
 
     const data = await request.getJson(url, { timeout: 4000 });
@@ -594,6 +601,7 @@ async function findInAppList(appID) {
     let list = data.applist.apps;
     list.sort((a, b) => b.appid - a.appid); //recent first
 
+    fs.mkdirSync(path.dirname(filepath), { recursive: true });
     fs.writeFileSync(filepath, JSON.stringify(list, null, 2));
 
     const app = list.find((app) => app.appid === appID);
