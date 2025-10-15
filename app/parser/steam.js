@@ -579,11 +579,14 @@ async function findInAppList(appID) {
   const filepath = path.join(cache, 'appList.json');
 
   try {
-    const list = JSON.parse(await ffs.readFile(filepath));
+    const list = JSON.parse(fs.readFileSync(filepath));
     const app = list.find((app) => app.appid === appID);
     if (!app) throw 'ERR_NAME_NOT_FOUND';
     return app.name;
   } catch {
+    if (Date.now() - fs.statSync(filepath).mtimeMs < 60 * 60 * 1000) {
+      throw 'ERR_NAME_NOT_FOUND';
+    }
     const url = 'http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json';
 
     const data = await request.getJson(url, { timeout: 4000 });
@@ -591,7 +594,7 @@ async function findInAppList(appID) {
     let list = data.applist.apps;
     list.sort((a, b) => b.appid - a.appid); //recent first
 
-    await ffs.writeFile(filepath, JSON.stringify(list, null, 2));
+    fs.writeFileSync(filepath, JSON.stringify(list, null, 2));
 
     const app = list.find((app) => app.appid === appID);
     if (!app) throw 'ERR_NAME_NOT_FOUND';
