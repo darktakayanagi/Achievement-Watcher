@@ -24,7 +24,7 @@ const debug = require('./util/log.js');
 const { crc32 } = require('crc');
 const { isWinRTAvailable } = require('powertoast');
 const { isFullscreenAppRunning } = require('./queryUserNotificationState.js');
-const { startObs, recordGame, setRecordPath, setRecordResolution } = require('./obsHandler.js');
+const { enableObs, startObs, recordGame, setRecordPath, setRecordResolution } = require('./obsHandler.js');
 const userShellFolder = require('./util/userShellFolder.js');
 
 const cfg_file = {
@@ -114,6 +114,7 @@ var app = {
       debug.log(self.options);
 
       RegisterOverlayHotkey(self.options.overlay.hotkey);
+      enableObs(self.options.souvenir_video.video != '0');
 
       try {
         startObs(true).then(async () => {

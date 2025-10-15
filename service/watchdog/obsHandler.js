@@ -13,6 +13,7 @@ let config;
 let latestReplay;
 let saveDir;
 let obsCheckInterval = null;
+let isEnabled = false;
 
 obs.on('ConnectionOpened', () => {
   obs.connected = true;
@@ -166,7 +167,12 @@ async function recordGame(game) {
   //debug.log(`attached OBS to ${game.name}'s window (${png.width}x${png.height})`);
 }
 
+function enableObs(state = true) {
+  isEnabled = state;
+}
+
 async function startObs(kill = false) {
+  if (!isEnabled) return;
   checkSettings();
 
   while (true) {
@@ -196,12 +202,14 @@ async function startObs(kill = false) {
 }
 
 async function setRecordPath(dir) {
+  if (!isEnabled) return;
   await sleep(1000);
   if (!obs.connected) await connectToObs();
   const r = await obs.call('SetRecordDirectory', { recordDirectory: dir });
 }
 
 async function setRecordResolution() {
+  if (!isEnabled) return;
   await startObs();
   try {
     const { windowManager } = require('node-window-manager');
@@ -246,6 +254,7 @@ async function setRecordResolution() {
 
 // Save the replay buffer
 async function saveReplay() {
+  if (!isEnabled) return;
   try {
     if (!(await obs.call('GetReplayBufferStatus'))) await obs.call('StartReplayBuffer');
     await obs.call('SaveReplayBuffer');
@@ -255,6 +264,7 @@ async function saveReplay() {
 }
 
 async function moveLatestReplay() {
+  if (!isEnabled) return;
   const result = await obs.call('GetLastReplayBufferReplay');
   latestReplay = result.savedReplayPath;
   if (!fs.existsSync(latestReplay)) return console.log('❌ No replay file found');
@@ -264,6 +274,7 @@ async function moveLatestReplay() {
 }
 
 async function takeScreenshot(dir, overwrite = false, delay = 0) {
+  if (!isEnabled) return;
   try {
     if (fs.existsSync(dir)) {
       if (!overwrite) return true;
@@ -284,6 +295,7 @@ async function takeScreenshot(dir, overwrite = false, delay = 0) {
 }
 
 module.exports = {
+  enableObs,
   startObs,
   connectToObs,
   recordGame,
