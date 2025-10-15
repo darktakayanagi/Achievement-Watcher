@@ -1,69 +1,134 @@
-name: Build Windows Installer
+name: Build Windows Installer and Release
 
 on:
   push:
     tags:
-      - 'v*' # Triggers on version tags like v1.0.0
-  workflow_dispatch: # Allows manual triggering
+      - 'v*' # Trigger on version tags like v1.0.0
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-release:
     runs-on: windows-latest
 
     steps:
+      # 1. Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - id: cache-obs
-        name: Cache OBS Studio
+      # 2. Cache OBS Studio
+      - name: Cache OBS Studio
+        id: cache-obs
         uses: actions/cache@v4
         with:
           path: service/obs
           key: obs-studio-31.0.3-${{ runner.os }}
 
-      - name: Download and extract OBS Studio portable 31.0.3
+      # 3. Download OBS if not cached
+      - name: Download OBS if not cached
         if: steps.cache-obs.outcome != 'cache-hit'
-        shell: pwsh # Explicitly use PowerShell Core (cross-version compatibility)
+        shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path service/obs
           Invoke-WebRequest -Uri https://github.com/obsproject/obs-studio/releases/download/31.0.3/OBS-Studio-31.0.3-Windows.zip -OutFile obs.zip
           Expand-Archive -Path obs.zip -DestinationPath service/obs -Force
           Remove-Item obs.zip
 
-      - name: Setup Node.js 14.x
+      # 4. Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 14
 
-      - name: Setup MSBuild (needed for node-gyp native modules)
+      # 5. Setup MSBuild (for native modules)
+      - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
 
-      - name: Run VS Developer Command Prompt
-        working-directory: app
+      # 6. Setup Visual Studio environment and rebuild all native modules
+      - name: Build Electron App (dependencies + native rebuild)
         shell: cmd
+        working-directory: app
+        env:
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
         run: |
-          for /f "usebackq tokens=*" %%i in (`"vswhere.exe" -latest -products * -requires Microsoft.Component.MSBuild -property installationPath`) do (
+          REM Initialize VS environment for node-gyp
+          for /f "usebackq tokens=*" %%i in (`vswhere.exe -latest -products * -requires Microsoft.Component.MSBuild -property installationPath`) do (
             call "%%i\VC\Auxiliary\Build\vcvars64.bat"
-            npm config set msvs_version 2022
-            npm ci || npm install --verbose
           )
 
-      - name: Install dependencies with fallback
-        working-directory: app
-        run: |
-          npm ci || npm install --verbose
+          REM Install latest node-gyp globally and point npm to it
+          npm install --global node-gyp@9.4.1
+          for /f %P in ('npm prefix -g') do npm config set node_gyp "%P\node_modules\node-gyp\bin\node-gyp.js"
 
-      - name: Rebuild native modules for Electron
-        working-directory: app
-        run: |
-          npx electron-rebuild
+          REM Force node-gyp to use VS2022
+          npm config set msvs_version 2022
 
-      - name: Build (no publish)
-        run: npx electron-builder --config ../electron-builder.yml --windows --publish never
-        working-directory: app
+          REM Install dependencies and apply patches
+          npm ci
+          npx patch-package
 
-      - name: Upload installer artifacts
-        uses: actions/upload-artifact@v4
+          REM Rebuild native modules for Electron
+          npx electron-rebuild --force --debug
+
+      # 7. Cache Electron headers
+      - name: Cache Electron headers
+        uses: actions/cache@v4
         with:
-          name: windows-installer
-          path: app/dist/
+          path: ~/.electron
+          key: electron-headers-${{ runner.os }}-12.2.3
+
+      # 8. Build Windows installer
+      - name: Build installer
+        working-directory: app
+        run: npx electron-builder --windows --publish never
+
+      - name: Get version from package.json
+        id: get_version
+        shell: pwsh
+        run: |
+          $pkg = Get-Content -Raw app\package.json | ConvertFrom-Json
+          Write-Output "version=$($pkg.version)" >> $env:GITHUB_ENV
+
+      # 9. Create GitHub Release
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.version }}
+          release_name: Release ${{ env.version }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 10. Upload installer to release
+      - name: Upload installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/dist/Achievement.Watcher.Setup.${{ env.version }}.exe
+          asset_name: Achievement.Watcher.Setup.${{ env.version }}.exe
+          asset_content_type: application/octet-stream
+
+      # 11. Upload latest.yml
+      - name: Upload latest.yml
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/dist/latest.yml
+          asset_name: latest.yml
+          asset_content_type: application/octet-stream
+
+      # 12. Upload blockmap
+      - name: Upload blockmap
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/dist/Achievement.Watcher.Setup.${{ env.version }}.exe.blockmap
+          asset_name: Achievement.Watcher.Setup.${{ env.version }}.exe.blockmap
+          asset_content_type: application/octet-stream

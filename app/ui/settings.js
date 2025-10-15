@@ -133,10 +133,12 @@ let holdingKeysCheck = null;
       try {
         //The API used by windows-focus-assist can change/break at any time in the future.
         //Show focus assist state for information
-        const { getFocusAssist } = require('windows-focus-assist');
-        const focusAssist = getFocusAssist();
-        $('#focus-assist-state span').attr('data-state', focusAssist.value).text(focusAssist.name);
-        $('#focus-assist-state').show();
+        //disabled this to avoid having this dependency
+        //const { getFocusAssist } = require('windows-focus-assist');
+        //const focusAssist = getFocusAssist();
+        //$('#focus-assist-state span').attr('data-state', focusAssist.value).text(focusAssist.name);
+        //$('#focus-assist-state').show();
+        $('#focus-assist-state').hide();
       } catch (err) {
         $('#focus-assist-state').hide();
         debug.log(err);

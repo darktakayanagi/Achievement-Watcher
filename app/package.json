@@ -55,7 +55,6 @@
     "sound-play": "^1.1.0",
     "steam-user": "^5.2.3",
     "steamid": "^1.1.3",
-    "windows-focus-assist": "^1.2.1",
     "xml2js": "^0.4.23"
   },
   "config": {
