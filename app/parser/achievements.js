@@ -181,11 +181,15 @@ module.exports.getAchievementsForAppid = async (option, requestedAppid) => {
 
 module.exports.getSavedAchievementsForAppid = async (option, requestedAppid, cachedList) => {
   let game;
+  let isDuplicate = false;
 
   try {
-    let appidList = cachedList || (await discover(option.achievement_source, option.steam.main));
-    let appid = appidList.find((a) => a.appid == requestedAppid);
-
+    let appids = [requestedAppid];
+    if (!requestedAppid.data) {
+      let appidList = cachedList || (await discover(option.achievement_source, option.steam.main));
+      appids = appidList.filter((a) => a.appid == requestedAppid.appid);
+    }
+    let appid = appids[0];
     if (appid.data.type === 'rpcs3') {
       game = await rpcs3.getGameData(appid.data.path);
     } else if (appid.data.type === 'uplay' || appid.data.type === 'lumaplay') {
@@ -205,93 +209,126 @@ module.exports.getSavedAchievementsForAppid = async (option, requestedAppid, cac
     game.source = appid.source;
     if (!option.achievement.mergeDuplicate && appid.source) game.source = appid.source;
 
-    let root = {};
-    try {
-      if (appid.data.type === 'file') {
-        root = await steam.getAchievementsFromFile(appid.data.path);
-        //Note to self: Empty file should be considered as a 0% game -> do not throw an error just issue a warning
-        if (root.constructor === Object && Object.entries(root).length === 0)
-          debug.warn(`[${appid.appid}] Warning ! Achievement file in '${appid.data.path}' is probably empty`);
-      } else if (appid.data.type === 'reg') {
-        root = await greenluma.getAchievements(appid.data.root, appid.data.path);
-      } else if (appid.data.type === 'steamAPI') {
-        root = await steam.getAchievementsFromAPI({
-          appID: appid.appid,
-          user: appid.data.userID,
-          path: appid.data.cachePath,
-          key: option.steam.apiKey,
-        });
-      } else if (appid.data.type === 'rpcs3') {
-        root = await rpcs3.getAchievements(appid.data.path, game.achievement.total);
-      } else if (appid.data.type === 'lumaplay') {
-        root = uplay.getAchievementsFromLumaPlay(appid.data.root, appid.data.path);
-      } else if (appid.data.type === 'cached') {
-        root = await watchdog.getAchievements(appid.appid);
-      } else {
-        throw 'Not yet implemented';
-      }
-    } catch (err) {
-      debug.error(`[${appid.appid}] Error parsing local achievements data => ${err}`);
-    }
+    for (let appid of appids) {
+      if (isDuplicate && !option.achievement.mergeDuplicate) continue;
 
-    for (let i in root) {
-      if (Object.prototype.hasOwnProperty.call(root, i)) {
-        try {
-          let achievement = game.achievement.list.find((elem) => {
-            if (root[i].crc) {
-              return root[i].crc.includes(crc32(elem.name).toString(16)); //(SSE) crc module removes leading 0 when dealing with anything below 0x1000 -.-'
-            } else {
-              let apiname = root[i].id || root[i].apiname || root[i].name || root[i].AchievementId || i;
-              return elem.name == apiname || elem.name.toString().toUpperCase() == apiname.toString().toUpperCase(); //uppercase == uppercase : cdx xcom chimera (apiname doesn't match case with steam schema)
-            }
+      let root = {};
+      try {
+        if (appid.data.type === 'file') {
+          root = await steam.getAchievementsFromFile(appid.data.path);
+          //Note to self: Empty file should be considered as a 0% game -> do not throw an error just issue a warning
+          if (root.constructor === Object && Object.entries(root).length === 0)
+            debug.warn(`[${appid.appid}] Warning ! Achievement file in '${appid.data.path}' is probably empty`);
+        } else if (appid.data.type === 'reg') {
+          root = await greenluma.getAchievements(appid.data.root, appid.data.path);
+        } else if (appid.data.type === 'steamAPI') {
+          root = await steam.getAchievementsFromAPI({
+            appID: appid.appid,
+            user: appid.data.userID,
+            path: appid.data.cachePath,
+            key: option.steam.apiKey,
           });
-          if (!achievement) throw 'ACH_NOT_FOUND_IN_SCHEMA';
+        } else if (appid.data.type === 'rpcs3') {
+          root = await rpcs3.getAchievements(appid.data.path, game.achievement.total);
+        } else if (appid.data.type === 'lumaplay') {
+          root = uplay.getAchievementsFromLumaPlay(appid.data.root, appid.data.path);
+        } else if (appid.data.type === 'cached') {
+          root = await watchdog.getAchievements(appid.appid);
+        } else {
+          throw 'Not yet implemented';
+        }
+      } catch (err) {
+        debug.error(`[${appid.appid}] Error parsing local achievements data => ${err}`);
+      }
 
-          let parsed = {
-            Achieved:
-              root[i].Achieved == 1 ||
-              root[i].achieved == 1 ||
-              root[i].State == 1 ||
-              root[i].HaveAchieved == 1 ||
-              root[i].Unlocked == 1 ||
-              root[i].earned ||
-              root[i] === '1'
-                ? true
-                : false,
-            CurProgress: root[i].CurProgress || root[i].progress || 0,
-            MaxProgress: root[i].MaxProgress || root[i].max_progress || 0,
-            UnlockTime:
-              root[i].UnlockTime ||
-              root[i].unlocktime ||
-              root[i].HaveAchievedTime ||
-              root[i].HaveHaveAchievedTime ||
-              root[i].Time ||
-              root[i].earned_time ||
-              root[i].unlock_time ||
-              0,
-          };
+      for (let i in root) {
+        if (Object.prototype.hasOwnProperty.call(root, i)) {
+          try {
+            let achievement = game.achievement.list.find((elem) => {
+              if (root[i].crc) {
+                return root[i].crc.includes(crc32(elem.name).toString(16)); //(SSE) crc module removes leading 0 when dealing with anything below 0x1000 -.-'
+              } else {
+                let apiname = root[i].id || root[i].apiname || root[i].name || root[i].AchievementId || i;
+                return elem.name == apiname || elem.name.toString().toUpperCase() == apiname.toString().toUpperCase(); //uppercase == uppercase : cdx xcom chimera (apiname doesn't match case with steam schema)
+              }
+            });
+            if (!achievement) throw 'ACH_NOT_FOUND_IN_SCHEMA';
 
-          if (
-            (!parsed.Achieved && parsed.MaxProgress != 0 && parsed.CurProgress != 0 && parsed.MaxProgress == parsed.CurProgress) ||
-            game.source === 'gog' ||
-            game.source === 'epic'
-          ) {
-            //CODEX Gears5 (09/2019)  && Gears tactics (05/2020)
-            //gog and epic only save unlocked achivements so if they are in the root it means they are unlocked
-            parsed.Achieved = true;
-          }
+            let parsed = {
+              Achieved:
+                root[i].Achieved == 1 ||
+                root[i].achieved == 1 ||
+                root[i].State == 1 ||
+                root[i].HaveAchieved == 1 ||
+                root[i].Unlocked == 1 ||
+                root[i].earned ||
+                root[i] === '1'
+                  ? true
+                  : false,
+              CurProgress: root[i].CurProgress || root[i].progress || 0,
+              MaxProgress: root[i].MaxProgress || root[i].max_progress || 0,
+              UnlockTime:
+                root[i].UnlockTime ||
+                root[i].unlocktime ||
+                root[i].HaveAchievedTime ||
+                root[i].HaveHaveAchievedTime ||
+                root[i].Time ||
+                root[i].earned_time ||
+                root[i].unlock_time ||
+                0,
+            };
 
-          Object.assign(achievement, parsed);
-        } catch (err) {
-          if (err === 'ACH_NOT_FOUND_IN_SCHEMA') {
-            debug.warn(`[${appid.appid}] Achievement not found in game schema data ?! ... Achievement was probably deleted or renamed over time`);
-          } else {
-            debug.error(`[${appid.appid}] Unexpected Error: ${err}`);
+            if (
+              (!parsed.Achieved && parsed.MaxProgress != 0 && parsed.CurProgress != 0 && parsed.MaxProgress == parsed.CurProgress) ||
+              game.source === 'gog' ||
+              game.source === 'epic'
+            ) {
+              //CODEX Gears5 (09/2019)  && Gears tactics (05/2020)
+              //gog and epic only save unlocked achivements so if they are in the root it means they are unlocked
+              parsed.Achieved = true;
+            }
+
+            if (isDuplicate) {
+              if (parsed.Achieved && !achievement.Achieved) {
+                achievement.Achieved = true;
+              }
+
+              if (
+                (!achievement.CurProgress && parsed.CurProgress > 0) ||
+                (parsed.CurProgress > 0 && parsed.MaxProgress == achievement.MaxProgress && parsed.CurProgress > achievement.CurProgress)
+              ) {
+                achievement.CurProgress = parsed.CurProgress;
+              }
+
+              if (!achievement.MaxProgress && parsed.MaxProgress > 0) {
+                achievement.MaxProgress = parsed.MaxProgress;
+              }
+
+              if (option.achievement.timeMergeRecentFirst) {
+                if (!achievement.UnlockTime || achievement.UnlockTime == 0 || parsed.UnlockTime > achievement.UnlockTime) {
+                  //More recent first
+                  achievement.UnlockTime = parsed.UnlockTime;
+                }
+              } else {
+                if (!achievement.UnlockTime || achievement.UnlockTime == 0 || (parsed.UnlockTime > 0 && parsed.UnlockTime < achievement.UnlockTime)) {
+                  //Oldest first
+                  achievement.UnlockTime = parsed.UnlockTime;
+                }
+              }
+            } else {
+              Object.assign(achievement, parsed);
+              isDuplicate = true;
+            }
+          } catch (err) {
+            if (err === 'ACH_NOT_FOUND_IN_SCHEMA') {
+              debug.warn(`[${appid.appid}] Achievement not found in game schema data ?! ... Achievement was probably deleted or renamed over time`);
+            } else {
+              debug.error(`[${appid.appid}] Unexpected Error: ${err}`);
+            }
           }
         }
       }
     }
-
     game.achievement.unlocked = game.achievement.list.filter((ach) => ach.Achieved == 1).length;
 
     return game;
@@ -306,20 +343,28 @@ module.exports.makeList = async (option, callbackProgress = () => {}) => {
     debug.log('Scanning for games ...');
 
     let result = [];
-
+    let startTime, endTime;
     let appidList = await discover(option.achievement_source, option.steam.main);
 
     if (appidList.length > 0) {
       let count = 0;
 
       for (let appid of appidList) {
-        let game = await this.getSavedAchievementsForAppid(option, appid.appid, appidList);
+        startTime = Date.now();
+        debug.log(`[${appid.appid}] loading data...`);
+        let game = await this.getSavedAchievementsForAppid(option, appid, appidList);
+        endTime = Date.now();
+        if (!game) {
+          blacklist.add(appid.appid);
+          debug.log(`[${appid.appid}] took ${(endTime - startTime) / 1000} seconds.`);
+        }
         if (game && game.achievement && game.achievement.total > 0) {
           let duplicate = result.find((a) => a.appid == game.appid);
           if (duplicate && option.achievement.mergeDuplicate) {
           } else {
             result.push(game);
           }
+          debug.log(`[${game.appid}] ${game.name} took ${(endTime - startTime) / 1000} seconds.`);
         }
         count++;
         callbackProgress(Math.floor((count / appidList.length) * 100));
