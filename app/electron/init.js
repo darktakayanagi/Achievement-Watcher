@@ -103,8 +103,10 @@ async function getSteamData(appid, type) {
     }
     await clientLogOn();
     const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
-    const appInfo = apps[appid].appinfo || apps[0].appinfo;
+    const appInfo = apps[appid]?.appinfo || apps[0]?.appinfo;
     switch (type) {
+      case 'name':
+        return appInfo?.common?.name;
       case 'common':
         return {
           name: appInfo.common.name,
@@ -371,10 +373,10 @@ function delay(ms) {
 }
 
 async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
-  if (Date.now() - lastScrape < 3000) {
-    await delay(Math.floor(Math.random() * 1500) + (Date.now() - lastScrape));
-    lastScrape = Date.now();
-  }
+  //if (Date.now() - lastScrape < 3000) {
+  //  await delay(Math.floor(Math.random() * 1500) + (Date.now() - lastScrape));
+  //  lastScrape = Date.now();
+  //}
   try {
     const chromePath = ChromeLauncher.Launcher.getInstallations()[0];
     const url = `https://steamhunters.com/apps/${info.appid}/achievements`;
@@ -391,7 +393,16 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
         const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
         const page = puppeteerWindow.page;
         try {
-          await page.goto(url, { waitUntil: 'domcontentloaded' });
+          await page.setRequestInterception(true);
+          page.on('request', (req) => {
+            const type = req.resourceType();
+            if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+              req.abort();
+            } else {
+              req.continue();
+            }
+          });
+          await page.goto(url);
           await page.waitForFunction(() => {
             return Array.from(document.querySelectorAll('script')).some((s) => s.textContent.includes('var sh'));
           });
@@ -401,6 +412,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
             eval(target.textContent);
           });
           const achievements = (await page.evaluate(() => sh.model.listData.pagedList.items)) || [];
+
           const results = [];
           achievements.forEach((item) => {
             results.push({
@@ -806,7 +818,7 @@ async function createOverlayWindow(info) {
 
   await startEngines();
   await getCachedData(info);
-  info.game = await achievementsJS.getSavedAchievementsForAppid(configJS, info.appid);
+  info.game = await achievementsJS.getSavedAchievementsForAppid(configJS, { appid: info.appid });
 
   overlayWindow = new BrowserWindow({
     width: 450,
