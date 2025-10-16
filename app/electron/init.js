@@ -603,6 +603,7 @@ function searchForSteamAppId(info = { name: '' }) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      backgroundThrottling: false,
     },
   });
   win.webContents.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36');
@@ -698,6 +699,7 @@ function createMainWindow() {
     webviewTag: false,
     v8CacheOptions: manifest.config.debug ? 'none' : 'code',
     enableRemoteModule: true,
+    backgroundThrottling: false,
   };
   //electron 9 crash if no icon exists to specified path
   try {
@@ -839,6 +841,7 @@ async function createOverlayWindow(info) {
       contextIsolation: true,
       nodeIntegration: false,
       devTools: manifest.config.debug || false,
+      backgroundThrottling: false,
     },
   });
 
@@ -885,7 +888,6 @@ async function createOverlayWindow(info) {
   let selectedLanguage = 'english';
   overlayWindow.webContents.on('did-finish-load', () => {
     overlayWindow.webContents.send('show-overlay', info.game);
-    overlayWindow.webContents.send('set-language', selectedLanguage);
     overlayWindow.showInactive();
   });
 
@@ -904,16 +906,7 @@ async function createNotificationWindow(info) {
 
   await startEngines();
   await clientLogOn();
-  //try {
-  //  let d = await getSteamData(3489700, 'full');
-  //} catch (err) {
-  //  console.log(err);
-  //}
-
-  //let d = await scrapeWithPuppeteer({ appid: 3489700 }, { steamid: '76561198152618007' });
-
   await getCachedData(info);
-
   closePuppeteer();
   const message = {
     displayName: info.a.displayName || '',
@@ -977,6 +970,7 @@ async function createNotificationWindow(info) {
       additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 
@@ -1076,6 +1070,7 @@ async function createPlaytimeWindow(info) {
       additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
   playtimeWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -1084,9 +1079,11 @@ async function createPlaytimeWindow(info) {
   playtimeWindow.setFullScreenable(false);
   playtimeWindow.setFocusable(false);
 
-  info.headerUrl = pathToFileURL(
-    await fetchIcon(`https://cdn.cloudflare.steamstatic.com/steam/apps/${String(info.appid)}/header.jpg`, info.appid)
-  ).href;
+  await startEngines();
+  await clientLogOn();
+  await getCachedData(info);
+  closePuppeteer();
+  info.headerUrl = pathToFileURL(await fetchIcon(info.game.img.header, info.appid)).href;
   playtimeWindow.once('ready-to-show', () => {
     if (playtimeWindow && !playtimeWindow.isDestroyed()) {
       playtimeWindow.showInactive();
@@ -1147,6 +1144,7 @@ async function createProgressWindow(info) {
       additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 

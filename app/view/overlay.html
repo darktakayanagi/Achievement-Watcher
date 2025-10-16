@@ -221,28 +221,16 @@
           }
 
           const row = document.createElement('tr');
-          row.innerHTML = `
-  <td class="image">
-	<img src="${imagePath}" alt="Icon"
-		 onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/11455/11455431.png';" /></td>
-  <td class="displayName"><strong>${displayName}</strong><br>
-	<span class="description"><em>${description}</em>${progressText}</span>
-  </td>
-  <td class="status">${status} ${earnedTimeText}</td>
-`;
+          row.innerHTML = `<td class="image"><img src="${imagePath}" alt="Icon" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/11455/11455431.png';" /></td>
+                          <td class="displayName"><strong>${displayName}</strong><br><span class="description"><em>${description}</em>${progressText}</span></td>
+                          <td class="status">${status} ${earnedTimeText}</td>
+                        `;
           tableBody.appendChild(row);
         });
 
         currentConfigName = game;
         isLoading = false;
       }
-
-      window.api.onSetLanguage((lang) => {
-        overlayLang = lang;
-        if (currentConfigName) {
-          loadTableData(currentConfigName);
-        }
-      });
 
       window.api.onOverlay((game) => {
         const tableBody = document.querySelector('#overlayTableBody');
