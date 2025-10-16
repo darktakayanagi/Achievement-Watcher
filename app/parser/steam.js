@@ -22,6 +22,7 @@ const SteamUser = require('steam-user');
 const client = new SteamUser();
 client.logOn({ anonymous: true });
 
+let appidListMap = new Map();
 let debug;
 let cacheRoot;
 module.exports.setUserDataPath = (p) => {
@@ -581,33 +582,31 @@ async function getDataFromSteamStore(appID) {
 async function findInAppList(appID) {
   if (!appID || !(Number.isInteger(appID) && appID > 0)) throw 'ERR_INVALID_APPID';
 
+  const { ipcRenderer } = require('electron');
   const cache = path.join(cacheRoot, 'steam_cache/schema');
   const filepath = path.join(cache, 'appList.json');
 
-  try {
-    const list = JSON.parse(fs.readFileSync(filepath));
-    const app = list.find((app) => app.appid === appID);
-    if (!app) throw 'ERR_NAME_NOT_FOUND';
-    return app.name;
-  } catch {
+  if (appidListMap.size === 0) {
+    let list;
     if (fs.existsSync(filepath))
-      if (Date.now() - fs.statSync(filepath).mtimeMs < 60 * 60 * 1000) {
-        throw 'ERR_NAME_NOT_FOUND';
+      if (Date.now() - fs.statSync(filepath).mtimeMS < 60 * 60 * 1000 * 24 * 3) {
+        list = JSON.parse(fs.readdirSync(filepath, 'utf-8'));
       }
-    const url = 'http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json';
-
-    const data = await request.getJson(url, { timeout: 4000 });
-
-    let list = data.applist.apps;
-    list.sort((a, b) => b.appid - a.appid); //recent first
-
-    fs.mkdirSync(path.dirname(filepath), { recursive: true });
-    fs.writeFileSync(filepath, JSON.stringify(list, null, 2));
-
-    const app = list.find((app) => app.appid === appID);
-    if (!app) throw 'ERR_NAME_NOT_FOUND';
-    return app.name;
+    if (!list) {
+      const url = 'http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json';
+      const data = await request.getJson(url, { timeout: 40000 });
+      list = data.applist.apps;
+      fs.mkdirSync(path.dirname(filepath), { recursive: true });
+      fs.writeFileSync(filepath, JSON.stringify(list, null, 2));
+    }
+    appidListMap = new Map(list.map((a) => [a.appid, a]));
   }
+
+  const app = appidListMap.get(appID);
+  if (app) return app.name;
+  const name = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'name' });
+  return name;
+  throw 'ERR_NAME_NOT_FOUND';
 }
 
 const cdnProviders = [
