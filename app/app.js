@@ -431,6 +431,27 @@ var app = {
             menu.append(new MenuItem({ type: 'separator' }));
             menu.append(
               new MenuItem({
+                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/folder-open.png')),
+                label: `Open game's icon cache folder`,
+                click() {
+                  remote.shell.openPath(path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'icon', `${appid}`));
+                },
+              })
+            );
+            menu.append(
+              new MenuItem({
+                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/folder-open.png')),
+                label: `Open game's .db cache folder`,
+                click() {
+                  remote.shell.showItemInFolder(
+                    path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'schema', 'english', `${appid}.db`)
+                  );
+                },
+              })
+            );
+            menu.append(new MenuItem({ type: 'separator' }));
+            menu.append(
+              new MenuItem({
                 icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
                 label: 'Steam',
                 click() {
