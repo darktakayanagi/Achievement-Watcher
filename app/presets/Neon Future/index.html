@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>NeonFuture Achievement Popup</title>
+    <meta name="duration" content="5000" />
+    <meta width="480" height="150" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        transform-origin: center center;
+      }
+
+      /* Container that adapts to scaling */
+      .achievement-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      /* Target the root container when scaling */
+      body[data-scaled='true'] .achievement-container {
+        overflow: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="achievement-container">
+      <div class="ach">
+        <div class="neon-glow"></div>
+        <div class="achievement-content">
+          <div class="icon">
+            <img src="" alt="Achievement Icon" class="achievement-icon" />
+          </div>
+          <div class="text-container">
+            <h3 class="title"></h3>
+            <p class="detail"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../scriptCode.js"></script>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        window.api.onNotification((notificationData) => {
+          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
+            document.querySelector('.achievement-title').textContent = notificationData.displayName;
+            document.querySelector('.achievement-description').textContent = notificationData.description;
+            document.querySelector('.achievement-icon').src = `file:///${notificationData.iconPath}`;
+
+            // Apply scaling with proper container adjustments
+            const root = document.body;
+            const scale = parseFloat(notificationData.scale || 1);
+            root.style.transform = `scale(${scale})`;
+
+            // Set data attribute for targeted CSS at different scales
+            if (scale > 1) {
+              root.setAttribute('data-scaled', 'true');
+            } else {
+              root.removeAttribute('data-scaled');
+            }
+          }
+
+          const container = document.querySelector('.achievement');
+          container.classList.add('active');
+
+          // Add glow animation
+          const glowElement = document.querySelector('.neon-glow');
+          glowElement.classList.add('pulse');
+
+          setTimeout(() => {
+            container.classList.remove('active');
+            glowElement.classList.remove('pulse');
+            window.api.closeNotificationWindow();
+          }, 5000);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -90,6 +90,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('.ach');
     container.classList.add('active');
 
+    // Add glow animation
+    const glowElement = document.querySelector('.neon-glow');
+    glowElement?.classList?.add('pulse');
+
     // Read duration from <meta name="duration">
     const durationMeta = document.querySelector('meta[name="duration"]');
     const duration = parseInt(durationMeta?.content, 10) || 4000;
@@ -98,6 +102,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }, duration * 0.75);
     setTimeout(() => {
       container.classList.remove('active');
+      glowElement?.classList?.remove('pulse');
       window.api.closeNotificationWindow();
     }, duration);
   });
