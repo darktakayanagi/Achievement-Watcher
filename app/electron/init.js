@@ -1269,6 +1269,12 @@ function checkResources() {
     copyFolderRecursive(profile, path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'));
     fs.copyFileSync(path.join(resourcesPath, 'obs', 'AW.json'), path.join(app.getPath('appData'), 'obs-studio', 'basic', 'scenes', 'AW.json'));
   }
+
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    path: path.join(manifest.config.debug ? path.join(__dirname, '../../service/') : path.dirname(process.execPath), 'nw/nw.exe'),
+    args: ['-config', 'watchdog.json'],
+  });
 }
 
 try {
