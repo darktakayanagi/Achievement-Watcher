@@ -262,17 +262,23 @@ ipcMain.on('get-images-for-game', async (event, arg) => {
 
     const gameId = game.id;
 
-    const [iconsRes, gridsRes, heroesRes] = await Promise.all([
+    const [iconsRes, gridsRes, heroesRes, logosRes] = await Promise.all([
       fetch(`${BASE_URL}/icons/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
       fetch(`${BASE_URL}/grids/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
       fetch(`${BASE_URL}/heroes/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
+      fetch(`${BASE_URL}/logos/game/${gameId}`, { headers: { Authorization: `Bearer ${API_KEY}` } }),
     ]);
 
-    const [icons, grids, heroes] = await Promise.all([iconsRes.json(), gridsRes.json(), heroesRes.json()]);
+    const [icons, grids, heroes, logos] = await Promise.all([iconsRes.json(), gridsRes.json(), heroesRes.json(), logosRes.json()]);
 
     const portrait = grids.data.find((g) => g.width === 600 && g.height === 900);
     const landscape = grids.data.find((g) => g.width === 920 && g.height === 430);
-    const links = { icon: icons.data?.[0]?.url, background: heroes.data?.[0]?.url, portrait: portrait?.url, landscape: landscape?.url };
+    const links = {
+      icon: icons.data?.[0]?.url || logos.data?.[0]?.url,
+      background: heroes.data?.[0]?.url,
+      portrait: portrait?.url,
+      landscape: landscape?.url,
+    };
     event.returnValue = links;
   } catch (err) {
     console.error('❌ Error:', err.message);
