@@ -670,10 +670,18 @@ const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
     let validUrl = url;
     try {
       new URL(url);
-      const res = await request(url, { method: 'HEAD' });
+      const res = await request(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0', // some CDNs require this
+        },
+        timeout: 5000,
+      });
       isValid = res.code !== 200 ? false : true;
       isValid = isValid ? res.headers['content-type'] : isValid;
-    } catch (e) {}
+    } catch (e) {
+      if (e.code != 'ERR_INVALID_URL') console.log(e);
+    }
 
     if (!isValid)
       validUrl = await findWorkingLink(
