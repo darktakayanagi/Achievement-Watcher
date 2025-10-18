@@ -392,22 +392,24 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
         executablePath: chromePath || puppeteerCore.executablePath(),
       });
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
-    if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();
-    //if (info.achievements) return;
+    if (!puppeteerWindow.page) {
+      puppeteerWindow.page = await puppeteerWindow.context.newPage();
+      const page = puppeteerWindow.page;
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const type = req.resourceType();
+        if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
+    }
     if (alternate) {
       if (alternate.steamhunters) {
         const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
         const page = puppeteerWindow.page;
         try {
-          await page.setRequestInterception(true);
-          page.on('request', (req) => {
-            const type = req.resourceType();
-            if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
-              req.abort();
-            } else {
-              req.continue();
-            }
-          });
           await page.goto(url);
           await page.waitForFunction(() => {
             return Array.from(document.querySelectorAll('script')).some((s) => s.textContent.includes('var sh'));
