@@ -90,7 +90,7 @@ async function getSteamData(appid, type) {
   try {
     if (type === 'data') {
       let info = { appid };
-      await scrapeWithPuppeteer(info);
+      await scrapeWithPuppeteer(info, { steamhunters: true });
       while (!info.achievements) {
         await delay(500);
       }
@@ -107,25 +107,25 @@ async function getSteamData(appid, type) {
     switch (type) {
       case 'name':
         return appInfo?.common?.name;
-      case 'common':
-        return {
-          name: appInfo.common.name,
-          isGame: appInfo.common.type.toLowerCase() === 'game',
-          icon: appInfo.common.icon,
-          header: appInfo.common.header_image?.english || appInfo.common.library_assets_full?.library_header?.image?.english,
-          portrait: appInfo.common.library_assets_full?.library_capsule?.image?.english,
-        };
+
       case 'header':
         return appInfo.common.header_image.english || appInfo.common.library_assets_full?.library_header?.image?.english;
       case 'icon':
         return appInfo.common.icon;
       case 'portrait':
         return appInfo.common.library_assets_full?.library_capsule?.image?.english;
-      case 'full':
-        return apps;
+      default:
+      case 'common':
+        return {
+          name: appInfo.common.name,
+          isGame: appInfo?.common?.type?.toLowerCase() === 'game',
+          icon: appInfo.common.icon,
+          header: appInfo.common.header_image?.english || appInfo.common.library_assets_full?.library_header?.image?.english,
+          portrait: appInfo.common.library_assets_full?.library_capsule?.image?.english,
+        };
     }
 
-    await delay(10000);
+    await delay(1000);
   } catch (err) {
     console.log(err);
   }
@@ -389,7 +389,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
     if (!puppeteerWindow.browser)
       puppeteerWindow.browser = await puppeteer.launch({
         headless: alternate && alternate.steamhunters ? 'new' : false,
-        executablePath: chromePath || puppeteerCore.executablePath(),
+        executablePath: fs.existsSync(chromePath) ? chromePath : puppeteerCore.executablePath(),
       });
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     if (!puppeteerWindow.page) {
@@ -407,6 +407,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
     }
     if (alternate) {
       if (alternate.steamhunters) {
+        let start = Date.now();
         const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
         const page = puppeteerWindow.page;
         try {
@@ -434,6 +435,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
             });
           });
           info.achievements = results;
+          debug.log(`[${info.appid}] steamhunters took ${(Date.now() - start) / 1000}s`);
         } catch (e) {
           console.log(e);
         }
