@@ -383,7 +383,7 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
     if (!puppeteerWindow.browser)
       puppeteerWindow.browser = await puppeteer.launch({
         headless: alternate && alternate.steamhunters ? 'new' : false,
-        executablePath: chromePath || puppeteer.executablePath(),
+        executablePath: chromePath || puppeteerCore.executablePath(),
       });
     if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
     if (!puppeteerWindow.page) puppeteerWindow.page = await puppeteerWindow.context.newPage();
