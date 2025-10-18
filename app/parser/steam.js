@@ -389,7 +389,7 @@ const getSteamUsers = (module.exports.getSteamUsers = async (steamPath) => {
   let result = [];
 
   let users = listRegistryAllSubkeys('HKCU', 'Software/Valve/Steam/Users');
-  if (!users) users = await glob('*([0-9])', { cwd: path.join(steamPath, 'userdata'), onlyDirectories: true, absolute: false });
+  if (!users || users.length == 0) users = await glob('*([0-9])', { cwd: path.join(steamPath, 'userdata'), onlyDirectories: true, absolute: false });
 
   if (users.length == 0) throw 'No Steam User ID found';
   for (let user of users) {
