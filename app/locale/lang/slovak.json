@@ -45,7 +45,7 @@
 	  },
       "hotkey": {
         "name": "Klávesová skratka pre prekrytie",
-        "description": "Počas hry môžete stlačiť túto klávesovú skratku, aby sa zobrazili achievementy tejto hry."
+        "description": "Počas hry môžete stlačiť túto klávesovú skratku, aby sa zobrazili achievementy tejto hry"
       },
       "scale": "Mierka oznámení",
       "duration": "Trvanie animácie"
@@ -77,7 +77,7 @@
         }
       },
       "hideZero": {
-        "name": "Skryť hry s 0% odomknutých achievemenov"
+        "name": "Skryť 0 % hry"
       }
     },
     "notification": {
@@ -133,7 +133,7 @@
         },
         "useWinRT": {
           "name": "WinRT API",
-          "description": "Ak je k dispozícii, použije WinRT pre rýchlejšie zobrazenie oznámení namiesto PowerShell."
+          "description": "Ak je k dispozícii, použije WinRT pre rýchlejšie zobrazenie oznámení namiesto PowerShell"
         },
         "useBalloon": {
           "name": "Bublinková nápoveda",
@@ -188,11 +188,11 @@
       }
     },
     "folder": {
-      "headline": "Kde hľadať súbory s achievementmi :",
+      "headline": "Kde hľadať súbory s achievementmi:",
       "default": "Predvolený adresár",
       "custom": "Adresár používateľa",
       "addInfo": [
-        "Vyberte priečinok, ktorý obsahuje priečinok/priečinky appid.",
+        "Vyberte priečinok, ktorý obsahuje priečinok/priečinky AppID.",
         "Pre ALI213, Hoodlum, Tenoke, UniverseLAN, RPCS3 prosím vyberte priečinok, kde",
         "sa nachádza súbor ALI213.ini, valve.ini, hlm.ini, ds.ini, steam_api.ini, SteamConfig.ini, tenoke.ini, UniverseLAN.ini alebo RPCS3.exe."
       ],

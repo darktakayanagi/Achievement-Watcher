@@ -40,12 +40,12 @@
     "overlay": {
       "position": "Pozice oznámení",
       "preset": {
-        "name": "Předvolené nastavení oznámení",
+        "name": "Výchozí nastavení oznámení",
         "description": "Legacy používá starý systém oznámení"
       },
       "hotkey": {
         "name": "Klávesová zkratka pro overlay",
-        "description": "Během hry můžete stisknout tuto klávesovou zkratku pro zobrazení achievementů této hry."
+        "description": "Během hry můžete stisknout tuto klávesovou zkratku pro zobrazení achievementů této hry"
       },
       "scale": "Měřítko oznámení",
       "duration": "Trvání animace"
@@ -77,7 +77,7 @@
         }
       },
       "hideZero": {
-        "name": "Skrýt hry s 0 % odemčených achievementů"
+        "name": "Skrýt 0 % hry"
       }
     },
     "notification": {
@@ -93,15 +93,15 @@
       "option": {
         "notification": {
           "name": "Oznámení",
-          "description": "Pokud je to možné, upozornit na odemčení achievementu"
+          "description": "Je-li to možné, upozornit na odemčení achievementu"
         },
         "rumble": {
           "name": "Vibrace gamepadu (XInput)",
-          "description": "Při odemčení achievementu zavibruje první ovladač"
+          "description": "Při odemčení achievementu zavibruje první gamepad"
         },
         "notifyOnProgress": {
           "name": "Postup achievementu",
-          "description": "Pokud je to možné, dostávat oznámení o postupu jednotlivých achievementů"
+          "description": "Je-li to možné, dostávat oznámení o postupu jednotlivých achievementů"
         },
         "playtime": {
           "name": "Sledování herního času",
@@ -133,7 +133,7 @@
         },
         "useWinRT": {
           "name": "WinRT API",
-          "description": "Pokud je k dispozici, použije WinRT pro rychlejší zobrazení oznámení místo PowerShellu."
+          "description": "Je-li k dispozici, použije WinRT pro rychlejší zobrazení oznámení místo PowerShellu"
         },
         "useBalloon": {
           "name": "Bublinová nápověda",
@@ -156,7 +156,7 @@
       "option": {
         "screenshot": {
           "name": "Suvenýr",
-          "description": "Při odemčení achievementu vytvoří snímek obrazovky"
+          "description": "Při odemčení achievementu pořídí snímek obrazovky"
         },
         "video": {
           "name": "Video suvenýr",
@@ -177,7 +177,7 @@
           "description": "10 bitů je dostupných pouze pro H.265/HEVC"
         },
         "duration": {
-          "name": "Délka"
+          "name": "Trvání"
         },
         "framerate": {
           "name": "Snímková frekvence"
@@ -192,7 +192,7 @@
       "default": "Výchozí adresář",
       "custom": "Uživatelský adresář",
       "addInfo": [
-        "Vyberte složku, která obsahuje složku/složky appid.",
+        "Vyberte složku, která obsahuje složku/složky AppID.",
         "Pro ALI213, Hoodlum, Tenoke, UniverseLAN, RPCS3 prosím vyberte složku, kde",
         "se nachází soubor ALI213.ini, valve.ini, hlm.ini, ds.ini, steam_api.ini, SteamConfig.ini, tenoke.ini, UniverseLAN.ini nebo RPCS3.exe."
       ],
@@ -222,7 +222,7 @@
       },
       "importCache": {
         "name": "Importovat cache oznámení",
-        "description": "Importovat cache z Watchdog jako další zdroj achievementů"
+        "description": "Importovat cache z watchdog jako další zdroj achievementů"
       }
     },
     "advanced": {

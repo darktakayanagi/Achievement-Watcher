@@ -23,6 +23,7 @@
   { "iso": "ru-RU", "displayName": "Russian", "api": "russian", "webapi": "ru", "native": "Русский" },
   { "iso": "es-ES", "displayName": "Spanish - Spain", "api": "spanish", "webapi": "es", "native": "Español-España" },
   { "iso": "es-419", "displayName": "Spanish - Latin America", "api": "latam", "webapi": "es-419", "native": "Español-Latinoamérica" },
+  { "iso": "sk-SK", "displayName": "Slovak", "api": "slovak", "webapi": "sk", "native": "slovenčina" },
   { "iso": "sv-SE", "displayName": "Swedish", "api": "swedish", "webapi": "sv", "native": "Svenska" },
   { "iso": "th-TH", "displayName": "Thai", "api": "thai", "webapi": "th", "native": "ไทย" },
   { "iso": "tr-TR", "displayName": "Turkish", "api": "turkish", "webapi": "tr", "native": "Türkçe" },
