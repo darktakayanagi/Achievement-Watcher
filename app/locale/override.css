@@ -139,3 +139,26 @@ html[lang="zh-cn"] #options-souvenir-video li:nth-child(1).hasHelper.expand
 {
   margin-bottom: 16px;
 }
+
+html[lang="sk"] #user-info {
+  width: 820px;
+}
+html[lang="sk"] #options-ui li:nth-child(7).hasHelper,
+html[lang="sk"] #options-notify-common li:nth-child(3).hasHelper,
+html[lang="sk"] #options-notify-transport li:nth-child(3).hasHelper,
+html[lang="sk"] #options-notify-transport li:nth-child(4).hasHelper,
+html[lang="sk"] #options-source li:nth-child(1).hasHelper {
+  margin-bottom: 32px;
+}
+
+html[lang="cs"] #user-info {
+  width: 820px;
+}
+html[lang="cs"] #options-ui li:nth-child(7).hasHelper,
+html[lang="cs"] #options-notify-common li:nth-child(3).hasHelper,
+html[lang="cs"] #options-notify-transport li:nth-child(3).hasHelper,
+html[lang="cs"] #options-notify-transport li:nth-child(4).hasHelper,
+html[lang="cs"] #options-source li:nth-child(1).hasHelper {
+  margin-bottom: 32px;
+}
+

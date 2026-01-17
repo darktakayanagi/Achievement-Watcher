@@ -19,7 +19,7 @@
     "title": "Nastavení",
     "sideMenu": {
       "general": "Obecné",
-      "overlay": "Overlay",
+      "overlay": "Překrytí",
       "notification": "Oznámení",
       "souvenir": "Suvenýr",
       "folder": "Složky",
@@ -37,15 +37,16 @@
       "version": "Verze",
       "edit": "Upravit"
     },
+    "watchdog": {
+      "startup": { "name": "Spustit při přihlášení", "description": "Watchdog se spustí automaticky při startu systému" },
+      "kill": { "name": "Ponechat spuštěný", "description": "Watchdog zůstane spuštěný i po zavření hlavní aplikace" }
+    },
     "overlay": {
       "position": "Pozice oznámení",
-      "preset": {
-        "name": "Předvolené nastavení oznámení",
-        "description": "Legacy používá starý systém oznámení"
-      },
+      "preset": { "name": "Výchozí nastavení oznámení", "description": "Legacy používá starý systém oznámení" },
       "hotkey": {
-        "name": "Klávesová zkratka pro overlay",
-        "description": "Během hry můžete stisknout tuto klávesovou zkratku pro zobrazení achievementů této hry."
+        "name": "Klávesová zkratka pro překrytí",
+        "description": "Stisknutím této klávesové zkratky během hry zobrazíte překrytí s achievementy"
       },
       "scale": "Měřítko oznámení",
       "duration": "Trvání animace"
@@ -77,15 +78,17 @@
         }
       },
       "hideZero": {
-        "name": "Skrýt hry s 0 % odemčených achievementů"
-      }
+        "name": "Skrýt 0 % hry"
+      },
+	  "tray": { "name": "Zavřít do oblasti oznámení", "description": "Nechat aplikaci běžet na pozadí, aby se oznámení spouštěla rychleji" }
     },
     "notification": {
       "title": {
         "common": "Obecné",
         "toast": "Vyskakovací oznámení",
         "transport": "Transport",
-        "chromium": "Oznámení Chromium"
+        "chromium": "Oznámení Chromium",
+        "watchdog": "Watchdog"
       },
       "info": {
         "toast": "Některé funkce jsou dostupné pouze v systému Windows 10"
@@ -93,15 +96,15 @@
       "option": {
         "notification": {
           "name": "Oznámení",
-          "description": "Pokud je to možné, upozornit na odemčení achievementu"
+          "description": "Je-li to možné, upozornit na odemčení achievementu"
         },
         "rumble": {
           "name": "Vibrace gamepadu (XInput)",
-          "description": "Při odemčení achievementu zavibruje první ovladač"
+          "description": "Při odemčení achievementu zavibruje první gamepad"
         },
         "notifyOnProgress": {
           "name": "Postup achievementu",
-          "description": "Pokud je to možné, dostávat oznámení o postupu jednotlivých achievementů"
+          "description": "Je-li to možné, dostávat oznámení o postupu jednotlivých achievementů"
         },
         "playtime": {
           "name": "Sledování herního času",
@@ -117,7 +120,7 @@
         },
         "toastSouvenir": {
           "name": "Suvenýr v oznámení",
-          "description": "Zobrazit snímek obrazovky suvenýru v oznámení",
+          "description": "Zobrazit suvenýrový snímek obrazovky v oznámení",
           "value": {
             "top": "Nahoře",
             "bottom": "Dole"
@@ -133,7 +136,7 @@
         },
         "useWinRT": {
           "name": "WinRT API",
-          "description": "Pokud je k dispozici, použije WinRT pro rychlejší zobrazení oznámení místo PowerShellu."
+          "description": "Je-li k dispozici, použije WinRT pro rychlejší zobrazení oznámení místo PowerShellu"
         },
         "useBalloon": {
           "name": "Bublinová nápověda",
@@ -156,7 +159,7 @@
       "option": {
         "screenshot": {
           "name": "Suvenýr",
-          "description": "Při odemčení achievementu vytvoří snímek obrazovky"
+          "description": "Při odemčení achievementu pořídí snímek obrazovky"
         },
         "video": {
           "name": "Video suvenýr",
@@ -177,7 +180,7 @@
           "description": "10 bitů je dostupných pouze pro H.265/HEVC"
         },
         "duration": {
-          "name": "Délka"
+          "name": "Trvání"
         },
         "framerate": {
           "name": "Snímková frekvence"
@@ -192,8 +195,8 @@
       "default": "Výchozí adresář",
       "custom": "Uživatelský adresář",
       "addInfo": [
-        "Vyberte složku, která obsahuje složku/složky appid.",
-        "Pro ALI213, Hoodlum, Tenoke, UniverseLAN, RPCS3 prosím vyberte složku, kde",
+        "Vyberte složku, která obsahuje složku/složky AppID.",
+        "Pro ALI213, Hoodlum, TENOKE, UniverseLAN, RPCS3 prosím vyberte složku, kde",
         "se nachází soubor ALI213.ini, valve.ini, hlm.ini, ds.ini, steam_api.ini, SteamConfig.ini, tenoke.ini, UniverseLAN.ini nebo RPCS3.exe."
       ],
       "add": "Přidat složku"
@@ -222,7 +225,7 @@
       },
       "importCache": {
         "name": "Importovat cache oznámení",
-        "description": "Importovat cache z Watchdog jako další zdroj achievementů"
+        "description": "Importovat cache z watchdog jako další zdroj achievementů"
       }
     },
     "advanced": {
@@ -230,7 +233,7 @@
       "blacklistButton": "Vynulovat černou listinu",
       "blacklistInfo": "Pro přidání hry na černou listinu klikněte pravým tlačítkem myši na kartu hry",
       "mainSteam": {
-        "title": "Hlavní účet na Steamu",
+        "title": "Hlavní účet služby Steam",
         "name": "Filtrovat podle uživatele",
         "description": "Zobrazit achievementy ze Steamu pouze pro vybraný účet"
       }
