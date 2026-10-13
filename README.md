@@ -1,3 +1,6 @@
+> **⚠️ PROJECT NO LONGER MAINTAINED**  
+> This repository is no longer actively supported or updated. Feel free to fork it or hit me up if you need anything!
+
 # 🔶 Achievement Watcher Fork
 
 > [!IMPORTANT]
