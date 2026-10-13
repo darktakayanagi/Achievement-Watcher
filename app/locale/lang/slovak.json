@@ -8,9 +8,9 @@
   "locked": "Zamknuté",
   "globalStat": "hráčov získalo",
   "hiddenRemain": "skrytých achievementov ostáva",
-  "revealedOnceUnlocked": "Podrobnosti o každom z achievementov sa zobrazia po jeho odomknutí",
+  "revealedOnceUnlocked": "Podrobnosti o každom achievemente sa zobrazia po jeho odomknutí",
   "noneUnlocked": "Zatiaľ nebol odomknutý žiadny achievement",
-  "play": "Začnite hrať !",
+  "play": "Začnite hrať!",
   "scrollUp": "Posunúť nahor",
   "allGamesBackButton": "Všetky hry",
   "removeFromList": "Odstrániť zo zoznamu",
@@ -37,15 +37,16 @@
       "version": "Verzia",
       "edit": "Upraviť"
     },
+    "watchdog": {
+      "startup": { "name": "Spustiť pri prihlásení", "description": "Watchdog sa spustí automaticky pri štarte systému" },
+      "kill": { "name": "Ponechať spustený", "description": "Ponechať watchdog spustený aj po zatvorení hlavnej aplikácie" }
+    },
     "overlay": {
       "position": "Poloha oznámenia",
-      "preset": { 
-	   "name": "Predvolené nastavenie oznámení", 
-	   "description": "Legacy používa starý systém oznámení" 
-	  },
+      "preset": { "name": "Predvolené nastavenie oznámení", "description": "Legacy používa starý systém oznámení" },
       "hotkey": {
         "name": "Klávesová skratka pre prekrytie",
-        "description": "Počas hry môžete stlačiť túto klávesovú skratku, aby sa zobrazili achievementy tejto hry."
+        "description": "Počas hry stlačte túto klávesovú skratku pre zobrazenie prekrytia s achievementmi"
       },
       "scale": "Mierka oznámení",
       "duration": "Trvanie animácie"
@@ -72,20 +73,22 @@
         "name": "Zlúčenie časových značiek",
         "description": "Ktorá časová značka bude pri zlučovaní duplikátov preferovaná",
         "value": {
-          "recent": "Najnovšía",
+          "recent": "Najnovšia",
           "oldest": "Najstaršia"
         }
       },
       "hideZero": {
-        "name": "Skryť hry s 0% odomknutých achievemenov"
-      }
+        "name": "Skryť 0 % hry"
+      },
+	  "tray": { "name": "Zavrieť do oblasti oznámení", "description": "Ponechať aplikáciu spustenú na pozadí, aby sa rýchlejšie spúšťali oznámenia" }
     },
     "notification": {
       "title": {
         "common": "Všeobecné",
         "toast": "Vyskakovacie oznámenie",
         "transport": "Transport",
-        "chromium": "Oznámenie Chromium"
+        "chromium": "Oznámenie Chromium",
+        "watchdog": "Watchdog"
       },
       "info": {
         "toast": "Niektoré funkcie sú dostupné iba v systéme Windows 10"
@@ -117,7 +120,7 @@
         },
         "toastSouvenir": {
           "name": "Suvenír v oznámení",
-          "description": "Zobraziť screenshot suveníru v oznámení",
+          "description": "Zobraziť suvenírovú snímku obrazovky v oznámení",
           "value": {
             "top": "Hore",
             "bottom": "Dole"
@@ -128,12 +131,12 @@
           "description": "Vizuálne zoskupiť upozornenia z rovnakej hry v Centre akcií"
         },
         "useToast": {
-          "name": "Vyskakovanie oznámenie",
-          "description": "Vyskakovanie oznámenie systémov Windows 8 a 10"
+          "name": "Vyskakovacie oznámenie",
+          "description": "Vyskakovacie oznámenie systémov Windows 8 a 10"
         },
         "useWinRT": {
           "name": "WinRT API",
-          "description": "Ak je k dispozícii, použije WinRT pre rýchlejšie zobrazenie oznámení namiesto PowerShell."
+          "description": "Ak je k dispozícii, použije WinRT pre rýchlejšie zobrazenie oznámení namiesto PowerShellu"
         },
         "useBalloon": {
           "name": "Bublinková nápoveda",
@@ -150,7 +153,7 @@
     },
     "souvenir": {
       "title": {
-        "screenshot": "Screenshot",
+        "screenshot": "Snímka obrazovky",
         "video": "Video"
       },
       "option": {
@@ -173,7 +176,7 @@
           "description": "H.265/HEVC sú výkonnejšie, ale menej podporované"
         },
         "colorDepth": {
-          "name": "Hĺbka farieb",
+          "name": "Farebná hĺbka",
           "description": "10 bitov je k dispozícii iba pre H.265/HEVC"
         },
         "duration": {
@@ -188,12 +191,12 @@
       }
     },
     "folder": {
-      "headline": "Kde hľadať súbory s achievementmi :",
+      "headline": "Kde hľadať súbory s achievementmi:",
       "default": "Predvolený adresár",
       "custom": "Adresár používateľa",
       "addInfo": [
-        "Vyberte priečinok, ktorý obsahuje priečinok/priečinky appid.",
-        "Pre ALI213, Hoodlum, Tenoke, UniverseLAN, RPCS3 prosím vyberte priečinok, kde",
+        "Vyberte priečinok, ktorý obsahuje priečinok/priečinky AppID.",
+        "Pre ALI213, Hoodlum, TENOKE, UniverseLAN, RPCS3 prosím vyberte priečinok, kde",
         "sa nachádza súbor ALI213.ini, valve.ini, hlm.ini, ds.ini, steam_api.ini, SteamConfig.ini, tenoke.ini, UniverseLAN.ini alebo RPCS3.exe."
       ],
       "add": "Pridať priečinok"
@@ -222,7 +225,7 @@
       },
       "importCache": {
         "name": "Importovať cache oznámení",
-        "description": "Importovať cache z Watchdog ako ďalší zdroj achievementov"
+        "description": "Importovať cache z watchdog ako ďalší zdroj achievementov"
       }
     },
     "advanced": {
@@ -230,7 +233,7 @@
       "blacklistButton": "Resetovať čiernu listinu",
       "blacklistInfo": "Pre pridanie hry na čiernu listinu kliknite pravým tlačidlom myši na kartu hry",
       "mainSteam": {
-        "title": "Hlavný účet na Steame",
+        "title": "Hlavný účet služby Steam",
         "name": "Filtrovať podľa používateľa",
         "description": "Zobraziť achievementy zo Steamu iba pre vybraný účet"
       }
