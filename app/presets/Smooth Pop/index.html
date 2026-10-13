@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>Achievement Notification</title>
+    <meta name="duration" content="8000" />
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        transform-origin: center center;
+      }
+    </style>
+  </head>
+  <body>
+    <meta width="400" height="150" />
+    <div class="ach">
+      <div class="icon">
+        <img src="" alt="Icon" />
+      </div>
+      <div class="text_wrap">
+        <p class="title"></p>
+        <span class="detail"></span>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const container = document.querySelector('.ach');
+        const titleEl = document.querySelector('.title');
+        const detailEl = document.querySelector('.detail');
+        const iconEl = document.querySelector('.icon img');
+        const docEl = document.documentElement;
+        const durationMeta = document.querySelector('meta[name="duration"]');
+
+        applyScale(1);
+
+        function applyScale(inputScale) {
+          const numeric = parseFloat(inputScale);
+          const safeScale = Number.isFinite(numeric) && numeric > 0 ? numeric : 1;
+          docEl.style.setProperty('--scale', String(safeScale));
+        }
+
+        function subscribe(handler) {
+          if (window.api && typeof window.api.onNotification === 'function') {
+            window.api.onNotification(handler);
+            return true;
+          }
+          if (window.electronAPI && typeof window.electronAPI.onNotification === 'function') {
+            window.electronAPI.onNotification(handler);
+            return true;
+          }
+          return false;
+        }
+
+        function closeWindow() {
+          window.api?.closeNotificationWindow?.();
+          window.electronAPI?.closeNotificationWindow?.();
+        }
+
+        function restartAnimation() {
+          if (!container) return;
+          container.classList.remove('is-active');
+          void container.offsetWidth;
+          container.classList.add('is-active');
+        }
+
+        const subscribed =
+          container &&
+          titleEl &&
+          detailEl &&
+          iconEl &&
+          subscribe((notificationData) => {
+            if (notificationData) {
+              if (notificationData.displayName) {
+                titleEl.textContent = notificationData.displayName;
+              }
+              if (notificationData.description) {
+                detailEl.textContent = notificationData.description;
+              }
+              const rawIcon = notificationData.iconPath || notificationData.icon;
+              if (rawIcon) {
+                const normalized = String(rawIcon).replace(/\\/g, '/');
+                iconEl.src = normalized.startsWith('file://') ? normalized : `file:///${normalized}`;
+              }
+            }
+            closeDelay = Math.max(0, Number(durationMeta?.content || 8000)) * notificationData.duration;
+            docEl.style.setProperty('--displaytime', `${closeDelay}ms`);
+            applyScale(notificationData?.scale ?? 1);
+
+            restartAnimation();
+
+            setTimeout(() => {
+              container?.classList.remove('is-active');
+              closeWindow();
+            }, closeDelay);
+          });
+
+        if (!subscribed) {
+          applyScale(1);
+        }
+      });
+    </script>
+  </body>
+</html>

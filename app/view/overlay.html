@@ -194,7 +194,7 @@
         });
 
         const sortedAchievements = sortAchievements(achievementsDataObj);
-        sortedAchievements.forEach(async (achievement) => {
+        for (const achievement of sortedAchievements) {
           if (!achievement.name || uniqueAchievements.has(achievement.name)) return;
           uniqueAchievements.add(achievement.name);
 
@@ -226,7 +226,7 @@
                           <td class="status">${status} ${earnedTimeText}</td>
                         `;
           tableBody.appendChild(row);
-        });
+        }
 
         currentConfigName = game;
         isLoading = false;

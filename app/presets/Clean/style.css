@@ -1,0 +1,181 @@
+@font-face {
+  font-family: 'PS5 Font';
+  src: url('ps5-font.ttf');
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body {
+  font-family: 'PS5 Font', sans-serif;
+}
+
+/* Outer container: fixed position + stable scale (never animated) */
+.ach {
+  width: 100%;
+  max-width: 500px;
+  position: fixed;
+  left: 50%;
+  right: auto;
+  /* Stable anchor + scale, independent of animations */
+  transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+}
+
+/* Horizontal alignment */
+.ach.at-center {
+  left: 50%;
+  right: auto;
+  --tx: -50%;
+}
+.ach.at-left {
+  left: 50%;
+  right: auto;
+  --tx: -50%;
+}
+.ach.at-right {
+  left: 50%;
+  right: auto;
+  --tx: -50%;
+}
+
+/* Vertical anchoring */
+.ach.from-top {
+  top: 0px;
+  bottom: auto;
+  transform-origin: center top;
+  --offsetY: -8px;
+}
+.ach.from-bottom {
+  bottom: 0;
+  top: auto;
+  transform-origin: center bottom;
+  --offsetY: 0;
+}
+
+/* Inner wrapper is the visible plate (moves together with text/bg) */
+.ach-inner {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px 20px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  opacity: 0;
+}
+
+/* Icon + text */
+.icon {
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+}
+.icon img {
+  width: 60px;
+  height: 60px;
+  border-radius: 10%;
+  display: block;
+}
+.text_wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden; /* clip marquee */
+}
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.title.marquee {
+  text-overflow: clip;
+}
+.title-inner {
+  display: inline-block;
+  will-change: transform;
+  padding-right: 24px;
+}
+.detail {
+  font-size: 14px;
+  opacity: 0.9;
+  color: #e6e6e6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keyframes: horizontal (no scale in inner; anchored by outer) */
+
+@keyframes ps5eSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ps5eSlideOutRight {
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+@keyframes ps5eSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ps5eSlideOutLeft {
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes ps5eSlideInBottom {
+  from {
+    transform: translate(var(--tx, -50%), 100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+  to {
+    transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+    opacity: 1;
+  }
+}
+@keyframes ps5eSlideOutBottom {
+  to {
+    transform: translate(var(--tx, -50%), 100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+}
+@keyframes ps5eSlideInTop {
+  from {
+    transform: translate(var(--tx, -50%), -100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+  to {
+    transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+    opacity: 1;
+  }
+}
+@keyframes ps5eSlideOutTop {
+  to {
+    transform: translate(var(--tx, -50%), -100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+}

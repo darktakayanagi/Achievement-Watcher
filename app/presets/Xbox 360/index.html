@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>Achievement Notification</title>
+    <meta name="duration" content="5000" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        transform-origin: center center;
+      }
+    </style>
+  </head>
+  <body>
+    <meta width="600" height="150" />
+
+    <div class="ach">
+      <div class="icon">
+        <img src="" alt="Icon" />
+      </div>
+      <div class="text_wrap">
+        <p class="title"><span class="title-inner"></span></p>
+        <span class="detail"></span>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const titleEl = document.querySelector('.title');
+        const detailEl = document.querySelector('.detail');
+
+        window.api.onNotification((notificationData) => {
+          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
+            if (titleEl) {
+              const existingTitleInner = titleEl.querySelector('.title-inner');
+              if (existingTitleInner) {
+                existingTitleInner.remove();
+              }
+              titleEl.textContent = notificationData.displayName;
+            }
+            if (detailEl) {
+              const existingInner = detailEl.querySelector('.detail-inner');
+              if (existingInner) {
+                existingInner.remove();
+              }
+              detailEl.textContent = notificationData.description;
+            }
+
+            document.querySelector('.icon img').src = notificationData.iconPath;
+            const root = document.body;
+            const scale = parseFloat(notificationData.scale || 1);
+            root.style.transform = `scale(${scale})`;
+            root.style.transformOrigin = 'center center';
+            root.style.setProperty('--duration', notificationData.duration);
+          }
+          const container = document.querySelector('.ach');
+          container.classList.add('active');
+
+          requestAnimationFrame(() => {
+            if (titleEl) {
+              const existingTitleInner = titleEl.querySelector('.title-inner');
+              try {
+                if (existingTitleInner) existingTitleInner.getAnimations().forEach((a) => a.cancel());
+                titleEl.getAnimations().forEach((a) => a.cancel());
+              } catch {}
+              titleEl.classList.remove('marquee');
+              void titleEl.offsetWidth;
+              const titleOverflowX = (titleEl.scrollWidth || 0) - (titleEl.clientWidth || 0);
+              const titleOverflowY = (titleEl.scrollHeight || 0) - (titleEl.clientHeight || 0);
+              if (titleOverflowX > 2 || titleOverflowY > 1) {
+                const titleText = titleEl.textContent || '';
+                titleEl.textContent = '';
+                const titleInnerSpan = document.createElement('span');
+                titleInnerSpan.className = 'title-inner';
+                titleInnerSpan.textContent = titleText;
+                titleEl.appendChild(titleInnerSpan);
+                titleEl.classList.add('marquee');
+                void titleEl.offsetWidth;
+                const px = Math.ceil(Math.max(0, (titleInnerSpan.scrollWidth || 0) - (titleEl.clientWidth || 0)) + 24);
+                titleInnerSpan.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${px}px)` }], {
+                  duration: Math.max(3000, Math.round(px / 50) * 1000),
+                  delay: 1200,
+                  easing: 'linear',
+                  fill: 'both',
+                });
+              }
+            }
+
+            if (detailEl) {
+              const currentInner = detailEl.querySelector('.detail-inner');
+              try {
+                if (currentInner) currentInner.getAnimations().forEach((a) => a.cancel());
+                detailEl.getAnimations().forEach((a) => a.cancel());
+              } catch {}
+              detailEl.classList.remove('marquee');
+              void detailEl.offsetWidth;
+              const overflowY = (detailEl.scrollHeight || 0) - (detailEl.clientHeight || 0);
+              const overflowX = (detailEl.scrollWidth || 0) - (detailEl.clientWidth || 0);
+              if (overflowY > 1 || overflowX > 2) {
+                const text = detailEl.textContent || '';
+                detailEl.textContent = '';
+                const innerSpan = document.createElement('span');
+                innerSpan.className = 'detail-inner';
+                innerSpan.textContent = text;
+                detailEl.appendChild(innerSpan);
+                detailEl.classList.add('marquee');
+                void detailEl.offsetWidth;
+                const px = Math.ceil(Math.max(0, (innerSpan.scrollWidth || 0) - (detailEl.clientWidth || 0)) + 24);
+                innerSpan.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${px}px)` }], {
+                  duration: Math.max(4000, Math.round(px / 40) * 1000),
+                  delay: 1400,
+                  easing: 'linear',
+                  fill: 'both',
+                });
+              }
+            }
+          });
+          const durationMeta = document.querySelector('meta[name="duration"]');
+          closeDelay = Math.max(0, Number(durationMeta?.content || 7500) * notificationData.duration);
+          setTimeout(() => {
+            container.classList.remove('active');
+            window.api.closeNotificationWindow();
+          }, closeDelay);
+        });
+      });
+    </script>
+  </body>
+</html>

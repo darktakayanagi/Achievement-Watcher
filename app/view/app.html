@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Achievement Watcher</title>
@@ -331,6 +331,38 @@
                         <span class="arrow"><i class="fas fa-chevron-left"></i></span>
                       </div>
                       <select autocomplete="off" id="option_lumaPlay">
+                        <option value="true" selected></option>
+                        <option value="false"></option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
+                  </li>
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-file-alt"></i> <span>GOG</span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" id="option_gog">
+                        <option value="true" selected></option>
+                        <option value="false"></option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
+                  </li>
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-file-alt"></i> <span>EPIC</span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" id="option_epic">
                         <option value="true" selected></option>
                         <option value="false"></option>
                       </select>
@@ -673,8 +705,11 @@
 
             <section class="content" data-view="notification">
               <div id="options-notify" class="arrow-list">
-                <div class="title"><span></span></div>
-                <ul id="options-notify-common">
+                <div class="title section-header">
+                  <span></span>
+                  <div class="toggle-arrow collapsed"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <ul id="options-notify-common" class="section-content collapsed">
                   <li class="hasHelper">
                     <div class="left"><i class="fas fa-bell"></i> <span></span></div>
                     <div class="right">
@@ -744,9 +779,12 @@
                   </li>
                 </ul>
 
-                <div class="title"><span></span></div>
+                <div class="title section-header">
+                  <span></span>
+                  <div class="toggle-arrow collapsed"><i class="fas fa-chevron-down"></i></div>
+                </div>
                 <div class="info"></div>
-                <ul id="options-notify-chromium">
+                <ul id="options-notify-chromium" class="section-content collapsed">
                   <li>
                     <div class="left"><i class="fas fa-compass"></i> <span></span></div>
                     <div class="right">
@@ -782,22 +820,25 @@
                   <li>
                     <div class="left"><i class="fas fa-ruler"></i> <span></span></div>
                     <div class="right">
-                      <input type="range" id="scaleSlider" min="10" max="500" value="100" />
+                      <input type="range" id="scaleSlider" min="25" max="200" value="100" />
                       <span id="scaleValue">100</span>%
                     </div>
                   </li>
                   <li>
                     <div class="left"><i class="fas fa-clock"></i> <span></span></div>
                     <div class="right">
-                      <input type="range" id="durationSlider" min="10" max="500" value="100" />
+                      <input type="range" id="durationSlider" min="25" max="200" value="100" />
                       <span id="durationValue">100</span>%
                     </div>
                   </li>
                 </ul>
 
-                <div class="title"><span></span></div>
-                <div class="info"></div>
-                <ul id="options-notify-toast">
+                <div class="title section-header">
+                  <span></span>
+                  <div class="toggle-arrow collapsed"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <div class="info collapsed"></div>
+                <ul id="options-notify-toast" class="section-content collapsed">
                   <li class="hasHelper">
                     <div class="left"><i class="fas fa-volume-up"></i> <span></span></div>
                     <div class="right">
@@ -854,8 +895,11 @@
                   </li>
                 </ul>
 
-                <div class="title"><span></span></div>
-                <ul id="options-notify-transport">
+                <div class="title section-header">
+                  <span></span>
+                  <div class="toggle-arrow collapsed"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <ul id="options-notify-transport" class="section-content collapsed">
                   <li class="hasHelper">
                     <div class="left"><i class="fas fa-atom"></i> <span></span></div>
                     <div class="right">
@@ -955,6 +999,44 @@
                       </div>
                     </div>
                     <div class="help">Growl Notification Transport Protocol</div>
+                  </li>
+                </ul>
+                <div class="title section-header">
+                  <span></span>
+                  <div class="toggle-arrow collapsed"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <ul id="options-notify-watchdog" class="section-content collapsed">
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-rocket"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" id="option_watchdog_startAtLogin">
+                        <option value="true" selected></option>
+                        <option value="false"></option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
+                  </li>
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-heartbeat"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" id="option_watchdog_keepRunning">
+                        <option value="true" selected></option>
+                        <option value="false"></option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
                   </li>
                 </ul>
               </div>
@@ -1070,6 +1152,23 @@
                     </div>
                     <div class="help"><span></span></div>
                   </li>
+
+                  <li class="hasHelper">
+                    <div class="left"><i class="fas fa-compress-alt"></i> <span></span></div>
+                    <div class="right">
+                      <div class="previous">
+                        <span class="arrow"><i class="fas fa-chevron-left"></i></span>
+                      </div>
+                      <select autocomplete="off" id="closeToTray">
+                        <option value="false"></option>
+                        <option value="true" selected></option>
+                      </select>
+                      <div class="next">
+                        <span class="arrow"><i class="fas fa-chevron-right"></i></span>
+                      </div>
+                    </div>
+                    <div class="help"></div>
+                  </li>
                 </ul>
               </div>
             </section>
@@ -1134,6 +1233,26 @@
 
     <script>
       window.$ = window.jQuery = require('../ui/lib/jquery-3.3.1.min.js');
+
+      document.querySelectorAll('.section-header').forEach((header) => {
+        header.addEventListener('click', () => {
+          let next = header.nextElementSibling;
+
+          const arrow = header.querySelector('.toggle-arrow');
+          if (arrow) arrow.classList.toggle('collapsed');
+
+          // Collapse `.info` if it exists
+          if (next && next.classList.contains('info')) {
+            next.classList.toggle('collapsed');
+            next = next.nextElementSibling; // move to the ul
+          }
+
+          // Collapse the UL
+          if (next && next.classList.contains('section-content')) {
+            next.classList.toggle('collapsed');
+          }
+        });
+      });
     </script>
     <script src="../components/register.js" type="module"></script>
     <script src="../ui/sort.js" type="text/javascript"></script>

@@ -15,6 +15,12 @@
   "allGamesBackButton": "All Games",
   "removeFromList": "Remove from list",
   "buildIconPrefetchCache": "Build icon notification cache",
+  "status": {
+    "checking": "Checking watchdog status...",
+    "running": "Watchdog is running (overlay/notifications should work properly)",
+    "stopped": "Watchdog is not running! (overlay/notifications won`t trigger.)",
+    "start": "Click to Start Watchdog!"
+  },
   "settings": {
     "title": "Settings",
     "sideMenu": {
@@ -222,6 +228,12 @@
       },
       "lumaPlay": {
         "description": "Uplay emulator"
+      },
+      "gog": {
+        "description": "GOG emulator"
+      },
+      "epic": {
+        "description": "EPIC emulator"
       },
       "importCache": {
         "name": "Import notification cache",

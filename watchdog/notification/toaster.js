@@ -12,7 +12,7 @@ const xinput = require('xinput-ffi');
 const fetch = require('./prefetch.js');
 const { broadcast } = require('../websocket.js');
 const regedit = require('regodit');
-const { takeScreenshot, saveAndMoveReplay, setRecordPath } = require('../obsHandler.js');
+const { saveAndMoveReplay, setRecordPath } = require('../obsHandler.js');
 
 const debug = require('../util/log.js');
 
@@ -42,7 +42,7 @@ module.exports = async (message, option = {}) => {
       prefetch: option.prefetch != null ? option.prefetch : true,
       souvenir: {
         screenshot: option.souvenir.screenshot || false,
-        video: option.souvenir.video >= 0 && option.souvenir.video <= 2 ? option.souvenir.video : 0,
+        video: Number(option.souvenir.video) >= 0 && Number(option.souvenir.video) <= 2 ? option.souvenir.video : 0,
         screenshot_options: option.souvenir.screenshot_options || {},
         video_options: option.souvenir.video_options || {},
       },
@@ -80,8 +80,9 @@ module.exports = async (message, option = {}) => {
       if (options.transport.chromium) {
         const watchdog = require('../watchdog.js');
         let t = options.gntpLabel && options.gntpLabel === 'Playtime' ? 'playtime' : message.progress ? 'progress' : 'achievement';
-        watchdog.SpawnOverlayNotification([
+        watchdog.SpawnNotification([
           `--wintype=${t}`,
+          `--source=${message.source}`,
           `--appid=${message.appid}`,
           `--ach=${message.achievementName}`,
           `--description=${message.achievementDescription}`,
@@ -158,8 +159,8 @@ module.exports = async (message, option = {}) => {
         }, duration * 1000 * message.delay || 0);
       }
     }
-    if (false) {
-      //options.souvenir.screenshot) {
+    //AW handles screenshot when using chromium, fallback to the old way if not using chromium
+    if (options.souvenir.screenshot && !options.transport.chromium) {
       debug.log('Souvenir: screenshot');
       try {
         const filePath = path.join(
@@ -167,23 +168,13 @@ module.exports = async (message, option = {}) => {
           fs.win32.sanitizeFileName(message.gameDisplayName),
           fs.win32.sanitizeFileName(message.achievementDisplayName) + '.png'
         );
-        debug.log(`"${filePath}"`);
-        let ssTaken = false;
-        try {
-          ssTaken = await takeScreenshot(filePath, options.souvenir.screenshot_options.overwrite_image, 3000);
-          message.image = filePath;
-        } catch (e) {
-          ssTaken = false;
-          debug.error(e);
-        }
-        if (!ssTaken) {
-          if (options.toast.imageIntegration != '0') {
-            message.image = await screenshot(filePath, options.souvenir.screenshot_options.overwrite_image);
-          } else {
-            screenshot(filePath, options.souvenir.screenshot_options.overwrite_image).catch((err) => {
-              debug.error(err);
-            });
-          }
+
+        if (options.toast.imageIntegration != '0') {
+          message.image = await screenshot(filePath, options.souvenir.screenshot_options.overwrite_image);
+        } else {
+          screenshot(filePath, options.souvenir.screenshot_options.overwrite_image).catch((err) => {
+            debug.error(err);
+          });
         }
       } catch (err) {
         debug.error(err);
@@ -192,7 +183,7 @@ module.exports = async (message, option = {}) => {
       debug.log('Skipping souvenir: screenshot');
     }
 
-    if (options.souvenir.video > 0 && videoIsRecording === false) {
+    if (Number(options.souvenir.video) > 0 && videoIsRecording === false) {
       debug.log('Souvenir: video');
       try {
         try {
@@ -216,8 +207,8 @@ module.exports = async (message, option = {}) => {
           );
           debug.log(`"${filePath}"`);
           videoIsRecording = true;
-          const vendor = options.souvenir.video == 1 ? 'nvenc' : 'amf';
-          const encoder = options.souvenir.video_options.codec == 1 ? 'hevc' : 'h264';
+          const vendor = options.souvenir.video == '1' ? 'nvenc' : 'amf';
+          const encoder = options.souvenir.video_options.codec == '1' ? 'hevc' : 'h264';
           videoCapture
             .hwencode(filePath, `${encoder}_${vendor}`, {
               overwrite: options.souvenir.video_options.overwrite_video,
@@ -237,6 +228,7 @@ module.exports = async (message, option = {}) => {
         }
       } catch (err) {
         debug.error(err);
+        videoIsRecording = false;
       }
     } else {
       debug.log('Skipping souvenir: video');

@@ -254,8 +254,44 @@ module.exports.getFolders = async (userDir_file) => {
               }
             } else if (file === files.steamEmu[6]) {
               //TENOKE
+              function findExeOrFolder(startPath) {
+                let currentDir = fs.statSync(startPath).isDirectory() ? path.resolve(startPath) : path.dirname(path.resolve(startPath));
+
+                while (true) {
+                  let entries;
+                  try {
+                    entries = fs.readdirSync(currentDir);
+                  } catch (e) {
+                    break; // permission error or unreadable dir
+                  }
+
+                  // Check for .exe files
+                  const hasExe = entries.some((name) => name.toLowerCase().endsWith('.exe'));
+
+                  // Check for "xx" folder
+                  const hasXX = entries.some((name) => {
+                    try {
+                      return fs.statSync(path.join(currentDir, name)).isDirectory() && name.toLowerCase() === 'SteamData'.toLowerCase();
+                    } catch {
+                      return false;
+                    }
+                  });
+
+                  if (hasExe || hasXX) {
+                    return currentDir;
+                  }
+
+                  // Move one directory up
+                  const parent = path.dirname(currentDir);
+                  if (parent === currentDir) break; // reached root
+                  currentDir = parent;
+                }
+
+                return null;
+              }
+              const exeOrFolderPath = findExeOrFolder(dir);
               steamEmu.push({
-                dir: path.join(dir.path, 'SteamData'),
+                dir: path.join(exeOrFolderPath || dir.path, 'SteamData'),
                 options: { appid: info.TENOKE.id.split('#')[0].trim(), recursive: false, file: [files.achievement[8]] },
               });
             } else if (file === files.steamEmu[7]) {
@@ -389,7 +425,7 @@ module.exports.parse = async (filePath) => {
 
           if (
             (!result.Achieved && result.MaxProgress != 0 && result.CurProgress != 0 && result.MaxProgress == result.CurProgress) ||
-            (result.UnlockTime && +result.UnlockTime !== '0')
+            (result.UnlockTime && +result.UnlockTime !== 0)
           ) {
             //CODEX Gears5 (09/2019)  && Gears tactics (05/2020) && Nemirtingas Galaxy/Epic Emu
             result.Achieved = true;

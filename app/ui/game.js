@@ -1,6 +1,29 @@
 'use strict';
 
+function applyGlobalStats(achievements) {
+  for (const globalStat of achievements) {
+    const percent = Math.round((globalStat.percent || globalStat.achievement?.rarity?.percent) * 10) / 10;
+    if (percent > 100) percent = 100;
+
+    const elem = $(`#achievement li .achievement[data-name="${globalStat.name || globalStat.achievement.name}"]`);
+
+    elem.find('.stats .community span.data').text(percent);
+
+    if (percent >= 0 && percent <= 10) {
+      elem.addClass('rare');
+    }
+  }
+  $('.achievement-list > .header .sort-ach .sort.percentage').addClass('show');
+}
+
 function getGlobalStat(appid, source) {
+  const { ipcRenderer } = require('electron');
+  if (source == 'gog') {
+    ipcRenderer.invoke('get-gog-data', { appid, type: 'percentage' }).then((achievements) => {
+      applyGlobalStats(achievements);
+    });
+    return;
+  }
   $.ajax({
     url:
       source === 'epic'
@@ -13,19 +36,9 @@ function getGlobalStat(appid, source) {
     timeout: 5000,
     beforeSend: () => {},
     success: (data) => {
-      for (const globalStat of source === 'epic' ? data.achievements : data.achievementpercentages.achievements) {
-        const percent = Math.round((globalStat.percent || globalStat.achievement?.rarity?.percent) * 10) / 10;
-        if (percent > 100) percent = 100;
+      const achievements = source === 'epic' ? data.achievements : data.achievementpercentages.achievements;
 
-        const elem = $(`#achievement li .achievement[data-name="${globalStat.name || globalStat.achievement.name}"]`);
-
-        elem.find('.stats .community span.data').text(percent);
-
-        if (percent >= 0 && percent <= 10) {
-          elem.addClass('rare');
-        }
-      }
-      $('.achievement-list > .header .sort-ach .sort.percentage').addClass('show');
+      applyGlobalStats(achievements);
     },
     error: () => {},
     complete: () => {},

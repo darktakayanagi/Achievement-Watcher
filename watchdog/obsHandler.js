@@ -1,19 +1,26 @@
 const { execSync, spawn } = require('child_process');
 const OBSWebSocket = require('obs-websocket-js').OBSWebSocket;
 const obs = new OBSWebSocket();
+const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const debug = require('./util/log.js');
+const unzipper = require('unzipper');
 
+const zipUrl = 'https://github.com/obsproject/obs-studio/releases/download/32.0.2/OBS-Studio-32.0.2-Windows-x64.zip';
+const expectedSize = 175 * 1024 * 1024;
+const extractFolder = path.join(process.env.APPDATA, 'Achievement Watcher', 'obs');
 const obs_path = path.join(process.env.APPDATA, 'obs-studio');
 const crash_file = path.join(obs_path, 'safe_mode');
+const crash_folder = path.join(obs_path, '.sentinel');
 const settings_file = path.join(obs_path, 'plugin_config/obs-websocket', 'config.json');
 let config;
 let latestReplay;
 let saveDir;
 let obsCheckInterval = null;
 let isEnabled = false;
+let isInstalled = false;
 
 obs.on('ConnectionOpened', () => {
   obs.connected = true;
@@ -32,6 +39,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function switchProfileAndSceneCollection() {
   await startObs();
   const p = await obs.call('GetProfileList');
+  if (!p.profiles.includes('AW')) {
+    //TODO: create scene
+  }
   if (p.currentProfileName !== 'AW') await obs.call('SetCurrentProfile', { profileName: 'AW' });
   const s = await obs.call('GetSceneCollectionList');
   if (s.currentSceneCollectionName !== 'AW') await obs.call('SetCurrentSceneCollection', { sceneCollectionName: 'AW' });
@@ -78,7 +88,7 @@ async function connectToObs() {
       if (e.code === 'ECONNREFUSED') {
         debug.log(`Attempt ${attempt}/${maxRetries}: OBS not ready or connection refused.`);
       } else {
-        debug.error(`Attempt ${attempt}/${maxRetries}:`, e);
+        debug.error(`Attempt ${attempt}/${maxRetries}: ${e}`);
       }
 
       if (attempt < maxRetries) {
@@ -94,6 +104,10 @@ async function connectToObs() {
 function deleteCrashFile() {
   if (fs.existsSync(crash_file)) {
     fs.unlinkSync(crash_file);
+  }
+  const items = fs.readdirSync(crash_folder);
+  for (const item of items) {
+    if (fs.lstatSync(path.join(crash_folder, item)).isFile()) fs.unlinkSync(path.join(crash_folder, item));
   }
 }
 
@@ -131,6 +145,7 @@ function isRunning() {
 }
 
 async function recordGame(game) {
+  if (!isEnabled) return;
   await startObs();
 
   let window = '' + game.name.replace(/:/g, '') + ':AWwatchdog:' + game.binary; //title:something:exe;
@@ -167,8 +182,50 @@ async function recordGame(game) {
   //debug.log(`attached OBS to ${game.name}'s window (${png.width}x${png.height})`);
 }
 
-function enableObs(state = true) {
+async function enableObs(state = true) {
   isEnabled = state;
+  await downloadAndExtract();
+}
+
+function getFolderSize(folderPath) {
+  let total = 0;
+
+  if (!fs.existsSync(folderPath)) return 0;
+
+  const files = fs.readdirSync(folderPath);
+
+  for (const file of files) {
+    const fullPath = path.join(folderPath, file);
+    const stats = fs.statSync(fullPath);
+
+    if (stats.isDirectory()) {
+      total += getFolderSize(fullPath);
+    } else {
+      total += stats.size;
+    }
+  }
+
+  return total;
+}
+
+async function downloadAndExtract() {
+  if (isInstalled) return;
+  if (getFolderSize(extractFolder) >= expectedSize) {
+    isInstalled = true;
+    return;
+  }
+  fs.mkdirSync(extractFolder, { recursive: true });
+  debug.log('OBS not found, downloading...');
+  const res = await fetch(zipUrl);
+  if (!res.ok) throw new Error(`Failed to download: ${res.statusText}`);
+  await new Promise((resolve, reject) => {
+    res.body
+      .pipe(unzipper.Extract({ path: extractFolder }))
+      .on('close', resolve)
+      .on('error', reject);
+  });
+  debug.log('OBS downloaded and ready to use.');
+  isInstalled = true;
 }
 
 async function startObs(kill = false) {
@@ -186,11 +243,12 @@ async function startObs(kill = false) {
     }
     deleteCrashFile();
 
-    const obs = spawn(path.join(__dirname, '../nw/nw.exe'), ['-config', 'obs.json'], {
-      cwd: path.join(__dirname, '../nw/'),
+    const obs = spawn(path.join(process.env.APPDATA, 'Achievement Watcher', 'obs', 'bin', '64bit', 'obs64.exe'), ['--minimize-to-tray'], {
+      cwd: path.join(process.env.APPDATA, 'Achievement Watcher', 'obs', 'bin', '64bit'),
       detached: true,
       stdio: 'ignore',
       shell: false,
+      windowsHide: true,
     });
     obs.unref(); // Let it run independently
     debug.log('Started OBS minimized.');
@@ -273,35 +331,12 @@ async function moveLatestReplay() {
   debug.log(`📁 Replay moved to: ${saveDir}`);
 }
 
-async function takeScreenshot(dir, overwrite = false, delay = 0) {
-  if (!isEnabled) return;
-  try {
-    if (fs.existsSync(dir)) {
-      if (!overwrite) return true;
-      fs.unlinkSync(dir);
-    }
-    if (!fs.existsSync(dir)) fs.mkdirSync(path.dirname(dir), { recursive: true });
-    await sleep(delay);
-    await obs.call('SaveSourceScreenshot', {
-      sourceName: 'AW',
-      imageFormat: 'png',
-      imageFilePath: dir,
-    });
-    return true;
-  } catch (err) {
-    debug.log(err);
-    return false;
-  }
-}
-
 module.exports = {
   enableObs,
   startObs,
-  connectToObs,
   recordGame,
   setRecordPath,
   setRecordResolution,
-  takeScreenshot,
   saveAndMoveReplay: async function (dir) {
     await sleep(2000);
     await saveReplay();

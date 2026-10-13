@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>Achievement Notification</title>
+    <meta name="duration" content="5000" />
+    <meta width="450" height="150" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        transform-origin: center center;
+      }
+
+      /* Container that adapts to scaling */
+      .achievement-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      /* Target the root container when scaling */
+      body[data-scaled='true'] .achievement-container {
+        overflow: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="achievement-container">
+      <div class="achievement">
+        <div class="achievement-content">
+          <div class="icon-container">
+            <img src="" alt="Achievement Icon" class="achievement-icon" />
+          </div>
+          <div class="text-container">
+            <h3 class="achievement-title"></h3>
+            <p class="achievement-description"></p>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        window.api.onNotification((notificationData) => {
+          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
+            document.querySelector('.achievement-title').textContent = notificationData.displayName;
+            document.querySelector('.achievement-description').textContent = notificationData.description;
+            document.querySelector('.achievement-icon').src = notificationData.iconPath;
+
+            // Apply scaling with proper container adjustments
+            const root = document.body;
+            const scale = parseFloat(notificationData.scale || 1);
+            root.style.transform = `scale(${scale})`;
+
+            // Set data attribute for targeted CSS at different scales
+            if (scale > 1) {
+              root.setAttribute('data-scaled', 'true');
+            } else {
+              root.removeAttribute('data-scaled');
+            }
+          }
+
+          const container = document.querySelector('.achievement');
+          container.offsetWidth;
+          container.classList.add('active');
+          const metaDur = document.querySelector('meta[name="duration"]');
+          const total = Math.max(0, Number(metaDur?.content || 5000) * notificationData.duration);
+          document.body.style.setProperty('--animation-duration', Math.max(0, Number(metaDur?.content || 5000) / 1000) + 's');
+          document.body.style.setProperty('--duration', notificationData.duration);
+          setTimeout(() => {
+            container.classList.remove('active');
+            window.api.closeNotificationWindow();
+          }, total);
+        });
+      });
+    </script>
+  </body>
+</html>

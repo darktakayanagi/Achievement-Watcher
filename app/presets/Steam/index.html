@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Achievement Notification</title>
+
+    <!-- Read by the host app -->
+    <meta name="duration" content="3000" />
+    <meta width="356" height="100" />
+
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      body {
+        transform-origin: center center;
+      }
+      .achievement-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        pointer-events: none; /* visual only */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="achievement-container">
+      <div class="arcade-card" id="card">
+        <div class="ani_icon"><img id="icon" alt="" /></div>
+        <div class="text">
+          <span id="title"></span>
+          <span id="desc"></span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const card = document.getElementById('card');
+        const iconEl = document.getElementById('icon');
+        const title = document.getElementById('title');
+        const desc = document.getElementById('desc');
+
+        const metaDur = document.querySelector('meta[name="duration"]');
+        const FALLBACK_TOTAL = 3000;
+
+        const fileUrl = (p) => {
+          if (!p) return '';
+          const s = String(p).replace(/\\/g, '/');
+          return s.startsWith('file://') ? s : `file:///${s}`;
+        };
+        const safe = (t) => (t ?? '').toString().trim();
+
+        function computeFromTopFallback() {
+          try {
+            // Decide direction from where the window is placed on the screen
+            const yMid = (window.screenY || 0) + (window.outerHeight || 0) / 2;
+            const h = screen.availHeight || screen.height || 1080;
+            return yMid < h / 2; // true = top half
+          } catch {
+            return false;
+          }
+        }
+
+        function setDirectionByPosition(posString) {
+          const pos = String(posString || '').toLowerCase();
+          const fromTop = pos === 'center-top' || pos === 'top-right' || pos === 'top-left' || (!pos && computeFromTopFallback());
+
+          card.classList.remove('from-top', 'from-bottom');
+          card.classList.add(fromTop ? 'from-top' : 'from-bottom');
+        }
+
+        function restartAnimation(totalMs) {
+          // remove + reflow + add to restart CSS animations
+          card.classList.remove('active');
+          // two rafs ensures styles are flushed in all engines
+          requestAnimationFrame(() => {
+            // Force layout read
+            void card.offsetWidth;
+            requestAnimationFrame(() => {
+              card.classList.add('active');
+              setTimeout(() => {
+                card.classList.remove('active');
+                window.api?.closeNotificationWindow?.();
+              }, totalMs);
+            });
+          });
+        }
+
+        window.api?.onNotification?.((payload) => {
+          // Content
+          iconEl.src = fileUrl(payload?.iconPath || '');
+          title.textContent = safe(payload?.displayName) || 'Achievement Unlocked';
+          const d = safe(payload?.description);
+          desc.textContent = d;
+          desc.style.display = d ? 'inline' : 'none';
+
+          // Scale (host window handles placement)
+          const scale = Math.max(0.01, Number(payload?.scale || 1));
+          document.body.style.transform = `scale(${scale})`;
+          if (scale > 1) document.body.setAttribute('data-scaled', 'true');
+          else document.body.removeAttribute('data-scaled');
+
+          // Direction (use provided position, else fallback by screenY)
+          setDirectionByPosition(payload?.position);
+
+          // Timings
+          const total = Math.max(0, Number(metaDur?.content || FALLBACK_TOTAL) * payload.duration);
+          const inMs = 300;
+          const outMs = 300;
+          const outDelay = Math.max(0, total - outMs - 120);
+
+          card.style.setProperty('--inMs', inMs + 'ms');
+          card.style.setProperty('--outMs', outMs + 'ms');
+          card.style.setProperty('--outDelay', outDelay + 'ms');
+
+          restartAnimation(total);
+        });
+      })();
+    </script>
+  </body>
+</html>

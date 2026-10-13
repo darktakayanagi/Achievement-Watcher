@@ -2,6 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const urlParser = require('url');
 const glob = require('fast-glob');
 const request = require('request-zero');
 
@@ -17,7 +18,7 @@ module.exports.initDebug = ({ isDev, userDataPath }) => {
 };
 
 module.exports.setUserDataPath = (p) => {
-  cacheRoot = p;
+  cacheRoot = path.join(p, 'epic_cache');
 };
 
 async function getEpicProductMapping() {
@@ -37,7 +38,7 @@ async function getGameTitleFromMapping(slug) {
 }
 
 module.exports.isExclusive = (appid) => {
-  const cacheFile = path.join(cacheRoot, 'steam_cache', 'epic.db');
+  const cacheFile = path.join(cacheRoot, 'epic.db');
   let cache = fs.existsSync(cacheFile) ? JSON.parse(fs.readFileSync(cacheFile, { encoding: 'utf8' })) : [];
   let cached = cache.find((g) => g.epicid === appid || g.steamid === appid);
   if (cached) return cached.steamid === undefined;
@@ -46,7 +47,7 @@ module.exports.isExclusive = (appid) => {
 };
 
 module.exports.scan = async (dir) => {
-  const cacheFile = path.join(cacheRoot, 'steam_cache', 'epic.db');
+  const cacheFile = path.join(cacheRoot, 'epic.db');
   let data = [];
   let cache = [];
   const { ipcRenderer } = require('electron');
@@ -104,7 +105,7 @@ module.exports.getCachedData = async (cfg) => {
 };
 
 module.exports.getGameData = async (cfg) => {
-  const cache = path.join(cacheRoot, 'steam_cache/schema', cfg.lang);
+  const cache = path.join(cacheRoot, 'schema', cfg.lang);
   let filePath = path.join(`${cache}`, `${cfg.appID}.db`);
   let result;
   try {
@@ -152,7 +153,7 @@ module.exports.getGameData = async (cfg) => {
     // probably hidden achievements, lets try to get steam's data
     if (err.code !== 404) debug.log(err);
     if (!cfg.steamappid) return result;
-    const achs = ipcRenderer.sendSync('get-steam-data', { appid: cfg.steamappid, type: 'steamhunters' });
+    const achs = await ipcRenderer.invoke('get-steam-data', { appid: cfg.steamappid, type: 'steamhunters' });
     list = achs.achievements;
   }
 
@@ -176,7 +177,7 @@ module.exports.getGameData = async (cfg) => {
     };
     ipcRenderer.send('stylize-background-for-appid', { background: links.background, appid: cfg.appID });
   } else {
-    let imgs = ipcRenderer.sendSync('get-steam-data', { appid: cfg.steamappid, type: 'common' });
+    let imgs = await ipcRenderer.invoke('get-steam-data', { appid: cfg.steamappid, type: 'common' });
     result.img = {
       header: imgs.header || 'header',
       background: imgs.background || 'page_bg_generated_v6b.jpg',
@@ -188,3 +189,53 @@ module.exports.getGameData = async (cfg) => {
   fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
   return result;
 };
+
+const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
+  let validUrl;
+  let filePath;
+  try {
+    const cache = path.join(cacheRoot, 'icon', `${appID}`);
+    let filename = path.parse(url).base;
+    filePath = path.join(cache, filename);
+    if (fs.existsSync(filePath)) return filePath;
+    let exts = ['.jpg', '.png'];
+    if (!url.endsWith('.jpg') && !url.endsWith('.png'))
+      for (let ext of exts) {
+        filePath = path.join(cache, filename + ext);
+        if (fs.existsSync(filePath)) return filePath;
+      }
+    //legacy url are full urls, check if they are still valid
+    let isValid = false;
+    validUrl = url;
+    try {
+      new URL(url);
+      const res = await request(url, { method: 'HEAD' });
+      isValid = res.code !== 200 ? false : true;
+      isValid = isValid ? res.headers['content-type'] : isValid;
+    } catch (e) {}
+
+    filename = path.parse(urlParser.parse(validUrl).pathname).base;
+
+    filePath = path.join(cache, filename);
+
+    if (fs.existsSync(filePath)) {
+      return filePath;
+    } else {
+      return (await request.download(validUrl, cache, { validateFileSize: false })).path;
+    }
+  } catch (err) {
+    if (err.code === 'ESIZEMISMATCH') {
+      try {
+        const fetch = require('node-fetch');
+        const res = await fetch(validUrl);
+        if (!res.ok) return validUrl;
+        const buffer = Buffer.from(await res.arrayBuffer());
+        fs.writeFileSync(filePath, buffer);
+        return filePath;
+      } catch (e) {
+        return validUrl;
+      }
+    }
+    return url;
+  }
+});

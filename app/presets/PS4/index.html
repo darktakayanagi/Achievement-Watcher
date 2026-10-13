@@ -28,7 +28,7 @@
     </style>
   </head>
   <body>
-    <meta width="400" height="200" />
+    <meta width="400" height="125" />
     <div>
       <div class="ach">
         <div class="icon">
@@ -38,8 +38,104 @@
           <p class="title"></p>
           <span class="detail"></span>
         </div>
+        <div class="ring-container">
+          <div class="ringring"></div>
+          <div class="circle">
+            <img src="./psicon.png" height="9" />
+          </div>
+        </div>
       </div>
     </div>
-    <script src="../scriptCode.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        // Helpers similar to Scalable/Steam for direction + restart
+        const metaDur = document.querySelector('meta[name="duration"]');
+        function computeFromTopFallback() {
+          try {
+            const yMid = (window.screenY || 0) + (window.outerHeight || 0) / 2;
+            const h = screen.availHeight || screen.height || 1080;
+            return yMid < h / 2;
+          } catch {
+            return false;
+          }
+        }
+        function setDirectionByPosition(ach, posString) {
+          const pos = String(posString || '').toLowerCase();
+          const fromTop = pos.includes('top') || (!pos && computeFromTopFallback());
+          const atLeft = pos.includes('left');
+          const atRight = pos.includes('right');
+          ach.classList.remove('from-top', 'from-bottom', 'at-left', 'at-center', 'at-right');
+          ach.classList.add(fromTop ? 'from-top' : 'from-bottom');
+          ach.classList.add(atLeft ? 'at-left' : atRight ? 'at-right' : 'at-center');
+        }
+        function restartAnimation(ach, totalMs) {
+          ach.classList.remove('active');
+          void ach.offsetWidth;
+          ach.classList.add('active');
+          setTimeout(() => {
+            ach.classList.remove('active');
+            window.api?.closeNotificationWindow?.();
+          }, totalMs);
+        }
+        window.api.onNotification((notificationData) => {
+          // Element refs
+          const ach = document.querySelector('.ach');
+          const titleEl = document.querySelector('.title');
+          const detailEl = document.querySelector('.detail');
+          let scaleValue = 1;
+
+          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
+            titleEl.textContent = notificationData.displayName;
+            detailEl.textContent = notificationData.description;
+            document.querySelector('.icon img').src = notificationData.iconPath;
+            scaleValue = parseFloat(notificationData.scale || 1) || 1;
+            ach.style.setProperty('--scale', scaleValue);
+          }
+          // Direction + restart like Steam
+          setDirectionByPosition(ach, notificationData?.position);
+          const total = Math.max(0, Number(metaDur?.content || 5000) * notificationData.duration);
+          restartAnimation(ach, total);
+
+          // Apply marquee to title/detail if overflowing
+          requestAnimationFrame(() => {
+            // TITLE marquee via Web Animations API
+            try {
+              titleEl.getAnimations().forEach((a) => a.cancel());
+            } catch {}
+            titleEl.classList.remove('marquee');
+            void titleEl.offsetWidth; // reflow
+            const tOverflow = titleEl.scrollWidth - titleEl.clientWidth;
+            if (tOverflow > 0) {
+              const px = Math.ceil(tOverflow + 24);
+              titleEl.classList.add('marquee'); // makes it inline-block under clipping parent
+              titleEl.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${px}px)` }], {
+                duration: Math.max(3000, Math.round(px / 50) * 1000),
+                delay: 1200,
+                easing: 'linear',
+                fill: 'both',
+              });
+            }
+
+            // DETAIL marquee if overflow exceeds 2 lines
+            try {
+              detailEl.getAnimations().forEach((a) => a.cancel());
+            } catch {}
+            detailEl.classList.remove('marquee');
+            void detailEl.offsetWidth;
+            const dOverflowY = detailEl.scrollHeight - detailEl.clientHeight;
+            if (dOverflowY > 1) {
+              const dpx = Math.ceil(detailEl.scrollWidth - detailEl.clientWidth + 24);
+              detailEl.classList.add('marquee');
+              detailEl.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${dpx}px)` }], {
+                duration: Math.max(3000, Math.round(dpx / 45) * 1000),
+                delay: 1200,
+                easing: 'linear',
+                fill: 'both',
+              });
+            }
+          });
+        });
+      });
+    </script>
   </body>
 </html>

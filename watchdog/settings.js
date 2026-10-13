@@ -6,14 +6,135 @@ const osLocale = require('os-locale');
 const fs = require('@xan105/fs');
 const steamLang = require('./steam.json');
 const aes = require('./util/aes.js');
+const os = require('os');
+
+const optionSchema = {
+  general: {
+    username: { default: os.userInfo().username || 'User', type: 'string' },
+    skippedVersion: { default: 'none', type: 'string' },
+  },
+  overlay: {
+    position: { default: 'right-top' },
+    preset: { default: 'default' },
+    hotkey: { default: 'Ctrl+Shift+O' },
+    scale: { default: '100', type: 'number' },
+    duration: { default: '100', type: 'number' },
+  },
+  achievement: {
+    thumbnailPortrait: { default: false },
+    showHidden: { default: false },
+    mergeDuplicate: { default: true },
+    timeMergeRecentFirst: { default: false },
+    hideZero: { default: false },
+  },
+  achievement_source: {
+    legitSteam: { default: '0', allowed: ['0', '1', '2'] },
+    steamEmu: { default: true },
+    greenLuma: { default: true },
+    rpcs3: { default: true },
+    lumaPlay: { default: true },
+    gog: { default: true },
+    epic: { default: true },
+    importCache: { default: true },
+  },
+  watchdog: {
+    startAtLogin: { default: true },
+    keepRunning: { default: true },
+  },
+  notification: {
+    notify: { default: true },
+    rumble: { default: true },
+    notifyOnProgress: { default: true },
+    playtime: { default: false },
+  },
+  notification_toast: {
+    customToastAudio: { default: '1', allowed: ['0', '1', '2'] },
+    toastSouvenir: { default: '0', allowed: ['0', '1', '2'] },
+    groupToast: { default: false },
+  },
+  notification_transport: {
+    chromium: { default: true },
+    toast: { default: true },
+    winRT: { default: true },
+    balloon: { default: true },
+    websocket: { default: true },
+    gntp: { default: true },
+  },
+  notification_advanced: {
+    timeTreshold: { default: '10' },
+    tick: { default: '600' },
+    checkIfProcessIsRunning: { default: true },
+    iconPrefetch: { default: true },
+  },
+  souvenir_screenshot: {
+    screenshot: { default: true },
+    custom_dir: { default: '' },
+    overwrite_image: { default: false },
+  },
+  souvenir_video: {
+    video: { default: '0', allowed: ['0', '1', '2'] },
+    codec: { default: '0', allowed: ['0', '1'] },
+    colorDepth10bits: { default: false },
+    custom_dir: { default: '' },
+    overwrite_video: { default: false },
+    duration: { default: '20', allowed: ['10', '15', '20', '30', '45'] },
+    framerate: { default: '60', allowed: ['30', '60'] },
+    cursor: { default: false },
+  },
+  action: {
+    target: { default: '' },
+    cwd: { default: '' },
+    hide: { default: true },
+  },
+  steam: {
+    main: { default: '0' },
+  },
+};
+
+//validate all options and reset invalid options to the default vals
+function applySchema(obj, schema) {
+  if (!obj || typeof obj !== 'object') obj = {};
+
+  for (const key in schema) {
+    const rule = schema[key];
+
+    // Nested object
+    if (!('default' in rule)) {
+      obj[key] = applySchema(obj[key], rule);
+      continue;
+    }
+
+    // Missing -> default
+    if (!(key in obj)) {
+      obj[key] = rule.default;
+      continue;
+    }
+
+    const val = obj[key];
+
+    // Validate allowed values
+    if (rule.allowed && !rule.allowed.includes(val)) {
+      obj[key] = rule.default;
+      continue;
+    }
+
+    const expectedType = rule.type || typeof rule.default;
+
+    // Wrong type -> default
+    if (typeof val !== expectedType) {
+      obj[key] = rule.default;
+    }
+  }
+
+  return obj;
+}
 
 module.exports.load = async (cfg_file) => {
   let options = {};
 
   try {
-    let fixFile = false;
-
     options = ini.parse(await fs.readFile(cfg_file, 'utf8'));
+    options = applySchema(options, optionSchema);
 
     if (!steamLang.some((lang) => lang.api == options.achievement.lang)) {
       try {
@@ -29,239 +150,6 @@ module.exports.load = async (cfg_file) => {
       } catch (err) {
         options.achievement.lang = 'english';
       }
-      fixFile = true;
-    }
-
-    if (typeof options.achievement.thumbnailPortrait !== 'boolean') {
-      options.achievement.thumbnailPortrait = false;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement.showHidden !== 'boolean') {
-      options.achievement.showHidden = false;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement.mergeDuplicate !== 'boolean') {
-      options.achievement.mergeDuplicate = true;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement.timeMergeRecentFirst !== 'boolean') {
-      options.achievement.timeMergeRecentFirst = false;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement.hideZero !== 'boolean') {
-      options.achievement.hideZero = false;
-      fixFile = true;
-    }
-
-    //Source
-
-    if (options.achievement_source.legitSteam != 0 && options.achievement_source.legitSteam != 1 && options.achievement_source.legitSteam != 2) {
-      options.achievement_source.legitSteam = 0;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement_source.steamEmu !== 'boolean') {
-      options.achievement_source.steamEmu = true;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement_source.greenLuma !== 'boolean') {
-      options.achievement_source.greenLuma = true;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement_source.rpcs3 !== 'boolean') {
-      options.achievement_source.rpcs3 = true;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement_source.lumaPlay !== 'boolean') {
-      options.achievement_source.lumaPlay = true;
-      fixFile = true;
-    }
-
-    if (typeof options.achievement_source.importCache !== 'boolean') {
-      options.achievement_source.importCache = true;
-      fixFile = true;
-    }
-
-    //Notification
-
-    if (typeof options.notification.notify !== 'boolean') {
-      options.notification.notify = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification.rumble !== 'boolean') {
-      options.notification.rumble = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification.notifyOnProgress !== 'boolean') {
-      options.notification.notifyOnProgress = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification.playtime !== 'boolean') {
-      options.notification.playtime = false;
-      fixFile = true;
-    }
-
-    //Toast
-
-    if (
-      options.notification_toast.customToastAudio != '0' &&
-      options.notification_toast.customToastAudio != '1' &&
-      options.notification_toast.customToastAudio != '2'
-    ) {
-      options.notification_toast.customToastAudio = '1';
-      fixFile = true;
-    }
-
-    if (
-      options.notification_toast.toastSouvenir != '0' &&
-      options.notification_toast.toastSouvenir != '1' &&
-      options.notification_toast.toastSouvenir != '2'
-    ) {
-      options.notification_toast.toastSouvenir = '0';
-      fixFile = true;
-    }
-
-    if (typeof options.notification_toast.groupToast !== 'boolean') {
-      options.notification_toast.groupToast = false;
-      fixFile = true;
-    }
-
-    //Transport
-
-    if (typeof options.notification_transport.toast !== 'boolean') {
-      options.notification_transport.toast = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification_transport.winRT !== 'boolean') {
-      options.notification_transport.winRT = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification_transport.balloon !== 'boolean') {
-      options.notification_transport.balloon = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification_transport.websocket !== 'boolean') {
-      options.notification_transport.websocket = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification_transport.gntp !== 'boolean') {
-      options.notification_transport.gntp = true;
-      fixFile = true;
-    }
-
-    //Advanced
-
-    if (isNaN(options.notification_advanced.timeTreshold)) {
-      options.notification_advanced.timeTreshold = 10;
-      fixFile = true;
-    }
-
-    if (isNaN(options.notification_advanced.tick)) {
-      options.notification_advanced.tick = 600;
-      fixFile = true;
-    }
-
-    if (typeof options.notification_advanced.checkIfProcessIsRunning !== 'boolean') {
-      options.notification_advanced.checkIfProcessIsRunning = true;
-      fixFile = true;
-    }
-
-    if (typeof options.notification_advanced.iconPrefetch !== 'boolean') {
-      options.notification_advanced.iconPrefetch = true;
-      fixFile = true;
-    }
-
-    //Souvenir
-
-    if (typeof options.souvenir_screenshot.screenshot !== 'boolean') {
-      options.souvenir_screenshot.screenshot = true;
-      fixFile = true;
-    }
-
-    if (typeof options.souvenir_screenshot.custom_dir !== 'string') {
-      options.souvenir_screenshot.custom_dir = '';
-      fixFile = true;
-    }
-
-    if (typeof options.souvenir_screenshot.overwrite_image !== 'boolean') {
-      options.souvenir_screenshot.overwrite_image = false;
-      fixFile = true;
-    }
-
-    if (options.souvenir_video.video != 0 && options.souvenir_video.video != 1 && options.souvenir_video.video != 2) {
-      options.souvenir_video.video = 0;
-      fixFile = true;
-    }
-
-    if (options.souvenir_video.codec != 0 && options.souvenir_video.codec != 1) {
-      options.souvenir_video.codec = 0;
-      fixFile = true;
-    }
-
-    if (typeof options.souvenir_video.colorDepth10bits !== 'boolean') {
-      options.souvenir_video.colorDepth10bits = false;
-      fixFile = true;
-    }
-
-    if (typeof options.souvenir_video.custom_dir !== 'string') {
-      options.souvenir_video.custom_dir = '';
-      fixFile = true;
-    }
-
-    if (typeof options.souvenir_video.overwrite_video !== 'boolean') {
-      options.souvenir_video.overwrite_video = false;
-      fixFile = true;
-    }
-
-    if (
-      options.souvenir_video.duration != 10 &&
-      options.souvenir_video.duration != 15 &&
-      options.souvenir_video.duration != 20 &&
-      options.souvenir_video.duration != 30 &&
-      options.souvenir_video.duration != 45
-    ) {
-      options.souvenir_video.duration = 20;
-      fixFile = true;
-    }
-
-    if (options.souvenir_video.framerate != 30 && options.souvenir_video.framerate != 60) {
-      options.souvenir_video.framerate = 60;
-      fixFile = true;
-    }
-
-    if (typeof options.souvenir_video.cursor !== 'boolean') {
-      options.souvenir_video.cursor = false;
-      fixFile = true;
-    }
-
-    //Action
-    if (typeof options.action.target !== 'string') {
-      options.action.target = '';
-      fixFile = true;
-    }
-
-    if (typeof options.action.cwd !== 'string') {
-      options.action.cwd = '';
-      fixFile = true;
-    }
-
-    if (typeof options.action.hide !== 'boolean') {
-      options.action.hide = true;
-      fixFile = true;
     }
 
     //Steam Key
@@ -271,80 +159,15 @@ module.exports.load = async (cfg_file) => {
       if (options.steam.apiKey) {
         if (options.steam.apiKey.includes(':')) {
           steamKey = aes.decrypt(options.steam.apiKey);
-        } else {
-          fixFile = true;
         }
       }
     } else {
       options.steam = {};
     }
 
-    if (fixFile) await fs.writeFile(cfg_file, ini.stringify(options), 'utf8').catch(() => {});
-
     if (steamKey) options.steam.apiKey = steamKey;
   } catch (err) {
-    options = {
-      achievement: {
-        thumbnailPortrait: false,
-        showHidden: false,
-        mergeDuplicate: true,
-        timeMergeRecentFirst: false,
-        hideZero: false,
-      },
-      achievement_source: {
-        legitSteam: 0,
-        steamEmu: true,
-        greenLuma: true,
-        rpcs3: true,
-        lumaPlay: false,
-        importCache: true,
-      },
-      notification: {
-        notify: true,
-        rumble: true,
-        notifyOnProgress: true,
-        playtime: false,
-      },
-      notification_toast: {
-        customToastAudio: '1',
-        toastSouvenir: '0',
-        groupToast: false,
-      },
-      notification_transport: {
-        toast: true,
-        winRT: true,
-        balloon: true,
-        websocket: true,
-        gntp: true,
-      },
-      notification_advanced: {
-        timeTreshold: 10,
-        tick: 600,
-        checkIfProcessIsRunning: true,
-        iconPrefetch: true,
-      },
-      souvenir_screenshot: {
-        screenshot: true,
-        custom_dir: '',
-        overwrite_image: false,
-      },
-      souvenir_video: {
-        video: 0,
-        codec: 0,
-        colorDepth10bits: false,
-        custom_dir: '',
-        overwrite_video: false,
-        duration: 20,
-        framerate: 60,
-        cursor: false,
-      },
-      action: {
-        target: '',
-        cwd: '',
-        hide: true,
-      },
-      steam: {},
-    };
+    options = applySchema({}, optionSchema);
 
     try {
       let locale = await osLocale();
@@ -359,8 +182,6 @@ module.exports.load = async (cfg_file) => {
     } catch (err) {
       options.achievement.lang = 'english';
     }
-
-    await fs.writeFile(cfg_file, ini.stringify(options), 'utf8').catch(() => {});
   }
 
   return options;

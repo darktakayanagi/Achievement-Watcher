@@ -18,12 +18,13 @@ html {
   --blue: #12cbc4;
   --dark-blue: #1289a7;
   --red: #ed4c67;
+  --duration: 1;
 }
 
 body {
   background-color: var(--background);
   font-family: Montserrat;
-  animation-delay: 1s;
+  animation-delay: calc(1s * var(--duration, 1));
 }
 
 .ach {
@@ -38,11 +39,13 @@ body {
   left: 28px;
   filter: drop-shadow(7px 7px 10px RGBA(0, 0, 0, 0.4));
   padding: 8px 13px;
+  transform: scale(var(--scale, 1));
+  transform-origin: left bottom;
+  opacity: 1;
 }
 
-.ach {
-  opacity: 1;
-  animation: base-animation 3s ease alternate infinite;
+.ach.active {
+  animation: base-animation calc(3s * var(--duration, 1)) ease alternate infinite;
 }
 
 .ach .icon {
@@ -63,35 +66,56 @@ body {
   font-size: 30px;
   color: white;
 }
-
 .ach .icon {
-  animation-delay: 1s;
-  animation: combinedButtonIconAnimation 3s ease alternate infinite;
+  z-index: 2;
 }
-.ach .icon img {
+
+.ach.active .icon {
+  animation-delay: calc(1s * var(--duration, 1));
+  animation: combinedButtonIconAnimation calc(3s * var(--duration, 1)) ease alternate infinite;
+}
+.ach .icon {
+  z-index: 2;
+}
+.ach.active .icon img {
   height: 60px;
   width: 60px;
   border-radius: 10px;
   animation-delay: 1s;
-  animation: icon-animation 3s ease alternate infinite;
+  animation: icon-animation calc(3s * var(--duration, 1)) ease alternate infinite;
 }
 
-.ach .text_wrap {
+.ach.active .text_wrap {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
   animation-delay: 1s;
-  animation: text-animation 3s ease alternate infinite;
+  animation: text-animation calc(3s * var(--duration, 1)) ease alternate infinite;
+  overflow: hidden; /* clip marquee */
 }
 
 .title {
+  position: relative;
+  z-index: 1;
   color: white;
-  font-weight: 600;
-  font-size: 20px;
+  font-weight: bold;
+  font-size: 18px;
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* marquee state */
+.title.marquee {
+  display: inline-block;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .detail {
   color: #ddd;
   font-size: 15px;
-  max-width: 80%;
+  max-width: 85%;
   white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;

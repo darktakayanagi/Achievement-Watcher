@@ -5,13 +5,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-
     <title>Achievement Notification</title>
     <meta name="duration" content="6000" />
     <style>
@@ -23,12 +16,10 @@
         height: 100%;
         overflow: hidden;
         background: transparent;
-
         display: flex;
         align-items: center;
         justify-content: center;
       }
-
       body {
         transform-origin: center center;
       }
@@ -37,14 +28,92 @@
   <body>
     <meta width="400" height="150" />
     <div class="ach">
-      <div class="icon">
-        <img src="" alt="Icon" />
-      </div>
+      <div class="icon"><img src="" alt="Icon" /></div>
       <div class="text_wrap">
         <p class="title"></p>
         <span class="detail"></span>
       </div>
     </div>
-    <script src="../scriptCode.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        function applyAnchoringFromPosition(ach, posRaw) {
+          const raw = String(posRaw || '').toLowerCase();
+          const tokens = raw
+            .replace(/[^a-z]+/g, ' ')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          let isTop = tokens.includes('top') || tokens.includes('t');
+          let isBottom = tokens.includes('bot') || tokens.includes('b');
+          if (!isTop && !isBottom) {
+            try {
+              const y = (window.screenY ?? window.screenTop ?? 0) | 0;
+              const sh = (screen.availHeight || screen.height || 1080) | 0;
+              const wh = (window.outerHeight || window.innerHeight || 0) | 0;
+              const centerY = y + wh / 2;
+              isTop = centerY < sh / 2;
+              isBottom = !isTop;
+            } catch {}
+          }
+          if (isTop && !isBottom) {
+            ach.style.top = '30px';
+            ach.style.bottom = 'auto';
+            ach.style.transformOrigin = 'left top';
+          } else {
+            ach.style.bottom = '0px';
+            ach.style.top = 'auto';
+            ach.style.transformOrigin = 'left bottom';
+          }
+        }
+
+        function startMarqueeIfOverflow() {
+          const titleEl = document.querySelector('.title');
+          const clip = document.querySelector('.text_wrap');
+          try {
+            titleEl.getAnimations().forEach((a) => a.cancel());
+          } catch {}
+          titleEl.classList.remove('marquee');
+          void titleEl.offsetWidth;
+          const overflow = Math.round((titleEl.scrollWidth || 0) - (clip?.clientWidth || 0));
+          if (overflow > 2) {
+            const px = Math.ceil(overflow + 24);
+            titleEl.classList.add('marquee');
+            titleEl.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${px}px)` }], {
+              duration: Math.max(3000, Math.round(px / 50) * 1000),
+              delay: 900,
+              easing: 'linear',
+              fill: 'both',
+            });
+          }
+        }
+
+        window.api.onNotification((data) => {
+          const title = document.querySelector('.title');
+          const detail = document.querySelector('.detail');
+          const icon = document.querySelector('.icon img');
+          const ach = document.querySelector('.ach');
+          if (data?.displayName) title.textContent = data.displayName;
+          if (data?.description) detail.textContent = data.description;
+          if (data?.iconPath || data?.icon) {
+            const p = String(data.iconPath || data.icon).replace(/\\/g, '/');
+            icon.src = p.startsWith('file://') ? p : `file:///${p}`;
+          }
+          const scale = Math.max(0.01, parseFloat(data?.scale || 1) || 1);
+          ach.style.setProperty('--scale', String(scale));
+
+          const posValue = (data?.position ?? data?.presetPosition ?? data?.pos ?? data?.corner ?? '').toString();
+          applyAnchoringFromPosition(ach, posValue);
+          ach.classList.add('active');
+          setTimeout(startMarqueeIfOverflow, 1600);
+          setTimeout(startMarqueeIfOverflow, 2000);
+
+          const total = Math.max(0, Number(document.querySelector('meta[name="duration"]')?.content || 6000) * data.duration);
+          setTimeout(() => {
+            ach.classList.remove('active');
+            window.api?.closeNotificationWindow?.();
+          }, total);
+        });
+      });
+    </script>
   </body>
 </html>

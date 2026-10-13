@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Achievement Notification</title>
+    <meta name="duration" content="5000" />
+    <meta width="500" height="125" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform-origin: center center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ach">
+      <div class="ach-inner">
+        <div class="icon"><img src="" alt="Icon" /></div>
+        <div class="text_wrap">
+          <p class="title"><span class="title-inner"></span></p>
+          <span class="detail"></span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const metaDur = document.querySelector('meta[name="duration"]');
+
+        async function computeDirFromWindowPosition() {
+          try {
+            const wa = (await window.api?.getDisplayWorkArea?.()) || {};
+            const wx = Number.isFinite(window.screenX) ? window.screenX : Number.isFinite(window.screenLeft) ? window.screenLeft : 0;
+            const wy = Number.isFinite(window.screenY) ? window.screenY : Number.isFinite(window.screenTop) ? window.screenTop : 0;
+            const ww = window.outerWidth || window.innerWidth || 0;
+            const wh = window.outerHeight || window.innerHeight || 0;
+            const centerX = wx + ww / 2;
+            const centerY = wy + wh / 2;
+            const waWidth = wa.width || window.screen?.availWidth || 1920;
+            const waHeight = wa.height || window.screen?.availHeight || 1080;
+            const midX = waWidth / 2;
+            const midY = waHeight / 2;
+            const nearCenterX = Math.abs(centerX - midX) <= Math.max(24, ww * 0.05);
+            const h = nearCenterX ? 'center' : centerX < midX ? 'left' : 'right';
+            const v = centerY < midY ? 'top' : 'bottom';
+            return { h, v };
+          } catch (e) {
+            return { h: 'right', v: 'bottom' };
+          }
+        }
+
+        function setDirectionByPosition(ach, posString) {
+          const raw = String(posString || '')
+            .trim()
+            .toLowerCase();
+          // normalize: allow tokens in any order: "left-top", "top_left", "center right", etc.
+          const tokens = raw
+            .replace(/[^a-z]+/g, ' ')
+            .trim()
+            .split(/\s+/);
+
+          const hasLeft = tokens.includes('left') || tokens.includes('l');
+          const hasRight = tokens.includes('right') || tokens.includes('r');
+          const hasTop = tokens.includes('top') || tokens.includes('t');
+          const hasBottom = tokens.includes('bot') || tokens.includes('b');
+          const hasCenter = tokens.includes('center') || tokens.includes('middle') || tokens.includes('c');
+
+          const atLeft = hasLeft && !hasRight;
+          const atRight = hasRight && !hasLeft;
+          const atCenter = !atLeft && !atRight; // default center when ambiguous
+          const fromTop = hasTop && !hasBottom;
+          const fromBottom = !fromTop; // default bottom when ambiguous
+
+          ach.className = 'ach';
+          ach.classList.add(fromTop ? 'from-top' : 'from-bottom');
+          ach.classList.add('at-center');
+
+          const inner = document.querySelector('.ach-inner');
+          if (inner) {
+            inner.classList.remove('side-left', 'side-right');
+            if (atLeft) inner.classList.add('side-left');
+            if (atRight || atCenter) inner.classList.add('side-right');
+          }
+        }
+
+        function startAnimation(ach, inner, placement, totalMs) {
+          // Only slide for left/right; no vertical animation
+          inner.style.animation = 'none';
+          ach.style.animation = 'none';
+          inner.classList.remove('active', 'side-left', 'side-right');
+
+          const IN_DUR = 300;
+          const OUT_DUR = 300;
+          const outDelayMs = Math.max(0, Number(totalMs) - OUT_DUR);
+
+          // Horizontal (left/right) on side placements
+          if (placement?.h === 'left' || placement?.h === 'right') {
+            void inner.offsetWidth; // reflow
+            inner.style.opacity = '1';
+            if (placement.h === 'right') {
+              inner.style.animation = `ps5eSlideInRight ${IN_DUR}ms ease-out forwards, ps5eSlideOutRight ${OUT_DUR}ms ease-in ${outDelayMs}ms forwards`;
+            } else {
+              inner.style.animation = `ps5eSlideInLeft ${IN_DUR}ms ease-out forwards, ps5eSlideOutLeft ${OUT_DUR}ms ease-in ${outDelayMs}ms forwards`;
+            }
+          } else {
+            // Vertical for center placements (top/bottom)
+            void ach.offsetWidth; // reflow
+            ach.style.opacity = '1';
+            inner.style.opacity = '1'; // ensure content is visible (inner default is opacity:0)
+            if (placement?.v === 'top') {
+              ach.style.animation = `ps5eSlideInTop ${IN_DUR}ms ease-out forwards, ps5eSlideOutTop ${OUT_DUR}ms ease-in ${outDelayMs}ms forwards`;
+            } else {
+              ach.style.animation = `ps5eSlideInBottom ${IN_DUR}ms ease-out forwards, ps5eSlideOutBottom ${OUT_DUR}ms ease-in ${outDelayMs}ms forwards`;
+            }
+          }
+
+          // Close slightly after the out animation completes for visibility
+          const closeAfter = outDelayMs + OUT_DUR + 80;
+          setTimeout(() => {
+            window.api?.closeNotificationWindow?.();
+          }, closeAfter);
+        }
+
+        window.api?.onNotification?.(async (payload) => {
+          const ach = document.querySelector('.ach');
+          const inner = document.querySelector('.ach-inner');
+          const titleEl = document.querySelector('.title');
+          const titleInnerEl = document.querySelector('.title-inner');
+          const detailEl = document.querySelector('.detail');
+          const iconEl = document.querySelector('.icon img');
+
+          ach.style.display = 'none';
+          ach.offsetHeight; // force layout
+          ach.style.display = '';
+          ach.offsetWidth; // force final layout
+
+          // Content
+          if (payload?.displayName) titleInnerEl.textContent = payload.displayName;
+          if (payload?.description) detailEl.textContent = payload.description;
+          if (payload?.iconPath) iconEl.src = payload.iconPath;
+
+          // Scale (outer only)
+          const scale = Math.max(0.01, Number(payload?.scale || 1));
+          ach.style.setProperty('--scale', String(scale));
+
+          // Direction classes
+          const posValue = (payload?.position ?? payload?.presetPosition ?? payload?.pos ?? payload?.corner ?? '').toString();
+          // Still set classes for vertical offsets, but slide dir will be computed from actual window position
+          setDirectionByPosition(ach, posValue);
+
+          // Compute slide direction based on actual window placement (both axes)
+          const placement = await computeDirFromWindowPosition();
+
+          // Animate next frame to ensure classes applied
+          const total = Math.max(0, Number(metaDur?.content || 4000));
+          requestAnimationFrame(() => {
+            // extra tick ensures styles settled before animating
+            void inner.offsetWidth;
+            ach.style.display = 'none';
+            ach.offsetHeight; // force layout
+            ach.style.display = '';
+            ach.offsetWidth; // force final layout
+            requestAnimationFrame(() => startAnimation(ach, inner, placement, total * payload.duration));
+          });
+
+          // Title marquee only if it overflows (animate inner span)
+          requestAnimationFrame(() => {
+            try {
+              titleInnerEl.getAnimations().forEach((a) => a.cancel());
+            } catch {}
+            titleEl.classList.remove('marquee');
+            void titleEl.offsetWidth; // reflow to apply removal
+            const overflowX = (titleInnerEl.scrollWidth || 0) - (titleEl.clientWidth || 0);
+            if (overflowX > 0) {
+              const px = Math.ceil(overflowX + 24);
+              titleEl.classList.add('marquee');
+              titleInnerEl.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${px}px)` }], {
+                duration: Math.max(3000, Math.round(px / 50) * 1000),
+                delay: 1200,
+                easing: 'linear',
+                fill: 'both',
+              });
+            }
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

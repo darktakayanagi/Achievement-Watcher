@@ -1,9 +1,13 @@
 /* Containerul notificării – stil PS4 */
+:root {
+  --duration: 1;
+}
+
 .ach {
   position: fixed;
   left: 50%;
   bottom: 50px;
-  transform: translateX(-50%) translateY(100%);
+  transform: translateX(-50%) translateY(100%) scale(var(--scale, 1));
   width: 350px;
   height: 50px;
   background: rgba(0, 0, 0, 0.8);
@@ -16,59 +20,59 @@
   opacity: 0;
   z-index: 10000;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-  /* Intrare în 0.5s, ieșire după 4.5s (de exemplu, pentru o durată totală de 5s) */
-  animation: ps4AchievementIn 0.5s forwards, ps4AchievementOut 0.5s forwards 4.5s;
 }
 
-/* Animația de intrare pentru container */
+.ach.active {
+  animation: ps4AchievementIn calc(0.5s * var(--duration, 1)) forwards,
+    ps4AchievementOut (0.5s * var(--duration, 1)) forwards calc(4.5s * var(--duration, 1));
+}
+
 @keyframes ps4AchievementIn {
   0% {
-    transform: translateX(-50%) translateY(100%);
+    transform: translateX(-50%) translateY(100%) scale(var(--scale, 1));
     opacity: 0;
   }
   60% {
-    transform: translateX(-50%) translateY(-10px);
+    transform: translateX(-50%) translateY(-10px) scale(var(--scale, 1));
     opacity: 1;
   }
   100% {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(var(--scale, 1));
     opacity: 1;
   }
 }
 
-/* Animația de ieșire pentru container */
 @keyframes ps4AchievementOut {
   0% {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(var(--scale, 1));
     opacity: 1;
   }
   100% {
-    transform: translateX(-50%) translateY(100%);
+    transform: translateX(-50%) translateY(100%) scale(var(--scale, 1));
     opacity: 0;
   }
 }
 
-/* Containerul pentru iconiță */
 .ach .icon {
   flex: 0 0 auto;
   width: 50px;
   height: 50px;
   margin-right: 10px;
   position: relative;
-  /* Poți adăuga și o rotație dacă dorești un efect suplimentar */
 }
 
-/* Iconița – trofeul */
 .ach .icon img {
   width: 100%;
   height: 100%;
   border-radius: 15%;
   transform: scale(0);
-  /* Intrare rapidă, ieșire după aceea; sincronizată cu containerul */
-  animation: ps4TrophyIn 0.5s forwards, ps4TrophyOut 0.5s forwards 4.5s;
 }
 
-/* Animația de intrare pentru iconiță */
+.ach.active .icon img {
+  animation: ps4TrophyIn calc(0.5s * var(--duration, 1)) forwards,
+    ps4TrophyOut calc(0.5s * var(--duration, 1)) forwards calc(4.5s * var(--duration, 1));
+}
+
 @keyframes ps4TrophyIn {
   0% {
     transform: scale(0);
@@ -81,7 +85,6 @@
   }
 }
 
-/* Animația de ieșire pentru iconiță */
 @keyframes ps4TrophyOut {
   0% {
     transform: scale(1);
@@ -91,34 +94,243 @@
   }
 }
 
-/* Containerul pentru text */
 .ach .text_wrap {
   flex: 1;
   color: #fff;
   font-family: 'Trebuchet MS', sans-serif;
-  text-align: center;
-  margin-bottom: 1em;
+  text-align: left;
+  margin-bottom: 0;
+  overflow: hidden;
+  max-width: 70%;
 }
 
-/* Stiluri pentru titlu */
 .ach .text_wrap .title {
   font-size: 1.2em;
-  width: 250px;
+  width: 100%;
   margin: 0 0 -0.2em;
   padding: 0;
-  font-style: bold;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-/* Stiluri pentru detalii */
 .ach .text_wrap .detail {
   font-size: 1em;
-  width: 250px;
+  width: 100%;
   white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   margin-top: 2px;
+}
+
+/* Marquee effects (only when overflowing) */
+.ach .text_wrap .title.marquee {
+  /* move under a clipping parent */
+  display: inline-block;
+  width: auto;
+  overflow: visible;
+  will-change: transform;
+  animation: none; /* driven by JS Web Animations */
+}
+
+.ach .text_wrap .detail.marquee {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  -webkit-line-clamp: initial;
+  line-clamp: initial;
+  -webkit-box-orient: initial;
+  will-change: transform;
+  animation: none; /* driven by JS Web Animations */
+}
+
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+  }
+}
+
+/* --- Position + scale anchoring overrides and animations --- */
+/* Override base to avoid moving anchor when scaling and to clip overflow */
+.ach {
+  transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+  animation: none;
+  overflow: hidden;
+}
+
+/* Horizontal alignment helpers */
+.ach.at-center {
+  left: 50%;
+  right: auto;
+  --tx: -50%;
+}
+.ach.at-left {
+  left: 50%;
+  right: auto;
+  --tx: -50%;
+}
+.ach.at-right {
+  left: 50%;
+  right: auto;
+  --tx: -50%;
+}
+
+/* Vertical anchoring helpers */
+.ach.from-bottom {
+  bottom: 0px;
+  top: auto;
+  transform-origin: center bottom;
+}
+.ach.from-top {
+  top: 10px;
+  bottom: auto;
+  transform-origin: center top;
+  --offsetY: -8px; /* raise a bit above top edge (screen-space, not scaled) */
+}
+
+/* Ensure off-screen start by direction until .active is applied */
+.ach.from-top:not(.active) {
+  transform: translate(var(--tx, -50%), -100%) scale(var(--scale, 1));
+  opacity: 0;
+}
+.ach.from-bottom:not(.active) {
+  transform: translate(var(--tx, -50%), 100%) scale(var(--scale, 1));
+  opacity: 0;
+}
+
+/* Attach animations by direction */
+.ach.active.from-bottom {
+  animation: ps4AchievementInBottom calc(0.5s * var(--duration, 1)) forwards,
+    ps4AchievementOutBottom calc(0.5s * var(--duration, 1)) forwards calc(4.5s * var(--duration, 1));
+}
+.ach.active.from-top {
+  animation: ps4AchievementInTop calc(0.5s * var(--duration, 1)) forwards,
+    ps4AchievementOutTop calc(0.5s * var(--duration, 1)) forwards calc(4.5s * var(--duration, 1));
+}
+
+/* Keyframes for bottom (from below) */
+@keyframes ps4AchievementInBottom {
+  0% {
+    transform: translate(var(--tx, -50%), 100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+  60% {
+    transform: translate(var(--tx, -50%), -10px) scale(var(--scale, 1));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+    opacity: 1;
+  }
+}
+@keyframes ps4AchievementOutBottom {
+  0% {
+    transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, -50%), 100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+}
+
+/* Keyframes for top (from above) */
+@keyframes ps4AchievementInTop {
+  0% {
+    transform: translate(var(--tx, -50%), -100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+  60% {
+    transform: translate(var(--tx, -50%), 10px) scale(var(--scale, 1));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+    opacity: 1;
+  }
+}
+@keyframes ps4AchievementOutTop {
+  0% {
+    transform: translate(var(--tx, -50%), var(--offsetY, 0)) scale(var(--scale, 1));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, -50%), -100%) scale(var(--scale, 1));
+    opacity: 0;
+  }
+}
+
+/* Ensure text area clips */
+.ach .text_wrap {
+  overflow: hidden;
+}
+
+/* PS icon ring like PS5 enhanced */
+.ring-container {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%) scale(1.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle {
+  width: 15px;
+  height: 15px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringring {
+  border: 2px solid #ffffff;
+  -webkit-border-radius: 30px;
+  border-radius: 30px;
+  height: 25px;
+  width: 25px;
+  position: absolute;
+  -webkit-animation: pulsate 1s ease-out infinite;
+  animation: pulsate 1s ease-out infinite;
+  opacity: 0;
+}
+
+@-webkit-keyframes pulsate {
+  0% {
+    -webkit-transform: scale(0.5, 0.5);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: scale(1.6, 1.6);
+    opacity: 0;
+  }
+}
+@keyframes pulsate {
+  0% {
+    transform: scale(0.5, 0.5);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6, 1.6);
+    opacity: 0;
+  }
 }

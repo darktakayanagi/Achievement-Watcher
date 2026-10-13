@@ -37,7 +37,7 @@ ipcRenderer.on('reset-watchdog-status', (event) => {
   let shadow = document.querySelector('title-bar').shadowRoot;
   let watchdogStatus = shadow.querySelector('.status-dot');
   let watchdoglbl = shadow.querySelector('.status-text');
-  watchdoglbl.textContent = 'Checking watchdog status...';
+  watchdoglbl.textContent = l10n.getTextFor()?.status?.checking;
   watchdogStatus.classList.remove('status-green', 'status-red');
   watchdogStatus.classList.add('status-orange');
   let startBtn = shadow.querySelector('#start-watchdog');
@@ -49,22 +49,26 @@ ipcRenderer.on('watchdog-status', (event, found) => {
   let shadow = document.querySelector('title-bar').shadowRoot;
   let watchdogStatus = shadow.querySelector('.status-dot');
   let watchdoglbl = shadow.querySelector('.status-text');
-  watchdoglbl.textContent = 'Watchdog is not running! (overlay/notifications won`t trigger.)';
+  watchdoglbl.textContent = l10n.getTextFor()?.status?.stopped;
   watchdogStatus.classList.remove('status-green', 'status-orange');
   watchdogStatus.classList.add('status-red');
   let startBtn = shadow.querySelector('#start-watchdog');
-  startBtn.innerHTML = '<i class="fas fa-shield-alt"></i>Click to Start Watchdog!';
+  startBtn.innerHTML = `<i class="fas fa-shield-alt"></i>${l10n.getTextFor()?.status?.start}`;
   if (found) {
     //let watchdogStatus = shadow.querySelector('.status-dot.status-orange');
     watchdogStatus.classList.remove('status-orange', 'status-red');
     watchdogStatus.classList.add('status-green');
-    watchdoglbl.textContent = 'Watchdog is running (overlay/notifications should work properly)';
+    watchdoglbl.textContent = l10n.getTextFor()?.status?.running;
     startBtn.textContent = '';
   }
 });
 
 ipcRenderer.on('achievement-unlock', (event, { appid, ach_data }) => {
-  const game = gameList.find((game) => game.appid == appid);
+  achievementUnlocked(appid, ach_data);
+});
+
+function achievementUnlocked(appid, ach_data) {
+  const game = gameList.find((game) => String(game.appid) == String(appid));
   const achievement = game.achievement.list.find((ach) => ach.name == ach_data.name);
   if (!achievement.Achieved) {
     achievement.Achieved = 1;
@@ -73,7 +77,7 @@ ipcRenderer.on('achievement-unlock', (event, { appid, ach_data }) => {
     updateGameBox(appid, Math.floor((game.achievement.unlocked / game.achievement.total) * 100));
   }
   updateGamePage(appid, ach_data);
-});
+}
 
 function updateGamePage(appid, ach_data) {
   app.onGameBoxClick($(gameElements.get(`${appid}`)), gameList);
@@ -86,6 +90,39 @@ function updateGameBox(appid, newProgress) {
   const meter = progressBar.querySelector('.meter');
   meter.style.width = `${newProgress}%`;
   progressBar.dataset.percent = newProgress;
+}
+
+function addToBlacklist(appid) {
+  try {
+    blacklist.add(appid);
+    const index = gameList.findIndex((game) => String(game.appid) === String(appid));
+    if (index !== -1) {
+      gameList.splice(index, 1);
+    }
+    const gameEl = gameElements.get(`${appid}`);
+    if (!gameEl) return;
+    gameEl.closest('li').remove();
+    gameElements.delete(`${appid}`);
+  } catch (err) {
+    remote.dialog.showMessageBoxSync({
+      type: 'error',
+      title: 'Unexpected Error',
+      message: `Failed to add item to user blacklist`,
+      detail: `${err}`,
+    });
+  }
+}
+
+function normalizeSource(source) {
+  switch (source) {
+    case 'gog':
+      return source;
+    case 'epic':
+      return source;
+    case 'steam':
+    default:
+      return 'steam';
+  }
 }
 
 var app = {
@@ -161,13 +198,14 @@ var app = {
             let portrait = self.config.achievement.thumbnailPortrait;
 
             portrait ? $('#game-list').addClass('view-portrait') : $('#game-list').removeClass('view-portrait');
+            game.id = Date.now();
             let isPortrait = portrait && game.img.portrait;
             let imgName = isPortrait ? game.img.portrait : game.img.header;
             let template = `
             <li>
-                <div class="game-box" data-index="${gameList.length}" data-appid="${game.appid}" data-time="${
-              timeMostRecent > 0 ? timeMostRecent : 0
-            }" ${game.system ? `data-system="${game.system}"` : ''}>
+                <div class="game-box" data-index="${game.id}" data-appid="${game.appid}" data-time="${timeMostRecent > 0 ? timeMostRecent : 0}" ${
+              game.system ? `data-system="${game.system}"` : ''
+            }>
                   <div class="loading-overlay"><div class="content"><i class="fas fa-spinner fa-spin"></i></div></div>
                   <div class="header ${isPortrait ? 'glow' : ''}" id="game-header-${game.appid}" style="background: url('${
               pathToFileURL(path.join(appPath, 'resources/img/loading.gif')).href
@@ -191,7 +229,7 @@ var app = {
                       <div class="title">${game.name}</div>
                       <img style="height: 1em; vertical-align: middle; line-height: 1; flex-shrink:0;" src="${ipcRenderer.sendSync(
                         'fetch-source-img',
-                        game.source
+                        normalizeSource(game.source)
                       )}">
                     </div>
                     <div class="progressBar" data-percent="${progress}"><span class="meter" style="width:${progress}%"></span></div>
@@ -258,11 +296,13 @@ var app = {
                 el.css('background', `url('${game.img.header}')`);
                 return;
               }
-              ipcRenderer.invoke('fetch-icon', imgName, game.steamappid || game.appid).then((localPath) => {
-                if (localPath) {
-                  el.css('background', `url('${localPath}')`);
-                }
-              });
+              ipcRenderer
+                .invoke('fetch-icon', imgName, game.steamappid || game.appid, game.steamappid ? 'steam' : normalizeSource(game.source))
+                .then((localPath) => {
+                  if (localPath) {
+                    el.css('background', `url('${localPath}')`);
+                  }
+                });
             }, 0);
           }
         }
@@ -330,6 +370,7 @@ var app = {
           e.preventDefault();
           let self = $(this);
           let appid = self.data('appid');
+          let source = gameList.find((game) => String(game.appid) == String(appid)).source || 'steam';
 
           const { Menu, MenuItem, nativeImage } = remote;
           const menu = new Menu();
@@ -338,17 +379,7 @@ var app = {
               icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/cross.png')),
               label: $('#game-list').attr('data-contextMenu0'),
               click() {
-                try {
-                  blacklist.add(appid);
-                  app.onStart();
-                } catch (err) {
-                  remote.dialog.showMessageBoxSync({
-                    type: 'error',
-                    title: 'Unexpected Error',
-                    message: `Failed to add item to user blacklist`,
-                    detail: `${err}`,
-                  });
-                }
+                addToBlacklist(appid);
               },
             })
           );
@@ -420,22 +451,24 @@ var app = {
                     if (dialog.filePath.length > 0) {
                       const filePath = dialog.filePath;
                       const dir = path.parse(filePath).dir;
+                      const imagesDir = path.join(dir, 'images');
+                      fs.mkdirSync(imagesDir, { recursive: true });
                       const achievements = list.find((game) => game.appid == appid).achievement.list;
 
                       let result = [];
 
                       for (let achievement of achievements) {
                         try {
-                          let icons = await Promise.all([
-                            request.download(achievement.icon, path.join(dir, 'images')),
-                            request.download(achievement.icongray, path.join(dir, 'images')),
-                          ]);
+                          const iconPath = await ipcRenderer.invoke('fetch-icon', achievement.icon, appid, 'steam', true);
+                          const icongrayPath = await ipcRenderer.invoke('fetch-icon', achievement.icongray, appid, 'steam', true);
+                          fs.copyFileSync(iconPath, path.join(imagesDir, path.parse(iconPath).base));
+                          fs.copyFileSync(icongrayPath, path.join(imagesDir, path.parse(icongrayPath).base));
                           result.push({
                             description: achievement.description || '',
                             displayName: achievement.displayName,
                             hidden: achievement.hidden,
-                            icon: 'images/' + path.parse(icons[0].path).base,
-                            icongray: 'images/' + path.parse(icons[1].path).base,
+                            icon: 'images/' + path.parse(iconPath).base,
+                            icongray: 'images/' + path.parse(icongrayPath).base,
                             name: achievement.name,
                           });
                         } catch {
@@ -473,7 +506,9 @@ var app = {
                 icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/folder-open.png')),
                 label: `Open game's icon cache folder`,
                 click() {
-                  remote.shell.openPath(path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'icon', `${appid}`));
+                  remote.shell.openPath(
+                    path.join(process.env['APPDATA'], 'Achievement Watcher', `${normalizeSource(source)}_cache`, 'icon', `${appid}`)
+                  );
                 },
               })
             );
@@ -483,39 +518,81 @@ var app = {
                 label: `Open game's .db cache folder`,
                 click() {
                   remote.shell.showItemInFolder(
-                    path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'schema', `${app.config.achievement.lang}`, `${appid}.db`)
+                    path.join(
+                      process.env['APPDATA'],
+                      'Achievement Watcher',
+                      `${normalizeSource(source)}_cache`,
+                      'schema',
+                      source != 'steam' ? 'english' : `${app.config.achievement.lang}`,
+                      `${appid}.db`
+                    )
                   );
                 },
               })
             );
             menu.append(new MenuItem({ type: 'separator' }));
-            menu.append(
-              new MenuItem({
-                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
-                label: 'Steam',
-                click() {
-                  remote.shell.openExternal(`https://store.steampowered.com/app/${appid}/`);
-                },
-              })
-            );
-            menu.append(
-              new MenuItem({
-                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
-                label: 'SteamDB',
-                click() {
-                  remote.shell.openExternal(`https://steamdb.info/app/${appid}/`);
-                },
-              })
-            );
-            menu.append(
-              new MenuItem({
-                icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
-                label: 'PCGamingWiki',
-                click() {
-                  remote.shell.openExternal(`https://pcgamingwiki.com/api/appid.php?appid=${appid}`);
-                },
-              })
-            );
+
+            switch (normalizeSource(source)) {
+              case 'gog':
+                menu.append(
+                  new MenuItem({
+                    icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
+                    label: 'GOG',
+                    click() {
+                      remote.shell.openExternal(String(ipcRenderer.sendSync('get-store-link', { appid, source })));
+                    },
+                  })
+                );
+
+                menu.append(
+                  new MenuItem({
+                    icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
+                    label: 'GOGDB',
+                    click() {
+                      remote.shell.openExternal(`https://www.gogdb.org/product/${appid}`);
+                    },
+                  })
+                );
+                menu.append(
+                  new MenuItem({
+                    icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
+                    label: 'PCGamingWiki',
+                    click() {
+                      remote.shell.openExternal(`https://pcgamingwiki.com/api/gog.php?page=${appid}`);
+                    },
+                  })
+                );
+                break;
+              case 'steam':
+                menu.append(
+                  new MenuItem({
+                    icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
+                    label: 'Steam',
+                    click() {
+                      remote.shell.openExternal(`https://store.steampowered.com/app/${appid}/`);
+                    },
+                  })
+                );
+
+                menu.append(
+                  new MenuItem({
+                    icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
+                    label: 'SteamDB',
+                    click() {
+                      remote.shell.openExternal(`https://steamdb.info/app/${appid}/`);
+                    },
+                  })
+                );
+                menu.append(
+                  new MenuItem({
+                    icon: nativeImage.createFromPath(path.join(appPath, 'resources/img/globe.png')),
+                    label: 'PCGamingWiki',
+                    click() {
+                      remote.shell.openExternal(`https://pcgamingwiki.com/api/appid.php?appid=${appid}`);
+                    },
+                  })
+                );
+            }
           }
 
           menu.popup({ window: remote.getCurrentWindow() });
@@ -546,7 +623,7 @@ var app = {
   onGameBoxClick: function (self, list) {
     self.css('pointer-events', 'none');
 
-    let game = list.find((elem) => elem.appid == self.data('appid') && list.indexOf(elem) == self.data('index'));
+    let game = list.find((elem) => elem.appid == self.data('appid') && elem.id == self.data('index'));
 
     if (self.data('time') > 0) $('#unlock > .header .sort-ach .sort.time').addClass('show');
 
@@ -555,14 +632,16 @@ var app = {
     $('#home').fadeOut(function () {
       $('body').fadeIn().css('background', `url('../resources/img/ach_background.jpg')`);
       if (game.img.background) {
-        ipcRenderer.invoke('fetch-icon', game.img.background, game.steamappid || game.appid).then((localPath) => {
-          if (game.system === 'uplay' || game.img?.overlay === true) {
-            let gradient = `linear-gradient(to bottom right, rgba(0, 47, 75, .8), rgba(35, 54, 78, 0.9))`;
-            $('body').fadeIn().attr('style', `background: ${gradient}, url('${localPath}')`);
-          } else {
-            $('body').fadeIn().css('background', `url('${localPath}')`);
-          }
-        });
+        ipcRenderer
+          .invoke('fetch-icon', game.img.background, game.steamappid || game.appid, game.steamappid ? 'steam' : normalizeSource(game.source))
+          .then((localPath) => {
+            if (game.system === 'uplay' || game.img?.overlay === true) {
+              let gradient = `linear-gradient(to bottom right, rgba(0, 47, 75, .8), rgba(35, 54, 78, 0.9))`;
+              $('body').fadeIn().attr('style', `background: ${gradient}, url('${localPath}')`);
+            } else {
+              $('body').fadeIn().css('background', `url('${localPath}')`);
+            }
+          });
       }
 
       if (game.system) {
@@ -574,9 +653,11 @@ var app = {
       if (game.img.icon) {
         const iconEl = $('#achievement .wrapper > .header .title .icon');
         iconEl.css('background', `url('${pathToFileURL(path.join(appPath, 'resources/img/loading.gif')).href}')`);
-        ipcRenderer.invoke('fetch-icon', game.img.icon, game.steamappid || game.appid).then((localPath) => {
-          if (localPath) iconEl.css('background', `url('${localPath}')`);
-        });
+        ipcRenderer
+          .invoke('fetch-icon', game.img.icon, game.steamappid || game.appid, game.steamappid ? 'steam' : normalizeSource(game.source))
+          .then((localPath) => {
+            if (localPath) iconEl.css('background', `url('${localPath}')`);
+          });
       }
 
       $('#achievement .wrapper > .header .title span').text(game.name);
@@ -730,7 +811,12 @@ var app = {
           if (imageCache.has(hash)) {
             localPathPromise = imageCache.get(hash);
           } else {
-            localPathPromise = ipcRenderer.invoke('fetch-icon', hash, game.steamappid || game.appid);
+            localPathPromise = ipcRenderer.invoke(
+              'fetch-icon',
+              hash,
+              game.steamappid || game.appid,
+              game.steamappid ? 'steam' : normalizeSource(game.source)
+            );
             imageCache.set(hash, localPathPromise);
           }
         }
@@ -808,7 +894,7 @@ var app = {
         $('.achievement .stats .community').show();
         getGlobalStat(
           game.source === 'epic' && game.steamappid ? game.steamappid : self.data('appid'),
-          game.source === 'epic' ? (game.steamappid ? 'steam' : 'epic') : 'steam'
+          game.source === 'epic' ? (game.steamappid ? 'steam' : 'epic') : normalizeSource(game.source)
         );
       }
 
@@ -906,7 +992,10 @@ var app = {
       app.onStart();
 
       remote.app.on('second-instance', (event, argv, cwd) => {
-        // ignore, focus on achievement if one is unlocked via toast?
+        app.args = getArgs(argv);
+        if (app.args.appid && app.args.name) {
+          achievementUnlocked(app.args.appid, { name: app.args.name });
+        }
       });
     } catch (err) {
       debug.log(err);
@@ -916,12 +1005,12 @@ var app = {
 })(window.jQuery, window, document);
 
 function getArgs(argv) {
-  if (argv[1]) {
-    if (argv[1].includes('ach:')) {
-      argv[1] = argv[1].replace('ach:', '');
-      argv = args_split(argv[1]);
+  for (let arg of argv) {
+    if (arg && arg.includes('ach:')) {
+      let ar = arg.replace('ach:', '');
+      let a = args_split(ar);
+      return args(a);
     }
   }
-
-  return args(argv);
+  return args([]);
 }

@@ -3,6 +3,7 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const { exec } = require('child_process');
 const request = require('request-zero');
 const regedit = require('regodit');
 const WQL = require('wql-process-monitor');
@@ -11,8 +12,11 @@ const EventEmitter = require('emittery');
 const tasklist = require('win-tasklist');
 const Timer = require('./timer.js');
 const TimeTrack = require('./track.js');
-const { findByReadingContentOfKnownConfigfilesIn } = require('./steam_appid_find.js');
+const steam = require('./steam_appid_find.js');
+const gog = require('./gog_appid_find.js');
+const epic = require('./epic_appid_find.js');
 const { loadSteamData } = require('../steam.js');
+const { loadGogData } = require('../gog.js');
 
 const debug = new (require('@xan105/log'))({
   console: true,
@@ -23,6 +27,7 @@ const appdataPath = process.env['APPDATA'];
 const blacklist = require('./filter.json');
 let gameIndex;
 let savedConfigs;
+let nowPlaying = [];
 
 const systemTempDir = os.tmpdir() || process.env['TEMP'] || process.env['TMP'];
 
@@ -44,6 +49,23 @@ const filter = {
     file: blacklist.mute,
   },
 };
+
+function getArgsFromCmdline(cmdline) {
+  if (!cmdline) return '';
+
+  let args;
+
+  // If path is quoted
+  if (cmdline.startsWith('"')) {
+    const end = cmdline.indexOf('"', 1);
+    args = cmdline.slice(end + 1).trim();
+  } else {
+    // Unquoted path
+    args = cmdline.split(/\s+/).slice(1).join(' ');
+  }
+
+  return args;
+}
 
 function getCommandLine(pid) {
   return new Promise((resolve, reject) => {
@@ -79,10 +101,69 @@ async function getParentProcess(pid) {
   }
 }
 
+function gameStarted(game, emitter) {
+  if (!nowPlaying.includes(game)) {
+    //Only one instance allowed
+
+    const playing = Object.assign(game, {
+      pid: game.pid,
+      timer: new Timer(),
+    });
+    debug.log(`game started: ${JSON.stringify(playing)}`);
+
+    nowPlaying.push(playing);
+  } else {
+    debug.warn('Only one game instance allowed');
+    return;
+  }
+  emitter.emit('enable-overlay', { appid: game.appid, source: game.source });
+  emitter.emit('notify', [game]);
+}
+
+function gameStopped(game, emitter) {
+  debug.log(`Stop playing ${game.name}(${game.appid})`);
+  game.timer.stop();
+  const playedtime = game.timer.played;
+
+  let index = nowPlaying.indexOf(game);
+  if (index !== -1) {
+    nowPlaying.splice(index, 1);
+  } //remove from nowPlaying
+
+  debug.log('playtime: ' + Math.floor(playedtime / 60) + 'min');
+
+  let humanized;
+  if (playedtime < 60) {
+    humanized = humanizeDuration(playedtime * 1000, { language: 'en', units: ['s'] });
+  } else {
+    humanized = humanizeDuration(playedtime * 1000, { language: 'en', conjunction: ' and ', units: ['h', 'm'], round: true });
+  }
+
+  TimeTrack(game.appid, playedtime).catch((err) => {
+    debug.error(err);
+  });
+  emitter.emit('disable-overlay');
+  emitter.emit('notify', [game, 'You played for ' + humanized]);
+}
+
+async function getGameData(appid, source) {
+  const settings = require('../settings.js');
+  const options = await settings.load(path.join(appdataPath, 'Achievement Watcher/cfg', 'options.ini'));
+  const lang = options.achievement.lang;
+  const apikey = options.steam.apiKey;
+  switch (source) {
+    case 'gog':
+      return await loadGogData(appid);
+    case 'steam':
+    default:
+      return await loadSteamData(appid, lang, apikey, process);
+  }
+}
+
 async function init() {
   const emitter = new EventEmitter();
 
-  let nowPlaying = [];
+  nowPlaying = [];
   gameIndex = await getGameIndex();
   await getSavedConfigs();
 
@@ -103,19 +184,51 @@ async function init() {
     if (!filepath) return;
     if (filter.mute.dir.some((dirpath) => path.parse(filepath).dir.toLowerCase().startsWith(dirpath.toLowerCase()))) return;
     if (filter.mute.file.some((bin) => bin.toLowerCase() === process.toLowerCase())) return;
-
+    debug.log(`Possible game started with .exe: ${process}`);
+    let game;
     const parent = await getParentProcess(pid);
     //if (!parent) return;
-
+    let savedConfig =
+      savedConfigs.find((game) => game.exe.toLowerCase() === filepath.toLowerCase()) ||
+      savedConfigs.find((game) => game.args.toLowerCase().includes(filepath.toLowerCase()));
+    let appid = savedConfig?.appid;
+    let source = savedConfig?.source || 'steam';
+    try {
+      //try steam
+      appid = appid || (await steam.findByReadingContentOfKnownConfigfilesIn(path.parse(filepath).dir));
+    } catch (e) {
+      //try gog
+      debug.log(`Failed to find Steam AppID (${e})`);
+      try {
+        appid = appid || (await gog.findByReadingContentOfKnownConfigfilesIn(path.parse(filepath).dir)); //TODO: this is returning steamid of gogid, change this to proper handle?
+        source = 'gog';
+      } catch (e) {
+        debug.log(`Failed to find GOG AppID (${e})`);
+        try {
+          appid = appid || (await epic.findByReadingContentOfKnownConfigfilesIn(path.parse(filepath).dir)); //TODO: this is returning steamid of epicid, change this to proper handle?
+          source = 'epic';
+        } catch (e) {
+          debug.log(`Failed to find EPIC AppID (${e})`);
+        }
+      }
+    }
+    if (appid) {
+      addtoSavedConfigs(appid, source, filepath, getArgsFromCmdline(await getCommandLine(pid)));
+      emitter.emit('fetch-data', { appid, source }); //hacky solution to fetch game data
+      game = await getGameData(appid?.appid || appid, source);
+      game = { appid: game.appid, source, binary: process, icon: game.img.icon.split('/').pop().split('.')[0], name: game.name, pid };
+      gameStarted(game, emitter);
+      return;
+    }
+    debug.log(`No appid found for process: ${process} [${filepath}]`);
+    //ignore non-matching processes for now
+    return;
     const games = gameIndex.filter(
       (game) =>
         (game.binary.toLowerCase() === process.toLowerCase() ||
           game.binary.replace('.exe', '-Win64-Shipping.exe').toLowerCase() === process.toLowerCase()) && //thanks UE -.-'
         !game.name.toLowerCase().includes('demo')
     );
-
-    let game;
-
     if (games.length === 1) {
       //single hit
       game = games[0];
@@ -162,21 +275,8 @@ async function init() {
       }
     }*/
 
-    if (!nowPlaying.includes(game)) {
-      //Only one instance allowed
-
-      const playing = Object.assign(game, {
-        pid: pid,
-        timer: new Timer(),
-      });
-      debug.log(playing);
-
-      nowPlaying.push(playing);
-    } else {
-      debug.warn('Only one game instance allowed');
-    }
-    emitter.emit('enable-overlay', game.appid);
-    emitter.emit('notify', [game]);
+    gameStarted(game, emitter);
+    return;
   });
 
   processMonitor.on('deletion', ([process, pid]) => {
@@ -188,30 +288,7 @@ async function init() {
     );
 
     if (!game) return;
-
-    debug.log(`Stop playing ${game.name}(${game.appid})`);
-    game.timer.stop();
-    const playedtime = game.timer.played;
-
-    let index = nowPlaying.indexOf(game);
-    if (index !== -1) {
-      nowPlaying.splice(index, 1);
-    } //remove from nowPlaying
-
-    debug.log('playtime: ' + Math.floor(playedtime / 60) + 'min');
-
-    let humanized;
-    if (playedtime < 60) {
-      humanized = humanizeDuration(playedtime * 1000, { language: 'en', units: ['s'] });
-    } else {
-      humanized = humanizeDuration(playedtime * 1000, { language: 'en', conjunction: ' and ', units: ['h', 'm'], round: true });
-    }
-
-    TimeTrack(game.appid, playedtime).catch((err) => {
-      debug.error(err);
-    });
-    emitter.emit('disable-overlay');
-    emitter.emit('notify', [game, 'You played for ' + humanized]);
+    gameStopped(game, emitter);
   });
 
   return emitter;
@@ -268,8 +345,17 @@ async function getGameIndex() {
   return mergeArrayOfObj(gameIndex, userOverride, 'appid');
 }
 
+function addtoSavedConfigs(appid, source, exe, args) {
+  const filepath = path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'exeList.db');
+
+  if (savedConfigs.find((g) => String(g.appid) == String(appid))) return;
+  debug.log(`New game detected! adding .exe config to list: ${exe}(${appid} on ${source})`);
+  savedConfigs.push({ appid, source, exe, args });
+  fs.writeFileSync(filepath, JSON.stringify(savedConfigs, null, 2), 'utf8');
+}
+
 async function getSavedConfigs() {
-  const filepath = path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'exeList.json');
+  const filepath = path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'exeList.db');
 
   try {
     if (fs.existsSync(filepath)) {

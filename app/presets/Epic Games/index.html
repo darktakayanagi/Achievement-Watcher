@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Achievement Notification</title>
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- App reads these -->
+    <meta name="duration" content="5000" />
+    <meta width="410" height="96" />
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      body {
+        transform-origin: center center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dock" id="dock">
+      <div class="icon" id="iconWrap">
+        <img id="icon" alt="" />
+        <i class="seam"></i>
+      </div>
+
+      <div class="clip">
+        <div class="text">
+          <div class="title" id="title"></div>
+          <div class="desc" id="desc"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        window.api?.onNotification?.((payload) => {
+          const dock = document.getElementById('dock');
+          const icon = document.getElementById('icon');
+          const title = document.getElementById('title');
+          const desc = document.getElementById('desc');
+
+          const metaDur = document.querySelector('meta[name="duration"]');
+          const TOTAL = Math.max(1200, Number(metaDur?.content || 5000));
+
+          // timeline
+          const tIconIn = 220;
+          const tSlideL = 320;
+          const tOpen = 260;
+          const tClose = 220;
+          const tSlideBk = 320;
+          const tFadeOut = 140;
+
+          const marginEnd = 40;
+          let hold = (TOTAL - (tIconIn + tSlideL + tOpen + tClose + tSlideBk + tFadeOut + marginEnd)) * 0.9;
+          if (hold < 260) hold = 260;
+
+          const dSlideL = tIconIn;
+
+          const dOpen = dSlideL + 0; // CHANGED
+
+          const dClose = dOpen + tOpen + hold;
+          const dSlideBk = dClose + tClose;
+          const dFade = dSlideBk + tSlideBk;
+
+          const setVar = (k, v) => dock.style.setProperty(k, v + 'ms');
+          setVar('--tIconIn', tIconIn * payload.duration);
+          setVar('--tSlideL', tSlideL * payload.duration);
+          setVar('--tOpen', tOpen * payload.duration);
+          setVar('--tClose', tClose * payload.duration);
+          setVar('--tSlideBk', tSlideBk * payload.duration);
+          setVar('--tFade', tFadeOut * payload.duration);
+
+          setVar('--dSlideL', dSlideL * payload.duration);
+          setVar('--dOpen', dOpen * payload.duration); // CHANGED
+          setVar('--dClose', dClose * payload.duration);
+          setVar('--dSlideBk', dSlideBk * payload.duration);
+          setVar('--dFade', dFade * payload.duration);
+
+          function fileUrl(p) {
+            if (!p) return '';
+            const s = String(p).replace(/\\/g, '/');
+            return s.startsWith('file://') ? s : `file:///${s}`;
+          }
+          const safe = (t) => (t ?? '').toString().trim();
+
+          icon.src = fileUrl(payload?.iconPath || '');
+          title.textContent = safe(payload?.displayName) || 'Achievement';
+          const d = safe(payload?.description);
+          desc.textContent = d;
+          desc.style.display = d ? 'block' : 'none';
+
+          const scale = Math.max(0.01, Number(payload?.scale || 1));
+          document.body.style.transform = `scale(${scale})`;
+          if (scale > 1) document.body.dataset.scaled = 'true';
+          else delete document.body.dataset.scaled;
+
+          dock.classList.remove('active');
+          void dock.offsetWidth;
+          dock.classList.add('active');
+          setTimeout(() => {
+            dock.classList.remove('active');
+            window.api.closeNotificationWindow();
+          }, dFade * payload.duration);
+        });
+      });
+    </script>
+  </body>
+</html>

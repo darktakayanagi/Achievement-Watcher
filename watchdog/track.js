@@ -1,18 +1,21 @@
 'use strict';
 
 const path = require('path');
-const fs = require('@xan105/fs');
+const fs = require('fs');
 
-const cache = path.join(process.env['APPDATA'], 'Achievement Watcher/steam_cache/data');
+const cache = path.join(process.env['APPDATA'], 'Achievement Watcher');
 
-module.exports.load = async (appID) => {
+module.exports.load = (appID, source = 'steam') => {
   try {
-    return JSON.parse(await fs.readFile(path.join(cache, `${appID}.db`), 'utf8'));
+    let cacheRoot = path.join(cache, `${source}_cache`, 'data');
+    return JSON.parse(fs.readFileSync(path.join(cacheRoot, `${appID}.db`), 'utf8'));
   } catch (err) {
     return [];
   }
 };
 
-module.exports.save = async (appID, achievements) => {
-  await fs.writeFile(path.join(cache, `${appID}.db`), JSON.stringify(achievements, null, null), 'utf8');
+module.exports.save = (appID, source = 'steam', achievements) => {
+  let cacheRoot = path.join(cache, `${source}_cache`, 'data');
+  fs.mkdirSync(cacheRoot, { recursive: true });
+  fs.writeFileSync(path.join(cacheRoot, `${appID}.db`), JSON.stringify(achievements), 'utf8');
 };

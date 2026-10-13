@@ -1,0 +1,264 @@
+:root {
+  --bg: rgba(18, 20, 24, 0.94);
+  --stroke: rgba(255, 255, 255, 0.08);
+  --title: #fff;
+  --desc: #cfd6dd;
+
+  --icon: 86px;
+  --panel: 300px;
+  --radius: 4px;
+  --radiusL: 0px;
+  --seam: 2px;
+
+  --glowRGB: 120, 180, 255;
+  --glow: 0.18;
+
+  --tIconIn: 220ms;
+  --tSlideL: 320ms;
+  --tOpen: 260ms;
+  --tClose: 220ms;
+  --tSlideBk: 320ms;
+  --tFade: 140ms;
+
+  --dSlideL: 220ms;
+  --dOpen: 540ms;
+  --dClose: 1800ms;
+  --dSlideBk: 2020ms;
+  --dFade: 2340ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.dock {
+  position: relative;
+  width: calc(var(--icon) + var(--panel));
+  height: var(--icon);
+  pointer-events: none;
+  opacity: 1;
+}
+.dock::before {
+  content: '';
+  position: absolute;
+  inset: -18% -10%;
+  background: radial-gradient(60% 70% at 35% 50%, rgba(var(--glowRGB), 0.28), transparent 70%),
+    radial-gradient(60% 70% at 70% 50%, rgba(var(--glowRGB), 0.16), transparent 72%);
+  filter: blur(18px);
+  opacity: 0;
+  pointer-events: none;
+}
+.dock.active::before {
+  animation: glow-in 220ms ease-out var(--dOpen) forwards, glow-out var(--tFade) ease-in var(--dFade) forwards;
+}
+@keyframes glow-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--glow);
+  }
+}
+@keyframes glow-out {
+  from {
+    opacity: var(--glow);
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ICON */
+.icon {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--icon);
+  height: var(--icon);
+  transform: translateX(-50%) scale(0.96);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0c0f14;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  opacity: 0;
+  z-index: 3;
+  will-change: left, transform, opacity;
+}
+.icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.seam {
+  position: absolute;
+  top: 0;
+  right: -10px;
+  width: calc(var(--seam) + 1px);
+  height: 100%;
+  background: var(--bg);
+  display: block;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.dock.active .icon {
+  animation: icon-pop var(--tIconIn) cubic-bezier(0.17, 0.84, 0.44, 1) forwards,
+    icon-left var(--tSlideL) cubic-bezier(0.22, 0.8, 0.2, 1) var(--dSlideL) forwards,
+    icon-back var(--tSlideBk) cubic-bezier(0.22, 0.8, 0.2, 1) var(--dSlideBk) forwards;
+}
+@keyframes icon-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+@keyframes icon-left {
+  from {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  to {
+    left: 0;
+    transform: translateX(0);
+  }
+}
+@keyframes icon-back {
+  from {
+    left: 0;
+    transform: translateX(0);
+  }
+  to {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.clip {
+  position: absolute;
+  top: 0;
+  left: calc(var(--icon) - var(--seam));
+  height: var(--icon);
+  width: calc(var(--panel) + var(--seam));
+  overflow: hidden;
+  visibility: hidden;
+  z-index: 1;
+}
+
+.text {
+  position: absolute;
+  inset: 0;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-radius: var(--radiusL) var(--radius) var(--radius) var(--radiusL); /* CHANGED */
+  border: 1px solid var(--stroke);
+  border-left: none;
+
+  clip-path: inset(0 100% 0 0 round var(--radius));
+  will-change: clip-path;
+}
+
+.title {
+  color: var(--title);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  opacity: 0;
+  transform: translateY(3px);
+}
+.desc {
+  margin-top: 6px;
+  color: var(--desc);
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translateY(3px);
+}
+
+.dock.active .clip {
+  animation: clip-show 1ms linear var(--dOpen) forwards, clip-hide 1ms linear calc(var(--dClose) + var(--tClose)) forwards;
+}
+.dock.active .text {
+  animation: panel-open var(--tOpen) ease-out var(--dOpen) forwards, panel-close var(--tClose) ease-in var(--dClose) forwards;
+}
+@keyframes clip-show {
+  to {
+    visibility: visible;
+  }
+}
+@keyframes clip-hide {
+  to {
+    visibility: hidden;
+  }
+}
+
+@keyframes panel-open {
+  from {
+    clip-path: inset(0 100% 0 0 round var(--radius));
+  }
+  to {
+    clip-path: inset(0 0 0 0 round var(--radius));
+  }
+}
+@keyframes panel-close {
+  from {
+    clip-path: inset(0 0 0 0 round var(--radius));
+  }
+  to {
+    clip-path: inset(0 100% 0 0 round var(--radius));
+  }
+}
+
+.dock.active .title {
+  animation: text-in 200ms ease-out calc(var(--dOpen) + 120ms) forwards, text-out 160ms ease-in calc(var(--dClose) - 140ms) forwards;
+}
+.dock.active .desc {
+  animation: text-in 200ms ease-out calc(var(--dOpen) + 200ms) forwards, text-out 160ms ease-in calc(var(--dClose) - 100ms) forwards;
+}
+@keyframes text-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes text-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.dock.active {
+  animation: dock-fade var(--tFade) ease-in var(--dFade) forwards;
+}
+@keyframes dock-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+body[data-scaled='true'] .dock {
+  transform-origin: center bottom;
+}

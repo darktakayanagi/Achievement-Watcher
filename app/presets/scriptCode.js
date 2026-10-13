@@ -80,6 +80,43 @@ window.addEventListener('DOMContentLoaded', () => {
       durationMeta.setAttribute('content', scaled.toString());
     }
   });
+  function setDirectionByPosition(ach, posString) {
+    const raw = String(posString || '')
+      .trim()
+      .toLowerCase();
+    // normalize: allow tokens in any order: "left-top", "top_left", "center right", etc.
+    const tokens = raw
+      .replace(/[^a-z]+/g, ' ')
+      .trim()
+      .split(/\s+/);
+    console.log(`Parsing position string: "${raw}", tokens: [${tokens.join(', ')}]`);
+    const hasLeft = tokens.includes('left');
+    const hasRight = tokens.includes('right');
+    const hasTop = tokens.includes('top');
+    const hasBottom = tokens.includes('bottom') || tokens.includes('bot');
+    const hasCenter = tokens.includes('center') || tokens.includes('middle') || tokens.includes('mid');
+
+    const atLeft = hasLeft && !hasRight;
+    const atRight = hasRight && !hasLeft;
+    const atCenter = (!atLeft && !atRight) || hasCenter; // default center when ambiguous
+    const fromTop = hasTop && !hasBottom;
+    const fromBottom = hasBottom && !fromTop; // default bottom when ambiguous
+
+    ach.className = 'ach';
+    ach.classList.add(fromTop ? 'from-top' : 'from-bottom');
+    ach.classList.add(atLeft ? 'at-left' : atRight ? 'at-right' : 'at-center');
+    console.log(`Position parsed: ${atLeft ? 'left' : atRight ? 'right' : 'center'} / ${fromTop ? 'top' : 'bottom'}`);
+    const inner = ach.querySelector('.ach-inner');
+    if (inner) {
+      inner.classList.remove('side-left', 'side-right', 'side-up', 'side-down');
+      inner.style.setProperty('--start-x', atLeft ? '-130%' : atRight ? '130%' : '0');
+      inner.style.setProperty('--start-y', fromTop ? '-130%' : fromBottom ? '130%' : '0');
+      inner.style.setProperty('--overshoot-x', atLeft ? '10%' : atRight ? '-10%' : '0');
+      inner.style.setProperty('--overshoot-y', fromTop ? '10%' : fromBottom ? '-10%' : '0');
+      inner.style.setProperty('--end-x', atLeft ? '-130%' : atRight ? '130%' : '0');
+      inner.style.setProperty('--end-y', fromTop ? '-130%' : fromBottom ? '130%' : '0');
+    }
+  }
 
   window.api.onNotification((notificationData) => {
     if (notificationData && notificationData.displayName && notificationData.iconPath) {
@@ -87,18 +124,20 @@ window.addEventListener('DOMContentLoaded', () => {
       document.querySelector('.detail').textContent = notificationData.description || '';
       document.querySelector('.icon img').src = notificationData.iconPath;
     }
+
     const container = document.querySelector('.ach');
+    container?.style?.setProperty('--scale', String(notificationData.scale || 1));
+    void container.offsetWidth;
+    //setDirectionByPosition(container, notificationData.position);
+    void container.offsetWidth;
     container.classList.add('active');
 
     // Read duration from <meta name="duration">
     const durationMeta = document.querySelector('meta[name="duration"]');
     const duration = parseInt(durationMeta?.content, 10) || 4000;
     setTimeout(() => {
-      window.api.captureScreen(notificationData.game, notificationData.displayName);
-    }, duration * 0.75);
-    setTimeout(() => {
       container.classList.remove('active');
       window.api.closeNotificationWindow();
-    }, duration);
+    }, duration * notificationData.duration);
   });
 });

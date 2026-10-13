@@ -1,0 +1,125 @@
+:root{
+  --bg1:#30302e;
+  --bg2:#1a1a17;
+  --stroke:rgba(255,255,255,.08);
+  --shadow:0 8px 22px rgba(0,0,0,.45);
+  --title:#ffffff;
+  --desc:#e2e6ea;
+
+  /* set by JS */
+  --inMs:300ms;
+  --outMs:300ms;
+  --outDelay:2400ms;
+}
+
+*{ box-sizing:border-box; }
+html,body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.arcade-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg-image, url("./bg.jpg"));
+  background-size: cover;
+  background-position: var(--bg-x, 50%) var(--bg-y, 50%);
+  background-repeat: no-repeat;
+  opacity: var(--bg-opacity, 2);
+  filter: var(--bg-blur, none);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.arcade-card{
+  width:356px; height:100px;
+  display:flex; align-items:center;
+  border:1px solid var(--stroke);
+  border-radius:0px;
+  box-shadow:var(--shadow);
+  opacity: 0;                 /* animated to 1 */
+  pointer-events: none;       /* visual only */
+}
+
+
+
+.arcade-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--bg1), var(--bg2));
+  opacity: 0.7;
+  z-index: 1;
+  pointer-events: none;
+}
+/* transform pivot matches edge */
+.arcade-card.from-bottom { transform-origin: center bottom; }
+.arcade-card.from-top    { transform-origin: center top; }
+
+/* Attach direction-specific animations only on .active */
+.arcade-card.active.from-bottom{
+  animation:
+    slideInUp var(--inMs) ease-out forwards,
+    slideOutDown var(--outMs) ease-in var(--outDelay) forwards;
+}
+.arcade-card.active.from-top{
+  animation:
+    slideInDown var(--inMs) ease-out forwards,
+    slideOutUp var(--outMs) ease-in var(--outDelay) forwards;
+}
+
+/* Keyframes for both directions */
+@keyframes slideInUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes slideOutDown {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+@keyframes slideInDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+@keyframes slideOutUp {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(-100%); opacity: 0; }
+}
+
+/* --- Content --- */
+.ani_icon{
+  width:68px; height:68px;
+  border-radius:8px;
+  background:#000;
+  margin-left:16px; margin-right:16px;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+    position: relative;
+  z-index: 2;
+}
+.ani_icon img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+
+.text{
+  display:flex; flex-direction:column; gap:2px;
+  color:#fff; min-width:0;
+    position: relative;
+  z-index: 2;
+}
+#title{
+  color:var(--title);
+  font-weight:700;
+  font-size:14px; line-height:18px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#desc{
+  color:var(--desc);
+  font-size:12px; line-height:16px;
+  opacity:.95;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* nicer pivot when scaled (optional) */
+body[data-scaled="true"] .arcade-card.from-bottom { transform-origin: center bottom; }
+body[data-scaled="true"] .arcade-card.from-top    { transform-origin: center top; }

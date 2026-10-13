@@ -24,12 +24,22 @@
     "vivaldi.exe",
     "taskhostw.exe",
     "UnityCrashHandler64.exe",
+    "UnityCrashHandler32.exe",
     "dxwebsetup.exe",
     "QuickSFV.exe",
     "achievement watcher.exe",
     "generate_emu_config.exe",
     "ui32.exe",
-    "crs-handler.exe"
+    "crs-handler.exe",
+    "crashpad_handler.exe",
+    "steamclient_loader.exe",
+    "wallpaper64.exe",
+    "UniverseLANServer64.exe",
+    "UniverseLANServer.exe",
+    "Downloader.exe",
+    "Steam.exe",
+    "unins000.exe",
+    "Achievements.exe"
   ],
   "mute": [
     "nw.exe",

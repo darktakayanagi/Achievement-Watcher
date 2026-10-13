@@ -19,6 +19,7 @@ async function findByReadingContentOfKnownConfigfilesIn(dirPath) {
     'ColdClientLoader.ini', //Goldberg experimental
     'SmartSteamEmu.ini',
     'ColdAPI.ini',
+    'tenoke.ini',
   ];
 
   const list = await glob(
@@ -38,7 +39,8 @@ async function findByReadingContentOfKnownConfigfilesIn(dirPath) {
 
         //Node14: use ?.
         //Nb: order of if test is ~somewhat~ important
-        if (data.SmartSteamEmu) appid = data.SmartSteamEmu.AppId;
+        if (data.TENOKE) appid = data.TENOKE.id.split('#')[0].trim();
+        else if (data.SmartSteamEmu) appid = data.SmartSteamEmu.AppId;
         else if (data.Steam) appid = data.Steam.AppId;
         else if (data.Settings) appid = data.Settings.AppId || data.Settings.AppID;
         else if (data.GameSettings) appid = data.GameSettings.AppId;

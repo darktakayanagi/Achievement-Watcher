@@ -13,10 +13,22 @@ module.exports.loadSteamData = async (appID, lang, key, binary = null) => {
   }
 
   const cache = path.join(process.env['APPDATA'], 'Achievement Watcher/steam_cache/schema', lang);
-
+  function waitForFile(filePath, intervalMs = 100) {
+    return new Promise((resolve) => {
+      const timer = setInterval(() => {
+        if (fs.existsSync(filePath)) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, intervalMs);
+    });
+  }
   try {
     let filePath = path.join(`${cache}`, `${appID}.db`);
     let result;
+
+    //hacky solution (AW is currently fetching data, lets wait for it to finish and read from cache)
+    await waitForFile(filePath);
 
     if (fs.existsSync(filePath)) {
       result = JSON.parse(fs.readFileSync(filePath));

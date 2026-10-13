@@ -47,7 +47,7 @@ async function discover(source, steamAccFilter) {
         scanned = await userDir.scan(dir.path);
         if (scanned.length > 0) {
           data = data.concat(scanned);
-          debug.log('-> Steam emu data added');
+          debug.log(`-> ${scanned[0].source && scanned[0].source == 'gog' ? 'GOG' : 'Steam'} emu data added`);
         } else {
           additionalSearch.push(dir.path);
           debug.log('-> will be scanned for appid folder(s)');
@@ -154,14 +154,26 @@ module.exports.getGameFromCache = async (appid, source, option) => {
   return result;
 };
 
+/**
+ *
+ * @param {Object} info
+ * @param {string|number} info.appid - game appid
+ * @param {string} info.source
+ * @param {Object} info.game - game data
+ * @param {string} lang - english/french/etc
+ */
 module.exports.saveGameToCache = async (info, lang) => {
+  let cfg = info.game;
+  cfg.lang = lang;
+  cfg.appid = info.appid;
   switch (info.source) {
+    case 'gog':
+      gog.saveGameToCache(cfg);
+      break;
     case 'steam':
     default:
-      let cfg = info.game;
-      cfg.lang = lang;
-      cfg.appid = info.appid;
       steam.saveGameToCache(cfg);
+      break;
   }
 };
 
@@ -197,6 +209,8 @@ module.exports.getSavedAchievementsForAppid = async (option, requestedAppid, cac
       game = await uplay.getGameData(appid.appid, option.achievement.lang);
     } else if (appid.source === 'epic') {
       game = await epic.getGameData({ appID: appid.appid, steamappid: appid.steamappid, lang: option.achievement.lang });
+    } else if (appid.source === 'gog') {
+      game = await gog.getGameData({ appID: appid.appid, useToken: option.gog.useToken });
     } else {
       game = await steam.getGameData({
         appID: appid.appid,

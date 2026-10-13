@@ -8,6 +8,7 @@ const glob = require('fast-glob');
 const fs = require('fs');
 const listDrive = require(path.join(appPath, 'util/listDrive.js'));
 const { readRegistryStringAndExpand } = require('../util/reg');
+const { findAppIDinFolder } = require('./gog.js');
 
 let file;
 
@@ -270,12 +271,54 @@ module.exports.scan = async (dir) => {
         }
       }
     } else if (file === 'tenoke.ini') {
+      function findExeOrFolder(startPath) {
+        let currentDir = fs.statSync(startPath).isDirectory() ? path.resolve(startPath) : path.dirname(path.resolve(startPath));
+
+        while (true) {
+          let entries;
+          try {
+            entries = fs.readdirSync(currentDir);
+          } catch (e) {
+            break; // permission error or unreadable dir
+          }
+
+          // Check for .exe files
+          const hasExe = entries.some((name) => name.toLowerCase().endsWith('.exe'));
+
+          // Check for "xx" folder
+          const hasXX = entries.some((name) => {
+            try {
+              return fs.statSync(path.join(currentDir, name)).isDirectory() && name.toLowerCase() === 'SteamData'.toLowerCase();
+            } catch {
+              return false;
+            }
+          });
+
+          if (hasExe || hasXX) {
+            return currentDir;
+          }
+
+          // Move one directory up
+          const parent = path.dirname(currentDir);
+          if (parent === currentDir) break; // reached root
+          currentDir = parent;
+        }
+
+        return null;
+      }
+      const exeOrFolderPath = findExeOrFolder(dir);
       result.push({
         appid: info.TENOKE.id.split('#')[0].trim(),
-        data: { type: 'file', path: path.join(dir, 'SteamData') },
+        data: { type: 'file', path: path.join(exeOrFolderPath || dir, 'SteamData') },
       });
     } else if (file === 'UniverseLAN.ini') {
-      result.push({ appid: info.GameSettings.AppID, data: { type: 'file', path: path.join(dir, 'UniverseLANData') } });
+      let appid = findAppIDinFolder(dir);
+      if (appid)
+        result.push({
+          appid,
+          source: 'gog',
+          data: { type: 'file', path: path.join(dir, 'UniverseLANData') },
+        });
     }
   } catch (err) {
     /*Do nothing*/

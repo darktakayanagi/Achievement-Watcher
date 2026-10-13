@@ -229,17 +229,16 @@ main {
   margin-bottom: 6px;
   text-align: center;
   height: 18px;
-  display: none;          /* hide title in small footer */
+  display: none; /* hide title in small footer */
   font-weight: bold;
   font-size: 12px;
   margin-bottom: 2px;
   text-align: center;
 }
 
-
 .loading .progressBar {
   position: relative;
-  width: 75%;       /* 50% of footer */
+  width: 75%; /* 50% of footer */
   min-width: 250px;
   height: 8px;
   background: #15202d;
@@ -251,7 +250,7 @@ main {
 }
 
 .loading .progressBar .meter {
-  width: 0%;        /* updated by JS */
+  width: 0%; /* updated by JS */
   height: 100%;
   background: linear-gradient(to right, #4969af, #375db3);
   border-radius: inherit;
@@ -269,7 +268,7 @@ main {
   transform: translate(-50%, -50%);
   font-size: 10px;
   color: #dedede;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   z-index: 2;
   pointer-events: none;
 }
@@ -287,6 +286,7 @@ main {
 #game-list > ul {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+  grid-auto-flow: row dense;
   justify-items: center;
 }
 
@@ -1024,6 +1024,31 @@ main {
   font-size: 14px;
 }
 
+.section-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-content {
+  max-height: 1000px; /* large enough to fit content */
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.section-content.collapsed {
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+
+.toggle-arrow {
+  transition: transform 0.3s ease;
+}
+
+.toggle-arrow.collapsed {
+  transform: rotate(-90deg);
+}
+
 #settings,
 #game-config {
   display: none;
@@ -1520,6 +1545,16 @@ main {
 }
 #options-notify .info {
   font-size: 14px;
+}
+
+.info {
+  max-height: 300px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.info.collapsed {
+  max-height: 0;
 }
 
 #settings .content[data-view='folder'] > .controls .info p {

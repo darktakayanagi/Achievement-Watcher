@@ -1,6 +1,11 @@
 appId: io.github.xan105.achievement.watcher
 productName: 'Achievement Watcher'
 
+protocols:
+  - name: Achievement Watcher Protocol
+    schemes:
+      - ach
+
 publish:
   provider: github
   owner: darktakayanagi
@@ -52,6 +57,9 @@ extraFiles:
   - from: ../obs
     to: ./obs
 
+  - from: ./resources/icon
+    to: .
+
   - from: ./media
     to: resources/userData/Media
 
@@ -64,10 +72,10 @@ extraFiles:
   - from: ./view
     to: resources/userData/view
 
-  - from: ../obs/config/obs-studio/basic/profiles
+  - from: ../obs/profiles
     to: resources/userData/obs
 
-  - from: ../obs/config/obs-studio/basic/scenes
+  - from: ../obs/scenes
     to: resources/userData/obs
     filter:
       - '!**.json.bak'

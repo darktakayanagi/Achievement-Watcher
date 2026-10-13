@@ -8,6 +8,8 @@ const ffs = require('@xan105/fs');
 const langDir = path.join(appPath, 'locale/lang');
 const steamLanguages = require(path.join(appPath, 'locale/steam.json'));
 
+let templateCache;
+
 module.exports.load = async (lang = 'english') => {
   try {
     if (!steamLanguages.some((language) => language.api === lang)) lang = 'english';
@@ -32,6 +34,7 @@ module.exports.load = async (lang = 'english') => {
     let locale = steamLanguages.find((language) => language.api === lang).webapi;
 
     if (template) {
+      templateCache = template;
       translateUI(lang, locale, template);
     } else {
       throw 'Unexpected Error';
@@ -56,6 +59,7 @@ function translateUI(lang, locale, template) {
 
   $('html').attr('lang', `${locale.toLowerCase()}`);
 
+  document.querySelector('title-bar').shadowRoot.querySelector('.status-text').textContent = clear(template.status.checking);
   selector = $('#game-list');
   selector.find('.loading .title').text(clear(template.loading));
   selector.find('.isEmpty span').text(clear(template.emptyList));
@@ -98,6 +102,10 @@ function translateUI(lang, locale, template) {
   selector.find("li:nth-child(6) .right select option[value='false']").text(clear(template.settings.common.disable));
   selector.find('li:nth-child(7) .left span').text(clear(template.settings.overlay.hotkey.name));
   selector.find('li:nth-child(7) .help').text(clear(template.settings.overlay.hotkey.description));
+  selector.find('li:nth-child(8) .left span').text(clear(template.settings.general.tray.name));
+  selector.find("li:nth-child(8) .right select option[value='true']").text(clear(template.settings.common.enable));
+  selector.find("li:nth-child(8) .right select option[value='false']").text(clear(template.settings.common.disable));
+  selector.find('li:nth-child(8) .help').text(clear(template.settings.general.tray.description));
   selector = $('#options-notify-common');
   selector.prev('.title').find('span').text(clear(template.settings.notification.title.common));
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.notification.option.notification.name));
@@ -116,6 +124,16 @@ function translateUI(lang, locale, template) {
   selector.find("li:nth-child(4) .right select option[value='true']").text(clear(template.settings.common.enable));
   selector.find("li:nth-child(4) .right select option[value='false']").text(clear(template.settings.common.disable));
   selector.find('li:nth-child(4) .help').text(clear(template.settings.notification.option.playtime.description));
+  selector = $('#options-notify-watchdog');
+  selector.prev('.title').find('span').text(clear(template.settings.notification.title.watchdog));
+  selector.find('li:nth-child(1) .left span').text(clear(template.settings.watchdog.startup.name));
+  selector.find("li:nth-child(1) .right select option[value='true']").text(clear(template.settings.common.enable));
+  selector.find("li:nth-child(1) .right select option[value='false']").text(clear(template.settings.common.disable));
+  selector.find('li:nth-child(1) .help').text(clear(template.settings.watchdog.startup.description));
+  selector.find('li:nth-child(2) .left span').text(clear(template.settings.watchdog.kill.name));
+  selector.find("li:nth-child(2) .right select option[value='true']").text(clear(template.settings.common.enable));
+  selector.find("li:nth-child(2) .right select option[value='false']").text(clear(template.settings.common.disable));
+  selector.find('li:nth-child(2) .help').text(clear(template.settings.watchdog.kill.description));
   selector = $('#options-notify-chromium');
   selector.prev().prev('.title').find('span').text(clear(template.settings.notification.title.chromium));
   selector.find('li:nth-child(1) .left span').text(clear(template.settings.overlay.position));
@@ -217,10 +235,16 @@ function translateUI(lang, locale, template) {
   selector.find("li:nth-child(5) .right select option[value='true']").text(clear(template.settings.common.enable));
   selector.find("li:nth-child(5) .right select option[value='false']").text(clear(template.settings.common.disable));
   selector.find('li:nth-child(5) .help').text(clear(template.settings.source.lumaPlay.description));
-  selector.find('li:nth-child(6) .left span').text(clear(template.settings.source.importCache.name));
   selector.find("li:nth-child(6) .right select option[value='true']").text(clear(template.settings.common.enable));
   selector.find("li:nth-child(6) .right select option[value='false']").text(clear(template.settings.common.disable));
-  selector.find('li:nth-child(6) .help').text(clear(template.settings.source.importCache.description));
+  selector.find('li:nth-child(6) .help').text(clear(template.settings.source.gog.description));
+  selector.find("li:nth-child(7) .right select option[value='true']").text(clear(template.settings.common.enable));
+  selector.find("li:nth-child(7) .right select option[value='false']").text(clear(template.settings.common.disable));
+  selector.find('li:nth-child(7) .help').text(clear(template.settings.source.epic.description));
+  selector.find('li:nth-child(8) .left span').text(clear(template.settings.source.importCache.name));
+  selector.find("li:nth-child(8) .right select option[value='true']").text(clear(template.settings.common.enable));
+  selector.find("li:nth-child(8) .right select option[value='false']").text(clear(template.settings.common.disable));
+  selector.find('li:nth-child(8) .help').text(clear(template.settings.source.importCache.description));
   $("#settings .content[data-view='advanced'] > ul:first-of-type > li:first-child").text(clear(template.settings.advanced.blacklistTitle));
   $('#blacklist_reset span').text(clear(template.settings.advanced.blacklistButton));
   $('#blacklist_reset ~ div').text(clear(template.settings.advanced.blacklistInfo));
@@ -253,3 +277,7 @@ function clear(str) {
     return str.replace(/<\/?[^>]+>/gi, '');
   }
 }
+
+module.exports.getTextFor = () => {
+  return templateCache;
+};

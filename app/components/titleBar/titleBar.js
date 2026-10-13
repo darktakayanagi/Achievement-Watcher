@@ -10,7 +10,7 @@ const template = `
     <link rel="stylesheet" href="../resources/css/titlebar.css" type="text/css" />
 
     <div class="sf-indicator">
-    <ul id="watchdog-status" class="sf-indicator"><span class="status-dot status-orange"></span><span class="status-text">Checking watchdog status...</span> <span id="start-watchdog"></span></ul>
+    <ul id="watchdog-status" class="sf-indicator"><span class="status-dot status-orange"></span><span class="status-text">...</span> <span id="start-watchdog"></span></ul>
     </div>
     <ul>
       <li id="btn-close"><i class="fas fa-times"></i></li>

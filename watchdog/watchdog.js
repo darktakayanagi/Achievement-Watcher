@@ -27,6 +27,8 @@ const request = require('request-zero');
 const settings = require('./settings.js');
 const monitor = require('./monitor.js');
 const steam = require('./steam.js');
+const gog = require('./gog.js');
+const epic = require('./epic.js');
 const track = require('./track.js');
 const playtimeMonitor = require('./playtime/monitor.js');
 const notify = require('./notification/toaster.js');
@@ -44,6 +46,7 @@ const cfg_file = {
 
 const appRoot = path.join(__dirname, '../');
 
+let pingServer;
 let isDev = process.env.NODE_ENV === 'development';
 let iohookRunning = false;
 let runningAppid;
@@ -52,48 +55,77 @@ let overlayHotkey;
 let runningGames = [];
 
 function parseOverlayHotkey(hotkey) {
-  overlayHotkey = hotkey
+  return hotkey
     .split('+')
     .map((part) => part.trim().toLowerCase())
     .join(' + ');
 }
 
 function RegisterOverlayHotkey(hotkey) {
-  parseOverlayHotkey(hotkey);
+  const newHotkey = parseOverlayHotkey(hotkey);
+  if (typeof newHotkey !== 'string' || newHotkey.trim().length === 0) {
+    debug.error('Invalid hotkey:' + hotkey);
+    return;
+  }
   debug.log('Registering Overlay hotkey...');
-  if (iohookRunning) return;
+  if (iohookRunning && overlayHotkey && newHotkey === overlayHotkey) return;
+  if (overlayHotkey) hotkeys.remove({ hotkeys: overlayHotkey });
   hotkeys.on({
-    hotkeys: overlayHotkey,
+    hotkeys: newHotkey,
     matchAllModifiers: true,
     callback: function () {
       if (runningAppid) {
-        SpawnOverlayNotification([`--wintype=overlay`, `--appid=${runningAppid}`, `--description=${overlayOpened ? 'close' : 'open'}`]);
+        debug.log('Overlay hotkey pressed, ' + (overlayOpened ? 'closing' : 'opening') + 'overlay');
+        SpawnNotification([`--wintype=overlay`, `--appid=${runningAppid}`, `--description=${overlayOpened ? 'close' : 'open'}`]);
         overlayOpened = !overlayOpened;
+      } else {
+        debug.log('Overlay hotkey pressed, no game is running; ignoring.');
       }
     },
   });
   iohookRunning = true;
+  overlayHotkey = newHotkey;
 }
 
-function SpawnOverlayNotification(args) {
-  debug.log('Spawning achievement notification...');
+function SpawnNotification(args) {
+  const wintypeArg = args.find((arg) => arg.startsWith('--wintype='));
+  const wintype = wintypeArg ? wintypeArg.split('=')[1] : 'unknown';
+  debug.log(
+    wintype == 'data' ? `Fetching data for ${args.find((arg) => arg.startsWith('--appid=')).split('=')[1]}` : `Spawning ${wintype} notification...`
+  );
   if (isDev) {
-    const electronPath = require(path.join(appRoot, '../app/node_modules/electron')); // assumes 'electron' is installed in node_modules
+    const electronPath = require(path.join(appRoot, 'app/node_modules/electron'));
     spawn(electronPath, ['.', ...args], {
-      cwd: path.join(appRoot, '../app'),
+      cwd: path.join(appRoot, 'app'),
       detached: true,
       stdio: 'ignore',
     }).unref();
   } else {
-    const execPath = path.join(appRoot, 'Achievement Watcher.exe'); // adjust for build path
+    const execPath = path.join(appRoot, 'Achievement Watcher.exe');
     spawn(execPath, args, {
       detached: true,
       stdio: ['ignore', process.stdout, process.stderr],
     }).unref();
-    debug.log(execPath);
   }
 }
-module.exports = { SpawnOverlayNotification };
+module.exports = { SpawnNotification };
+
+function startAWtoTray() {
+  if (isDev) {
+    const electronPath = require(path.join(appRoot, 'app/node_modules/electron'));
+    spawn(electronPath, ['.', ...['--wintype=tray']], {
+      cwd: path.join(appRoot, 'app'),
+      detached: true,
+      stdio: 'ignore',
+    }).unref();
+  } else {
+    const execPath = path.join(appRoot, 'Achievement Watcher.exe');
+    spawn(execPath, ['--wintype=tray'], {
+      detached: true,
+      stdio: ['ignore', process.stdout, process.stderr],
+    }).unref();
+  }
+}
 
 var app = {
   isRecording: false,
@@ -103,19 +135,21 @@ var app = {
   luma_keys: [],
   tick: 0,
   toastID: 'Microsoft.XboxApp_8wekyb3d8bbwe!Microsoft.XboxApp',
-  start: async function () {
+  start: async function (restarting = false) {
     try {
       let self = this;
-      self.cache = [];
+      if (!restarting) self.cache = [];
 
-      debug.log('Achievement Watchdog starting ...');
+      debug.log(`Achievement Watchdog ${restarting ? 're' : ''}starting ...`);
       const net = require('net');
       const PIPE_NAME = '\\\\.\\pipe\\AchievementWatchdogPipe';
 
-      const server = net.createServer(() => {});
-      server.listen(PIPE_NAME, () => {
-        console.log('Watchdog process running, pipe open');
-      });
+      if (!pingServer) {
+        pingServer = net.createServer(() => {});
+        pingServer.listen(PIPE_NAME, () => {
+          console.log('Watchdog process running, pipe open');
+        });
+      }
       processPriority
         .set('high priority')
         .then(() => {
@@ -129,11 +163,13 @@ var app = {
       self.options = await settings.load(cfg_file.option);
       debug.log(self.options);
 
+      if (self.options?.general?.closeToTray) startAWtoTray();
+
       RegisterOverlayHotkey(self.options.overlay.hotkey);
-      enableObs(self.options.souvenir_video.video != '0');
+      await enableObs(self.options.souvenir_video.video != '0');
 
       try {
-        startObs(true).then(async () => {
+        startObs(!restarting).then(async () => {
           await setRecordPath(userShellFolder['myvideo']);
           await setRecordResolution();
         });
@@ -141,7 +177,7 @@ var app = {
         debug.log(err);
       }
       if (isWinRTAvailable() === true && self.options.notification_transport.winRT === true) debug.log('[Toast] will use WinRT');
-      else debug.warn('[Toast] will use PowerShell');
+      else if (self.options.notification_transport.toast) debug.warn('[Toast] will use PowerShell');
 
       getStartApps
         .has({ id: 'GamingOverlay' })
@@ -155,21 +191,20 @@ var app = {
           } else if (hasXboxOverlay === true) {
             self.toastID = 'Microsoft.XboxGamingOverlay_8wekyb3d8bbwe!App';
           }
-
-          debug.log(`[Toast] will use appid: "${self.toastID}"`);
+          if (self.options.notification_transport.toast) debug.log(`[Toast] will use appid: "${self.toastID}"`);
         })
         .then(() => {
           return getStartApps.isValidAUMID(self.toastID);
         })
         .then((res) => {
           if (!res) {
-            debug.warn('[Toast] which is not a valid AUMID !');
+            if (self.options.notification_transport.toast) debug.warn('[Toast] which is not a valid AUMID !');
             if (!self.options.notification_advanced.iconPrefetch) {
               self.options.notification_advanced.iconPrefetch = true;
               debug.warn('[Toast] Forcing iconPrefetch to true so you will have achievement icon');
             }
           } else {
-            debug.log('[Toast] which is a valid AUMID');
+            if (self.options.notification_transport.toast) debug.log('[Toast] which is a valid AUMID');
           }
         })
         .catch(() => {});
@@ -180,7 +215,7 @@ var app = {
             debug.log('option file change detected -> reloading');
             self.watcher.forEach((watcher) => watcher.close());
             self.stop_lumaPlay();
-            self.start();
+            self.start(true);
           }
         });
       } catch (err) {
@@ -199,6 +234,7 @@ var app = {
         }
       }
       self.watch_lumaPlay();
+      debug.log('Waiting for achievements...');
     } catch (err) {
       debug.error(err);
       instance.unlock();
@@ -220,12 +256,13 @@ var app = {
         let filePath = path.parse(name);
         if (!options.file.some((file) => file == filePath.base)) return;
 
-        debug.log('achievement file change detected');
+        debug.log(`achievement file change detected: ${filePath.dir}`);
 
-        if (moment().diff(moment(self.tick)) <= self.options.notification_advanced.tick) throw 'Spamming protection is enabled > SKIPPING';
+        if (moment().diff(moment(self.tick)) <= Number(self.options.notification_advanced.tick)) throw 'Spamming protection is enabled > SKIPPING';
         self.tick = moment().valueOf();
 
         let appID;
+        let source = 'steam';
         try {
           appID = options.appid
             ? options.appid
@@ -234,13 +271,17 @@ var app = {
           throw "Unable to find game's appID";
         }
 
-        if (dir.includes('NemirtingasGalaxyEmu')) {
-          appID = await self.steamAppIdForGogId(appID);
+        if (
+          dir.toLowerCase().includes(String('NemirtingasGalaxyEmu').toLowerCase()) ||
+          dir.toLowerCase().includes(String('UniverseLAN').toLowerCase())
+        ) {
+          source = 'gog';
         }
+        if (dir.includes('NemirtingasEpicEmu')) source = 'epic';
 
-        let game = runningGames.find((g) => String(g.appid) === appID) || (await self.load(appID));
+        let game = runningGames.find((g) => String(g.appid) === appID) || (await self.load(appID, source));
         if (game.achievement === undefined) {
-          let g = await self.load(appID);
+          let g = await self.load(appID, source);
           game.achievement = g.achievement;
         }
 
@@ -249,28 +290,30 @@ var app = {
         if (options.disableCheckIfProcessIsRunning === true) {
           isRunning = true;
         } else if (self.options.notification_advanced.checkIfProcessIsRunning) {
-          if (await isFullscreenAppRunning()) {
-            isRunning = true;
-            debug.log('Fullscreen application detected on primary display. Assuming process is running');
-          } else if (game.binary) {
-            isRunning = await tasklist.isProcessRunning(game.binary).catch((err) => {
-              debug.error(err);
-              debug.warn('Assuming process is NOT running');
-              return false;
-            });
-
-            if (!isRunning) {
-              debug.log("Trying with '-Win64-Shipping' (Unreal Engine Game) ...");
-              isRunning = await tasklist.isProcessRunning(game.binary.replace('.exe', '-Win64-Shipping.exe')).catch((err) => {
+          isRunning = runningGames.find((g) => String(g.appid) === appID);
+          if (!isRunning)
+            if (await isFullscreenAppRunning()) {
+              isRunning = true;
+              debug.log('Fullscreen application detected on primary display. Assuming process is running');
+            } else if (game.binary) {
+              isRunning = await tasklist.isProcessRunning(game.binary).catch((err) => {
                 debug.error(err);
                 debug.warn('Assuming process is NOT running');
                 return false;
               });
+
+              if (!isRunning) {
+                debug.log("Trying with '-Win64-Shipping' (Unreal Engine Game) ...");
+                isRunning = await tasklist.isProcessRunning(game.binary.replace('.exe', '-Win64-Shipping.exe')).catch((err) => {
+                  debug.error(err);
+                  debug.warn('Assuming process is NOT running');
+                  return false;
+                });
+              }
+            } else {
+              debug.warn(`Warning! Missing "${game.name}" (${game.appid}) binary name > Overriding user choice to check if process is running`);
+              isRunning = true;
             }
-          } else {
-            debug.warn(`Warning! Missing "${game.name}" (${game.appid}) binary name > Overriding user choice to check if process is running`);
-            isRunning = true;
-          }
         } else {
           isRunning = true;
         }
@@ -279,7 +322,7 @@ var app = {
           let achievements = await monitor.parse(name);
 
           if (achievements.length > 0) {
-            let cache = await track.load(appID);
+            let cache = track.load(appID, source);
 
             let j = 0;
             for (let i in achievements) {
@@ -397,6 +440,7 @@ var app = {
                       await notify(
                         {
                           appid: game.appid,
+                          source: game.source,
                           gameDisplayName: game.name,
                           achievementName: ach.name,
                           achievementDisplayName: ach.displayName,
@@ -445,7 +489,7 @@ var app = {
                 }
               }
             }
-            await track.save(appID, achievements);
+            track.save(appID, source, achievements);
           }
         } else {
           debug.warn(`game's process "${game.binary}" not running`);
@@ -533,11 +577,11 @@ var app = {
     }
     this.luma_keys = [];
   },
-  load: async function (appID) {
+  load: async function (appID, source) {
     try {
       let self = this;
 
-      debug.log(`loading steam schema for ${appID}`);
+      debug.log(`loading schema for ${appID} (${source})`);
 
       let search = self.cache.find((game) => game.appid == appID);
       let game;
@@ -546,46 +590,22 @@ var app = {
         game = search;
         debug.log('from memory cache');
       } else {
-        game = await steam.loadSteamData(appID, self.options.achievement.lang, self.options.steam.apiKey);
+        switch (source) {
+          case 'steam':
+            game = await steam.loadSteamData(appID, self.options.achievement.lang, self.options.steam.apiKey);
+            break;
+          case 'gog':
+            game = await gog.loadGogData(appID);
+            break;
+          case 'epic':
+            game = await epic.loadEpicData(appID);
+            break;
+        }
         self.cache.push(game);
         debug.log('from file cache or remote');
       }
 
       return game;
-    } catch (err) {
-      throw err;
-    }
-  },
-  steamAppIdForGogId: async function (appID) {
-    try {
-      const cacheFile = path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'gog.db');
-      let cache = [];
-
-      if (fs.existsSync(cacheFile)) {
-        cache = JSON.parse(fs.readFileSync(cacheFile, { encoding: 'utf8' }));
-      }
-      let cached = cache.find((g) => g.gogid === game.appid);
-      if (cached) return cached.steamid;
-      const url = `https://gamesdb.gog.com/platforms/gog/external_releases/${appID}`;
-      let gameinfo = await request.getJson(url);
-      if (gameinfo) {
-        let steamid = gameinfo.game.releases.find((r) => r.platform_id === 'steam').external_id;
-        if (steamid) return steamid;
-      }
-    } catch (err) {
-      throw err;
-    }
-  },
-  steamAppIdForEpicId: async function (appID) {
-    try {
-      const cacheFile = path.join(process.env['APPDATA'], 'Achievement Watcher', 'steam_cache', 'epic.db');
-      let cache = [];
-
-      if (fs.existsSync(cacheFile)) {
-        cache = JSON.parse(fs.readFileSync(filePath, { encoding: 'utf8' }));
-      }
-      let cached = cache.find((g) => g.gogid === game.appid);
-      if (cached) return cached.steamid;
     } catch (err) {
       throw err;
     }
@@ -614,11 +634,17 @@ var app = {
 
         monitor.on('disable-overlay', () => {
           runningAppid = null;
-          SpawnOverlayNotification([`--wintype=overlay`, `--appid=0`]);
+          SpawnNotification([`--wintype=overlay`, `--appid=0`]);
         });
 
-        monitor.on('enable-overlay', (appid) => {
+        monitor.on('enable-overlay', ({ appid, source }) => {
           runningAppid = appid;
+          SpawnNotification([`--wintype=overlay`, `--appid=${appid}`, `--source=${source || 'steam'}`, `--description=fetch`]);
+        });
+
+        monitor.on('fetch-data', ({ appid, source }) => {
+          runningAppid = appid;
+          SpawnNotification([`--wintype=data`, `--appid=${appid}`, `--source=${source}`]);
         });
 
         monitor.on('notify', async ([game, time]) => {
@@ -635,6 +661,7 @@ var app = {
             notify(
               {
                 appid: game.appid,
+                source: game.source,
                 gameDisplayName: game.name,
                 achievementDisplayName: game.name,
                 achievementDescription: time ? time : 'Tracking playtime',

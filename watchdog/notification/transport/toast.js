@@ -1,7 +1,7 @@
 'use strict';
 
 const toast = require('powertoast');
-const player = require('sound-play');
+const player = require('node-wav-player');
 const path = require('path');
 
 module.exports = async (message, options) => {
@@ -52,7 +52,7 @@ module.exports = async (message, options) => {
     };
   }
   if (soundFile)
-    player.play(soundFile).catch((e) => {
+    player.play({ path: soundFile }).catch((e) => {
       const debug = require('../../util/log.js');
       debug.log(`Error playing toast sound:  ${e}`);
     });

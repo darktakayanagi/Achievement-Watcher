@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Achievement Notification</title>
+    <meta name="duration" content="4000" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body {
+        transform-origin: center center;
+      }
+    </style>
+  </head>
+  <body>
+    <meta width="450" height="150" />
+    <div class="ach">
+      <div class="icon">
+        <img src="" alt="Icon" />
+      </div>
+      <div class="text_wrap">
+        <p class="title"><span class="title-inner"></span></p>
+        <span class="detail"></span>
+      </div>
+      <div class="ring-container">
+        <div class="ringring"></div>
+        <div class="circle">
+          <img src="./psicon.png" height="9" />
+        </div>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        window.api.onNotification((notificationData) => {
+          const titleEl = document.querySelector('.title');
+          const titleInnerEl = document.querySelector('.title-inner');
+          const detailEl = document.querySelector('.detail');
+          if (notificationData && notificationData.displayName && notificationData.description && notificationData.iconPath) {
+            titleInnerEl.textContent = notificationData.displayName;
+            detailEl.textContent = notificationData.description;
+            document.querySelector('.icon img').src = notificationData.iconPath;
+            const scale = Math.max(0.01, parseFloat(notificationData.scale || 1));
+            const container = document.querySelector('.ach');
+            container?.style?.setProperty('--scale', String(scale));
+          }
+          const container = document.querySelector('.ach');
+          void container.offsetWidth;
+          container.classList.add('active');
+
+          // Title marquee only if overflows
+          requestAnimationFrame(() => {
+            try {
+              titleInnerEl.getAnimations().forEach((a) => a.cancel());
+            } catch {}
+            titleEl.classList.remove('marquee');
+            void titleEl.offsetWidth;
+            const overflowX = (titleInnerEl.scrollWidth || 0) - (titleEl.clientWidth || 0);
+            if (overflowX > 0) {
+              const px = Math.ceil(overflowX + 24);
+              titleEl.classList.add('marquee');
+              titleInnerEl.animate([{ transform: 'translateX(0)' }, { transform: `translateX(-${px}px)` }], {
+                duration: Math.max(3000, Math.round(px / 50) * 1000),
+                delay: 1200,
+                easing: 'linear',
+                fill: 'both',
+              });
+            }
+          });
+          const total = Math.max(0, Number(document.querySelector('meta[name="duration"]')?.content || 6000) * notificationData.duration);
+          setTimeout(() => {
+            container.classList.remove('active');
+            window.api.closeNotificationWindow();
+          }, total);
+        });
+      });
+    </script>
+  </body>
+</html>

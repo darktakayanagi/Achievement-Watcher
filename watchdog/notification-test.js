@@ -9,7 +9,7 @@ const regedit = require('regodit');
 const gntp = require('./notification/transport/gntp.js');
 const settings = require('./settings.js');
 const xinput = require('xinput-ffi');
-const player = require('sound-play');
+const player = require('node-wav-player');
 
 const cfg_file = path.join(process.env['APPDATA'], 'Achievement Watcher/cfg', 'options.ini');
 
@@ -69,7 +69,7 @@ module.exports.toast = async () => {
 
     try {
       if (soundFile)
-        player.play(soundFile).catch((e) => {
+        player.play({ path: soundFile }).catch((e) => {
           const debug = require('./util/log.js');
           debug.log(`Error playing toast sound:  ${e}`);
         });

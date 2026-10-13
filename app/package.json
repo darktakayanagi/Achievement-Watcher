@@ -2,7 +2,7 @@
   "private": true,
   "name": "Achievement-Watcher",
   "description": "A sexy achievement file parser with real-time notification.",
-  "version": "2.0.26",
+  "version": "2.0.32",
   "main": "./electron/init.js",
   "engines": {
     "node": "~14.0.0"
@@ -12,7 +12,7 @@
     "native-rebuild": "call .\\node_modules\\.bin\\electron-rebuild.cmd",
     "clean": "npm prune --production",
     "prepare": "patch-package",
-    "prepare:watchdog": "cd ../watchdog && npm prune --production",
+    "prepare:watchdog": "cd ../watchdog && npm prune --production && npm install",
     "build": "npm run prepare:watchdog && electron-builder --config electron-builder.yml --publish never"
   },
   "author": "Anthony Beaumont",
@@ -32,6 +32,7 @@
     "accountpicture-ms-extractor": "^1.2.4",
     "adm-zip": "0.4.13",
     "argv-split": "^2.0.1",
+    "canvas": "^3.2.0",
     "chrome-launcher": "^0.15.1",
     "crc": "^3.8.0",
     "deepmerge": "^4.2.2",
@@ -46,6 +47,7 @@
     "moment": "^2.29.1",
     "node-fetch": "^2.7.0",
     "node-html-parser": "^4.0.0",
+    "node-wav-player": "^1.0.0",
     "normalize-path": "^3.0.0",
     "puppeteer": "^19.11.1",
     "puppeteer-extra": "^3.3.4",

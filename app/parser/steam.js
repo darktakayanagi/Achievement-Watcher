@@ -21,7 +21,31 @@ const SteamUser = require('steam-user');
 const client = new SteamUser();
 client.logOn({ anonymous: true });
 
-let listReady = true;
+class Mutex {
+  constructor() {
+    this._locked = false;
+    this._waiting = [];
+  }
+
+  lock() {
+    const unlock = () => {
+      const next = this._waiting.shift();
+      if (next) {
+        next(unlock);
+      } else {
+        this._locked = false;
+      }
+    };
+
+    if (this._locked) {
+      return new Promise((resolve) => this._waiting.push(resolve));
+    } else {
+      this._locked = true;
+      return Promise.resolve(unlock);
+    }
+  }
+}
+let listReady = new Mutex();
 let steamUsersList;
 let appidListMap = new Map();
 let debug;
@@ -218,7 +242,7 @@ module.exports.getGameData = async (cfg) => {
       }
       needSaving = true;
     }
-    needSaving = needSaving || GetMissingData(result);
+    needSaving = needSaving || (await GetMissingData(result));
     if (needSaving) {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(result, null, 2));
@@ -452,7 +476,7 @@ const getSteamUsersList = (module.exports.getSteamUsersList = async () => {
 
 async function getSteamUserStatsFromSRV(user, appID) {
   const { ipcRenderer } = require('electron');
-  const result = ipcRenderer.sendSync('get-steam-data', { appid: appID, user, type: 'user' });
+  const result = await ipcRenderer.invoke('get-steam-data', { appid: appID, user, type: 'user' });
   return result;
 }
 
@@ -470,16 +494,16 @@ async function getSteamUserStats(cfg) {
 async function getSteamDataFromSRV(appID, lang) {
   const langObj = steamLanguages.find((language) => language.api === lang);
   const { ipcRenderer } = require('electron');
-  const result = ipcRenderer.sendSync('get-steam-data', {
+  const result = await ipcRenderer.invoke('get-steam-data', {
     appid: appID,
     type: 'common',
     lang: langObj,
   });
-  const achievements = result.isGame ? ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'steamhunters' }).achievements : [];
+  const achievements = result.isGame ? (await ipcRenderer.invoke('get-steam-data', { appid: appID, type: 'steamhunters' })).achievements : [];
   const translatedAchievements =
     !result.isGame || lang == 'english' || !result.translated
       ? []
-      : ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'steamcommunity', lang: langObj }).achievements;
+      : (await ipcRenderer.invoke('get-steam-data', { appid: appID, type: 'steamcommunity', lang: langObj })).achievements;
 
   for (let ach of translatedAchievements) {
     let match = achievements.find((a) => a.icon === ach.img || a.icongray === ach.img);
@@ -611,30 +635,44 @@ async function findInAppList(appID) {
   const cache = path.join(cacheRoot, 'steam_cache/schema');
   const filepath = path.join(cache, 'appList.json');
 
-  while (!listReady) await new Promise((r) => setTimeout(r, 50));
-  if (appidListMap.size === 0) {
-    listReady = false;
-    let list;
-    if (fs.existsSync(filepath))
-      if (Date.now() - fs.statSync(filepath).mtimeMS < 60 * 60 * 1000 * 24 * 3) {
-        list = JSON.parse(fs.readdirSync(filepath, 'utf-8'));
+  let listLock = await listReady.lock();
+  try {
+    if (appidListMap.size === 0) {
+      let list;
+      if (fs.existsSync(filepath)) {
+        if (Date.now() - fs.statSync(filepath).mtimeMs < 60 * 60 * 1000 * 24) {
+          list = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+        }
       }
-    if (!list) {
-      const url = 'http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json';
-      const data = await request.getJson(url, { timeout: 40000 });
-      list = data.applist.apps;
-      fs.mkdirSync(path.dirname(filepath), { recursive: true });
-      fs.writeFileSync(filepath, JSON.stringify(list, null, 2));
+      if (!list) {
+        try {
+          const url = 'https://raw.githubusercontent.com/denuvosanctuary/steamapplist/refs/heads/main/data/apps.json';
+          const data = await request.getJson(url, { timeout: 40000 });
+          list = data;
+          fs.mkdirSync(path.dirname(filepath), { recursive: true });
+          fs.writeFileSync(filepath, JSON.stringify(list, null, 2));
+        } catch (e) {
+          if (!fs.existsSync(filepath)) throw 'ERR_GET_APPLIST';
+          list = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+        }
+      }
+      appidListMap = new Map(list.map((a) => [a.appid, a]));
     }
-    appidListMap = new Map(list.map((a) => [a.appid, a]));
-  }
-  listReady = true;
+    listLock();
 
-  const app = appidListMap.get(appID);
-  if (app) return app.name;
-  const name = ipcRenderer.sendSync('get-steam-data', { appid: appID, type: 'name' });
-  return name;
-  throw 'ERR_NAME_NOT_FOUND';
+    const app = appidListMap.get(appID);
+    if (app) return app.name;
+    const name = await ipcRenderer.invoke('get-steam-data', { appid: appID, type: 'name' });
+    if (name) return name;
+    throw 'ERR_NAME_NOT_FOUND';
+  } catch (e) {
+    listLock();
+    if (e.code == 503 || e.code == 404 || e == 'ERR_GET_APPLIST') {
+      const name = await ipcRenderer.invoke('get-steam-data', { appid: appID, type: 'name' });
+      if (name) return name;
+    }
+    throw 'ERR_NAME_NOT_FOUND';
+  }
 }
 
 const cdnProviders = [
@@ -666,14 +704,14 @@ async function findWorkingLink(appid, basename) {
   return null;
 }
 
-function GetMissingData(data) {
+async function GetMissingData(data) {
   let updated = false;
   try {
     const { ipcRenderer } = require('electron');
     let updatedImgs, updatedDesc;
     if (Object.values(data.img).some((im) => !im)) {
       updated = true;
-      updatedImgs = ipcRenderer.sendSync('get-steam-data', { appid: data.appid, type: 'common' });
+      updatedImgs = await ipcRenderer.invoke('get-steam-data', { appid: data.appid, type: 'common' });
       data.img.header = data.img.header || updatedImgs.header || 'header';
       data.img.background = data.img.background || updatedImgs.background || 'page_bg_generated_v6b';
       data.img.portrait = data.img.portrait || updatedImgs.portrait || 'portrait';
@@ -682,12 +720,13 @@ function GetMissingData(data) {
     if (data.achievement.list.some((ac) => !ac.description || ac.description === '')) {
       updated = true;
       const missing = data.achievement.list.filter((ac) => !ac.description || ac.description === '');
-      updatedDesc = ipcRenderer.sendSync('get-steam-data', { appid: data.appid, type: 'steamhunters' });
+      updatedDesc = await ipcRenderer.invoke('get-steam-data', { appid: data.appid, type: 'steamhunters' });
       const map = new Map(updatedDesc.achievements.map((item) => [item.name, item.description]));
       for (let ach of data.achievement.list) {
         if (!ach.description && (map.has(ach.displayName) || map.has(ach.name))) ach.description = map.get(ach.displayName) || map.get(ach.name);
       }
     }
+    //TODO: check for missing achievement icons
   } catch (e) {
     debug.log(e);
   }
@@ -697,8 +736,12 @@ function GetMissingData(data) {
 const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
   let validUrl;
   let filePath;
+  url =
+    url ||
+    'https://steamdb.info/static/img/appicon.svg' ||
+    'https://raw.githubusercontent.com/Roschach96/achievement-viewer/refs/heads/main/default_icon.png';
   try {
-    const cache = path.join(process.env['APPDATA'], `Achievement Watcher/steam_cache/icon/${appID}`);
+    const cache = path.join(cacheRoot, `steam_cache/icon/${appID}`);
     let filename = path.parse(url).base;
     filePath = path.join(cache, filename);
     if (fs.existsSync(filePath)) return filePath;
@@ -712,8 +755,8 @@ const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
     let isValid = false;
     validUrl = url;
     try {
-      new URL(url);
-      const res = await request(url, { method: 'HEAD' });
+      new URL(validUrl);
+      const res = await request(validUrl, { method: 'HEAD' });
       isValid = res.code !== 200 ? false : true;
       isValid = isValid ? res.headers['content-type'] : isValid;
     } catch (e) {}
@@ -754,6 +797,7 @@ const fetchIcon = (module.exports.fetchIcon = async (url, appID) => {
         return validUrl;
       }
     }
-    return url;
+    if (url) return url;
+    return 'https://raw.githubusercontent.com/Roschach96/achievement-viewer/refs/heads/main/default_icon.png';
   }
 });

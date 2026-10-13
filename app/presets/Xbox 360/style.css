@@ -4,11 +4,16 @@
   box-sizing: border-box;
 }
 
+:root {
+  --duration: 1;
+  --scale: 1;
+}
+
 .ach {
   opacity: 1;
   margin: 0 auto;
   font-size: 350%;
-  width: 10em;
+  width: auto;
   color: #efefef;
   background: #3d4142;
   border-radius: 10em;
@@ -51,18 +56,56 @@
   text-shadow: 0 2px 0 #000;
   position: absolute;
   top: 0.5em;
-  left: 4em;
+  left: 3em;
   font-size: 50%;
   line-height: 1;
-  width: 400%;
+  width: 80%;
+  overflow: hidden;
 }
 .ach .title {
   margin: 0;
+  text-align: center;
+  overflow: hidden;
+  overflow: hidden;
+  display: block;
+  line-height: 1.2;
+  max-height: 1.2em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ach .title.marquee {
+  max-height: none;
+}
+.title-inner {
+  display: inline-block;
+  will-change: transform;
+  padding-right: 24px;
+  white-space: nowrap;
 }
 .ach .detail {
   margin: 0;
   text-align: center;
   font-size: 70%;
+  overflow: hidden;
+  display: block;
+  max-height: 2.4em;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ach .detail .detail-inner {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ach .detail.marquee {
+  max-height: none;
+}
+.ach .detail.marquee .detail-inner {
+  display: inline-block;
+  white-space: nowrap;
+  padding-right: 24px;
+  will-change: transform;
 }
 
 /* Generated content */
@@ -91,7 +134,7 @@
 /* Bars */
 .ach .icon img:before,
 .ach .icon img:after {
-  width: 150%;
+  width: 100%;
   height: 0.125em;
   background: #000;
   border-radius: 0.05em;
@@ -273,29 +316,29 @@
     opacity: 1;
   }
 }
-.ach {
-  -webkit-animation: open-close-banner 5s 1;
-  -moz-animation: open-close-banner 5s 1;
-  animation: open-close-banner 5s 1;
+.ach.active {
+  -webkit-animation: open-close-banner calc(5s * var(--duration, 1)) 1;
+  -moz-animation: open-close-banner calc(5s * var(--duration, 1)) 1;
+  animation: open-close-banner calc(5s * var(--duration, 1)) 1;
   -webkit-animation-fill-mode: forwards;
   -moz-animation-fill-mode: forwards;
   animation-fill-mode: forwards;
 }
 
-.ach .icon {
+.ach.active .icon {
   /* Make border-top pulse. */
-  -webkit-animation: border-top-pulse 1.25s 2;
-  -moz-animation: border-top-pulse 1.25s 2;
-  animation: border-top-pulse 1.25s 2;
+  -webkit-animation: border-top-pulse calc(1.25s * var(--duration, 1)) 2;
+  -moz-animation: border-top-pulse calc(1.25s * var(--duration, 1)) 2;
+  animation: border-top-pulse calc(1.25s * var(--duration, 1)) 2;
   -webkit-animation-fill-mode: forwards;
   -moz-animation-fill-mode: forwards;
   animation-fill-mode: forwards;
 }
 /* fade-in-text */
-.ach .text_wrap {
-  -webkit-animation: fade-in-text 0.5s 1;
-  -moz-animation: fade-in-text 0.5s 1;
-  animation: fade-in-text 0.5s 1;
+.ach.active .text_wrap {
+  -webkit-animation: fade-in-text calc(0.5s * var(--duration)) 1;
+  -moz-animation: fade-in-text calc(0.5s * var(--duration, 1)) 1;
+  animation: fade-in-text calc(0.5s * var(--duration, 1)) 1;
   -webkit-animation-fill-mode: forwards;
   -moz-animation-fill-mode: forwards;
   animation-fill-mode: forwards;

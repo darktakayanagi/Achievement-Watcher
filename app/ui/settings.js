@@ -31,6 +31,10 @@ let holdingKeysCheck = null;
       $('#settings').show();
       $('#settings .box').fadeIn();
 
+      if ($(`#closeToTray option[value="${app.config.general.closeToTray}"]`).length > 0) {
+        $(`#closeToTray`).val(app.config.general.closeToTray.toString()).change();
+      }
+
       for (let option in app.config.achievement) {
         if ($(`#option_${option} option[value="${app.config.achievement[option]}"]`).length > 0) {
           $(`#option_${option}`).val(app.config.achievement[option].toString()).change();
@@ -48,6 +52,12 @@ let holdingKeysCheck = null;
       for (let option in app.config.overlay) {
         if ($(`#option_overlay_${option} option[value="${app.config.overlay[option]}"]`).length > 0) {
           $(`#option_overlay_${option}`).val(app.config.overlay[option].toString()).change();
+        }
+      }
+
+      for (let option in app.config.watchdog) {
+        if ($(`#option_watchdog_${option} option[value="${app.config.watchdog[option]}"]`).length > 0) {
+          $(`#option_watchdog_${option}`).val(app.config.watchdog[option].toString()).change();
         }
       }
 
@@ -207,11 +217,12 @@ let holdingKeysCheck = null;
       app.config.overlay.hotkey = $('#hotkey').text();
       app.config.overlay.scale = $('#scaleSlider').val();
       app.config.overlay.duration = $('#durationSlider').val();
+      app.config.general.closeToTray = $('#closeToTray').val();
       $('#options-ui .right')
         .children('select')
         .each(function (index) {
           try {
-            if ($(this)[0].id !== '' && $(this).val() !== '') {
+            if ($(this)[0].id !== '' && $(this).val() !== '' && $(this)[0].id.includes('option_')) {
               app.config.achievement[$(this)[0].id.replace('option_', '')] =
                 $(this).val() === 'true' ? true : $(this).val() === 'false' ? false : $(this).val();
             }
@@ -291,6 +302,20 @@ let holdingKeysCheck = null;
           }
         });
 
+      $('#options-notify-watchdog .right')
+        .children('select')
+        .each(function (index) {
+          try {
+            if ($(this)[0].id !== '' && $(this).val() !== '') {
+              app.config.watchdog[$(this)[0].id.replace('option_watchdog_', '')] =
+                $(this).val() === 'true' ? true : $(this).val() === 'false' ? false : $(this).val();
+            }
+          } catch (e) {
+            console.warn(e);
+            debug.log('error while reading watchdog settings ui');
+          }
+        });
+
       $('#options-souvenir-screenshot .right')
         .children('select')
         .each(function (index) {
@@ -361,6 +386,7 @@ let holdingKeysCheck = null;
           settings
             .save(app.config)
             .then(() => {
+              ipcRenderer.invoke('reset-notification-window');
               $('#settings .box').fadeOut(() => {
                 self.css('pointer-events', 'initial');
                 resetUI();

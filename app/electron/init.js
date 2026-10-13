@@ -1,13 +1,20 @@
 'use strict';
 
-const path = require('path');
 const { app } = require('electron');
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
+const path = require('path');
+const { Tray, Menu, nativeImage } = require('electron');
 app.setName('Achievement Watcher');
 app.setPath('userData', path.join(app.getPath('appData'), app.getName()));
+app.setAsDefaultProtocolClient('ach');
 const CHROMIUM_REVISION = '1108766';
 const { BrowserWindow, dialog, session, shell, ipcMain, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.autoDownload = true;
 const remote = require('@electron/remote/main');
 remote.initialize();
 const minimist = require('minimist');
@@ -16,8 +23,10 @@ const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const semver = require('semver');
 const ipc = require(path.join(__dirname, 'ipc.js'));
-const player = require('sound-play');
-const { fetchIcon } = require(path.join(__dirname, '../parser/steam.js'));
+const player = require('node-wav-player');
+const { fetchIcon: fetchIconSteam } = require(path.join(__dirname, '../parser/steam.js'));
+const { fetchIcon: fetchIconGog } = require(path.join(__dirname, '../parser/gog.js'));
+const { fetchIcon: fetchIconEpic } = require(path.join(__dirname, '../parser/epic.js'));
 const { pathToFileURL } = require('url');
 const fetch = require('node-fetch');
 const BASE_URL = 'https://www.steamgriddb.com/api/v2';
@@ -31,19 +40,62 @@ function clientLogOn() {
   if (!client) client = new SteamUser();
   if (client.steamID) return Promise.resolve();
   if (clientLoginPromise) return clientLoginPromise;
-  clientLoginPromise = new Promise((resolve) => {
-    client.logOn({ anonymous: true });
-    client.on('loggedOn', () => {
+
+  clientLoginPromise = new Promise((resolve, reject) => {
+    const cleanup = () => {
+      client.removeListener('loggedOn', onLogOn);
+      client.removeListener('error', onError);
+      client.removeListener('disconnected', onError);
       clientLoginPromise = null;
+      debug.log('Steam client logged on');
+    };
+
+    const onLogOn = () => {
+      cleanup();
       resolve();
-    });
+    };
+
+    const onError = (err) => {
+      cleanup();
+      reject(err || new Error('Steam login failed'));
+    };
+
+    client.once('loggedOn', onLogOn);
+    client.once('error', onError);
+    client.once('disconnected', onError);
+
+    client.logOn({ anonymous: true });
   });
+
   return clientLoginPromise;
 }
+class Mutex {
+  constructor() {
+    this._locked = false;
+    this._waiting = [];
+  }
 
+  lock() {
+    const unlock = () => {
+      const next = this._waiting.shift();
+      if (next) {
+        next(unlock);
+      } else {
+        this._locked = false;
+      }
+    };
+
+    if (this._locked) {
+      return new Promise((resolve) => this._waiting.push(resolve));
+    } else {
+      this._locked = true;
+      return Promise.resolve(unlock);
+    }
+  }
+}
 const manifest = require('../package.json');
 const userData = app.getPath('userData');
-let currentlyscraping = { steamcommunity: false, steamhunters: false };
+let currentlyscraping = { steamcommunity: new Mutex(), steamhunters: new Mutex(), steamclient: new Mutex() };
 let settingsJS = null;
 let configJS = null;
 let achievementsJS = null;
@@ -52,6 +104,7 @@ if (manifest.config['disable-gpu']) app.disableHardwareAcceleration();
 if (manifest.config.appid) app.setAppUserModelId(manifest.config.appid);
 manifest.config.debug = process.env.NODE_ENV === 'development' || process.defaultApp || /[\\/]electron/.test(process.execPath);
 
+let tray;
 let puppeteerWindow = {};
 let MainWin = null;
 let progressWindow = null;
@@ -70,280 +123,222 @@ let debug = new (require('@xan105/log'))({
   file: path.join(userData, `logs/renderer.log`),
 });
 
-async function getUserAchievements(appid) {
-  let steamid = 76561198152618007;
-  //TODO: this can be used to get descriptions in other languagues
-  // append to url -> ?l=<languague> - like english/french/etc
-  const url = `https://steamcommunity.com/profiles/${steamid}`;
-  const res = await fetch(url, { redirect: 'manual', headers: { userAgent: 'node-fecth' } });
-  const l = res.headers.get('location');
-  const data = await res.json();
+async function getGogData(request) {
+  const CLIENT_ID = '46899977096215655'; //GOG id, don't change
+  const CLIENT_SECRET = '9d85c43b1482497dbbce61f6e4aa173a433796eeae2ca8c5f6129f2dc4de46d9'; //GOG secret, don't change
 
-  if (!data.playerstats || !data.playerstats.achievements) {
-    throw new Error('No achievements found or stats are private');
+  async function refreshToken(oldToken) {
+    const url =
+      'https://auth.gog.com/token?' +
+      new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'refresh_token',
+        refresh_token: oldToken.refresh_token,
+      });
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to refresh token');
+    const newToken = await res.json();
+
+    newToken.user_id = oldToken.user_id;
+
+    saveToken(newToken);
+    return newToken;
   }
 
-  return data.playerstats.achievements.map((a) => ({
-    apiName: a.apiname,
-    unlocked: a.achieved === 1,
-    name: a.name,
-    description: a.description,
-    unlockTime: a.unlocktime,
-  }));
-}
+  function loadToken() {
+    const aes = require(path.join(__dirname, '../util/aes.js'));
+    try {
+      let encryptedToken = JSON.parse(fs.readFileSync(path.join(userData, 'cfg', 'gog_token'), 'utf8'));
+      return {
+        access_token: aes.decrypt(encryptedToken.access_token),
+        expires_in: encryptedToken.expires_in,
+        refresh_token: aes.decrypt(encryptedToken.refresh_token),
+        scope: '',
+        session_id: aes.decrypt(encryptedToken.session_id),
+        token_type: 'bearer',
+        user_id: aes.decrypt(encryptedToken.user_id),
+      };
+    } catch {
+      return null;
+    }
+  }
 
-const steamUserIds = [
-  '76561198028121353',
-  '76561197979911851',
-  '76561198017975643',
-  '76561197993544755',
-  '76561198355953202',
-  '76561198001237877',
-  '76561198237402290',
-  '76561198152618007',
-  '76561198355625888',
-  '76561198213148949',
-  '76561197969050296',
-  '76561198217186687',
-  '76561198037867621',
-  '76561198094227663',
-  '76561198019712127',
-  '76561197963550511',
-  '76561198134044398',
-  '76561198001678750',
-  '76561197973009892',
-  '76561198044596404',
-  '76561197976597747',
-  '76561197969810632',
-  '76561198095049646',
-  '76561198085065107',
-  '76561198864213876',
-  '76561197962473290',
-  '76561198388522904',
-  '76561198033715344',
-  '76561197995070100',
-  '76561198313790296',
-  '76561198063574735',
-  '76561197996432822',
-  '76561197976968076',
-  '76561198281128349',
-  '76561198154462478',
-  '76561198027233260',
-  '76561198842864763',
-  '76561198010615256',
-  '76561198035900006',
-  '76561198122859224',
-  '76561198235911884',
-  '76561198027214426',
-  '76561197970825215',
-  '76561197968410781',
-  '76561198104323854',
-  '76561198001221571',
-  '76561198256917957',
-  '76561198008181611',
-  '76561198407953371',
-  '76561198062901118',
-  '76561197979667190',
-  '76561197974742349',
-  '76561198077213101',
-  '76561198121398682',
-  '76561198019009765',
-  '76561198119667710',
-  '76561197990233857',
-  '76561199130977924',
-  '76561198096081579',
-  '76561198139084236',
-  '76561197971011821',
-  '76561198063728345',
-  '76561198082995144',
-  '76561197963534359',
-  '76561198118726910',
-  '76561198097945516',
-  '76561198124872187',
-  '76561198077248235',
-  '76561198326510209',
-  '76561198109083829',
-  '76561198808371265',
-  '76561198048373585',
-  '76561198005337430',
-  '76561198045455280',
-  '76561197981111953',
-  '76561197992133229',
-  '76561198152760885',
-  '76561198037809069',
-  '76561198382166453',
-  '76561198093753361',
-  '76561198396723427',
-  '76561199168919006',
-  '76561198006391846',
-  '76561198040421250',
-  '76561197994616562',
-  '76561198017902347',
-  '76561198044387084',
-  '76561198172367910',
-  '76561199353305847',
-  '76561198121336040',
-  '76561197972951657',
-  '76561198251835488',
-  '76561198102767019',
-  '76561198021180815',
-  '76561197976796589',
-  '76561197992548975',
-  '76561198367471798',
-  '76561197965978376',
-  '76561197993312863',
-  '76561198128158703',
-  '76561198015685843',
-  '76561198047438206',
-  '76561197971026489',
-  '76561198252374474',
-  '76561198061393233',
-  '76561199173688191',
-  '76561198008797636',
-  '76561197995008105',
-  '76561197984235967',
-  '76561198417144062',
-  '76561197978640923',
-  '76561198219343843',
-  '76561197982718230',
-  '76561198031837797',
-  '76561198039492467',
-  '76561198020125851',
-  '76561198192399786',
-  '76561198028011423',
-  '76561198318111105',
-  '76561198155124847',
-  '76561198168877244',
-  '76561198105279930',
-  '76561197988664525',
-  '76561198996604130',
-  '76561197969148931',
-  '76561198035552258',
-  '76561198015992850',
-  '76561198050474710',
-  '76561198029503957',
-  '76561198026221141',
-  '76561198025653291',
-  '76561198034213886',
-  '76561198096632451',
-  '76561197972378106',
-  '76561197997477460',
-  '76561198054210948',
-  '76561198111433283',
-  '76561198004332929',
-  '76561198045540632',
-  '76561198043532513',
-  '76561199080934614',
-  '76561197970246998',
-  '76561197986240493',
-  '76561198029532782',
-  '76561198018254158',
-  '76561197973230221',
-  '76561198020746864',
-  '76561198158932704',
-  '76561198086250077',
-  '76561198269242105',
-  '76561198294806446',
-  '76561198031164839',
-  '76561198019555404',
-  '76561198048151962',
-  '76561198003041763',
-  '76561198025391492',
-  '76561197962630138',
-  '76561198072936438',
-  '76561198120120943',
-  '76561197984010356',
-  '76561198042965266',
-  '76561198046642155',
-  '76561198015856631',
-  '76561198124865933',
-  '76561198042781427',
-  '76561198443388781',
-  '76561198426000196',
-  '76561198051725954',
-  '76561197992105918',
-  '76561198172925593',
-  '76561198071709714',
-  '76561197981228012',
-  '76561197981027062',
-  '76561198122276418',
-  '76561198019841907',
-  '76561197985091630',
-  '76561199492215670',
-  '76561198106206019',
-  '76561198090111762',
-  '76561198104561325',
-  '76561197991699268',
-  '76561198072361453',
-  '76561198027066612',
-  '76561198032614383',
-  '76561198844130640',
-  '76561198106145311',
-  '76561198079227501',
-  '76561198093579202',
-  '76561198315929726',
-  '76561198171791210',
-  '76561198264362271',
-  '76561198846208086',
-  '76561197991613008',
-  '76561198026306582',
-  '76561197973701057',
-  '76561198028428529',
-  '76561198427572372',
-  '76561197983517848',
-  '76561198085238363',
-  '76561198070220549',
-  '76561198101049562',
-  '76561197969365800',
-  '76561198413266831',
-  '76561198015514779',
-  '76561198811114019',
-  '76561198165450871',
-  '76561197994575642',
-  '76561198034906703',
-  '76561198119915053',
-  '76561198079896896',
-  '76561198008549198',
-  '76561197988052802',
-  '76561198004532679',
-  '76561198002535276',
-  '76561197970545939',
-  '76561197977920776',
-  '76561198007200913',
-  '76561197984605215',
-  '76561198831075066',
-  '76561197970970678',
-  '76561197982273259',
-  '76561197970307937',
-  '76561198413088851',
-  '76561197970360549',
-  '76561198051740093',
-  '76561197966617426',
-  '76561198356842617',
-  '76561198025111129',
-  '76561197996825541',
-  '76561197967716198',
-  '76561197975329196',
-  '76561197998058239',
-  '76561198027668357',
-  '76561197962850521',
-  '76561198258304011',
-  '76561198098314980',
-  '76561198127957838',
-  '76561198060520130',
-  '76561198035612474',
-  '76561198318547224',
-  '76561198020810038',
-  '76561198080773680',
-  '76561198033967307',
-  '76561198034503074',
-  '76561198150467988',
-  '76561197994153029',
-  '76561198026278913',
-  '76561198217979953',
-  '76561197988445370',
-  '76561198083977059',
-];
+  function saveToken(token) {
+    const aes = require(path.join(__dirname, '../util/aes.js'));
+    let encryptedToken = {
+      access_token: aes.encrypt(token.access_token),
+      expires_in: token.expires_in,
+      refresh_token: aes.encrypt(token.refresh_token),
+      scope: token.scope,
+      session_id: aes.encrypt(token.session_id),
+      token_type: 'bearer',
+      user_id: aes.encrypt(token.user_id),
+    };
+    fs.writeFileSync(path.join(userData, 'cfg', 'gog_token'), JSON.stringify(encryptedToken, null, 2));
+  }
+
+  async function loginAndGetToken() {
+    const REDIRECT_URI = 'https://embed.gog.com/on_login_success?origin=client';
+    const puppeteer = require('puppeteer-extra');
+    const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+    puppeteer.use(StealthPlugin());
+    const ChromeLauncher = require('chrome-launcher');
+    const installedChromePath = ChromeLauncher.Launcher.getInstallations()[0];
+    const chromiumPath = fs.existsSync(installedChromePath) ? installedChromePath : (await ensureChromium()).executablePath;
+    const browser = await puppeteer.launch({
+      headless: false,
+      executablePath: chromiumPath,
+    });
+
+    const authUrl = `https://auth.gog.com/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
+      REDIRECT_URI
+    )}&response_type=code&layout=client2`;
+
+    const page = await browser.newPage();
+
+    console.log('Opening GOG login page. Please log in manually...');
+    await page.goto(authUrl);
+
+    // Wait for redirect to on_login_success and grab the code
+    const loginCode = await new Promise((resolve, reject) => {
+      page.on('framenavigated', (frame) => {
+        const url = frame.url();
+        if (url.startsWith(REDIRECT_URI)) {
+          const code = new URL(url).searchParams.get('code');
+          if (code) resolve(code);
+          else reject(new Error('No login code found in redirect URL.'));
+        }
+      });
+    });
+
+    // Exchange login code for access token
+    const tokenResponse = await fetch(
+      `https://auth.gog.com/token?` +
+        new URLSearchParams({
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          grant_type: 'authorization_code',
+          code: loginCode,
+          redirect_uri: REDIRECT_URI,
+        }),
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      }
+    );
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) throw new Error('Failed to get access token: ' + JSON.stringify(tokenData));
+
+    await browser.close();
+
+    return tokenData; // Contains access_token, refresh_token, expires_in, etc.
+  }
+
+  async function getValidToken() {
+    let token = loadToken();
+
+    if (!token) {
+      // No cached token → open Puppeteer login window
+      token = await loginAndGetToken();
+      saveToken(token);
+      return token;
+    }
+
+    // Try using existing token
+    const test = await fetch('https://users.gog.com/users/info', {
+      headers: { Authorization: 'Bearer ' + token.access_token },
+    });
+
+    if (test.status !== 401) {
+      return token; // token still good
+    }
+
+    // Token expired → try refreshing
+    try {
+      const newToken = await refreshToken(token);
+      return newToken;
+    } catch {
+      console.warn('Refresh failed — need full login again');
+      const freshToken = await loginAndGetToken();
+      saveToken(freshToken);
+      return freshToken;
+    }
+  }
+  const appid = String(request.appid);
+  const type = request.type;
+  const token = await getValidToken();
+  if (type == 'store') {
+    let url2 = `https://api.gog.com/v2/games/${appid}`;
+    let data2 = await (await fetch(url2)).json();
+
+    return data2?._links?.store?.href;
+  }
+  if (type == 'percentage') {
+    try {
+      const res = await fetch(`https://gameplay.gog.com/clients/${appid}/users/${token.user_id}/achievements`, {
+        headers: { Authorization: `Bearer ${token.access_token}` },
+      });
+
+      if (!res.ok) throw new Error(`Failed to fetch achievements: ${res.status}`);
+
+      const data = await res.json();
+
+      return data.items.map((a) => ({
+        name: a.achievement_key,
+        percent: a.rarity,
+      }));
+    } catch (e) {
+      debug.log(e);
+    }
+  }
+  if (type == 'data') {
+    try {
+      const res = await fetch(`https://gameplay.gog.com/clients/${appid}/users/${token.user_id}/achievements`, {
+        headers: { Authorization: `Bearer ${token.access_token}` },
+      });
+
+      if (!res.ok) throw new Error(`Failed to fetch achievements: ${res.status}`);
+
+      const data = await res.json();
+
+      return data.items.map((a) => ({
+        name: a.achievement_key,
+        displayName: a.name,
+        description: a.description,
+        hidden: a.visible ? '0' : '1',
+        default_value: '0',
+        icongray: a.image_url_locked,
+        icon: a.image_url_unlocked,
+      }));
+    } catch (e) {
+      debug.log(e);
+    }
+  }
+  if (type == 'common') {
+    let url = `https://www.gogdb.org/data/products/${appid}/product.json`;
+    let url2 = `https://api.gog.com/v2/games/${appid}`;
+    try {
+      let data1 = await (await fetch(url)).json();
+      let data2 = await (await fetch(url2)).json();
+      const baseImgUrl = 'https://images.gog-statics.com/'; // join with hash
+      stylizeBackground(baseImgUrl + data1.image_background + '.jpg', appid, 'gog');
+      return {
+        name: data1.title,
+        isGame: data1.type?.toLowerCase() === 'game',
+        translated: false,
+        icon: baseImgUrl + (data1.image_icon_square || data1.image_icon) + '.jpg',
+        header: baseImgUrl + data1.image_logo + '.jpg',
+        portrait: baseImgUrl + data1.image_boxart + '.jpg',
+        background: baseImgUrl + data1.image_background + '.jpg',
+      };
+    } catch (e) {
+      debug.log(e);
+    }
+  }
+}
 
 async function getSteamData(request) {
   const appid = request.appid;
@@ -372,110 +367,140 @@ async function getSteamData(request) {
       });
     }
     if (type === 'steamcommunity') {
-      let info = { appid };
-      const url = `https://steamcommunity.com/stats/${appid}/achievements?l=${lang.api}`; //this doesnt give hidden descriptions
-      await scrapeWithPuppeteer(info, { steamcommunity: true, url: url });
-      currentlyscraping.steamcommunity = false;
-      if (info.achievements.every((a) => a.description)) {
+      const communityunlock = await currentlyscraping.steamcommunity.lock();
+      try {
+        let info = { appid };
+        const url = `https://steamcommunity.com/stats/${appid}/achievements?l=${lang.api}`; //this doesnt give hidden descriptions
+        await scrapeWithPuppeteer(info, { steamcommunity: true, url: url });
+
+        if (info.achievements.every((a) => a.description)) {
+          return info;
+        }
+
+        let validXml = false;
+        let xml;
+
+        //instead of looping steamuserids,
+        //lets get users from steamhunters and try those
+
+        await scrapeWithPuppeteer(info, { userlist: true, steamhunters: true, appid });
+        let u = info.users.map((user) => user.steamId);
+
+        for (let id of u) {
+          userid = id;
+          const url = `https://steamcommunity.com/profiles/${userid}/stats/${appid}/?xml=1`; // this for all data
+          const res = await fetch(url);
+          xml = await res.text();
+          validXml = !(xml.startsWith('<!DOCTYPE html') || xml.includes('<html'));
+          if (!validXml) continue;
+
+          const parser = new XMLParser({ ignoreAttributes: false, allowBooleanAttributes: true, cdataPropName: '__cdata' });
+          const data = parser.parse(xml);
+          const achievements = data?.playerstats?.achievements?.achievement || [];
+          const list = achievements.map((a) => {
+            const unlocked = a['@_closed'] === '1';
+            const name = a.name.__cdata;
+            const description = a.description.__cdata;
+            return { name, description, unlocked };
+          });
+          const allgood = list.every((a) => a.description);
+          if (!allgood) continue;
+          const url2 = `https://steamcommunity.com/profiles/${userid}/stats/${appid}?l=${lang.api}`; // this for name and description, match them via icon hash
+          await scrapeWithPuppeteer(info, { steamcommunity: true, url: url2 });
+
+          return info;
+        }
+        // TODO: fallback to steamuserids if noone on steamhunters has 100% the game
         return info;
+      } finally {
+        communityunlock();
       }
-
-      let validXml = false;
-      let xml;
-
-      //instead of looping steamuserids,
-      //lets get users from steamhunters and try those
-
-      await scrapeWithPuppeteer(info, { userlist: true, steamhunters: true, appid });
-      currentlyscraping.steamhunters = false;
-      let u = info.users.map((user) => user.steamId);
-
-      for (let id of u) {
-        userid = id;
-        const url = `https://steamcommunity.com/profiles/${userid}/stats/${appid}/?xml=1`; // this for all data
-        const res = await fetch(url);
-        xml = await res.text();
-        validXml = !(xml.startsWith('<!DOCTYPE html') || xml.includes('<html'));
-        if (!validXml) continue;
-
-        const parser = new XMLParser({ ignoreAttributes: false, allowBooleanAttributes: true, cdataPropName: '__cdata' });
-        const data = parser.parse(xml);
-        const achievements = data?.playerstats?.achievements?.achievement || [];
-        const list = achievements.map((a) => {
-          const unlocked = a['@_closed'] === '1';
-          const name = a.name.__cdata;
-          const description = a.description.__cdata;
-          return { name, description, unlocked };
-        });
-        const allgood = list.every((a) => a.description);
-        if (!allgood) continue;
-        const url2 = `https://steamcommunity.com/profiles/${userid}/stats/${appid}?l=${lang.api}`; // this for name and description, match them via icon hash
-        await scrapeWithPuppeteer(info, { steamcommunity: true, url: url2 });
-        currentlyscraping.steamcommunity = false;
-        return info;
-      }
-      // TODO: fallback to steamuserids if noone on steamhunters has 100% the game
-      return info;
-    }
-
-    if (type === 'data') {
-      let info = { appid };
-      await scrapeWithPuppeteer(info, { steamhunters: true });
-      currentlyscraping.steamhunters = false;
-      while (!info.achievements) {
-        await delay(500);
-      }
-      return info;
     }
     if (type === 'steamhunters') {
-      let info = { appid };
-      await scrapeWithPuppeteer(info, { steamhunters: true });
-      currentlyscraping.steamhunters = false;
-      return info;
+      const huntersunlock = await currentlyscraping.steamhunters.lock();
+      try {
+        let info = { appid };
+        await scrapeWithPuppeteer(info, { steamhunters: true });
+        return info;
+      } finally {
+        huntersunlock();
+      }
     }
-    await clientLogOn();
-    const storeURL = `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en`;
-    const storeRes = await fetch(storeURL);
-    const json = await storeRes.json();
-    const storeData = json[appid] && json[appid].data;
-    const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
-    const appInfo = apps[appid]?.appinfo || apps[0]?.appinfo;
 
-    switch (type) {
-      case 'name':
-        return appInfo?.common?.name;
+    const clientunlock = await currentlyscraping.steamclient.lock();
 
-      case 'header':
-        return (
-          appInfo.common.header_image?.[lang.api] ||
-          appInfo.common.library_assets_full?.library_header?.image[lang.api] ||
-          appInfo.common.header_image.english ||
-          appInfo.common.library_assets_full?.library_header?.image?.english
-        );
-      case 'icon':
-        return appInfo.common.icon;
-      case 'portrait':
-        return (
-          appInfo.common.library_assets_full?.library_capsule?.image[lang] || appInfo.common.library_assets_full?.library_capsule?.image?.english
-        );
-      default:
-      case 'common':
-        return {
-          name: appInfo.common.name,
-          isGame: appInfo?.common?.type?.toLowerCase() === 'game',
-          translated: appInfo?.common?.languages?.[lang.api] || false,
-          icon: appInfo.common.icon,
-          header:
+    try {
+      await clientLogOn();
+      const storeURL = `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en`;
+      const json = await Promise.race([
+        (async () => {
+          const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+            Accept: 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            Referer: `https://store.steampowered.com/app/${appid}/`,
+          };
+          const storeRes = await fetch(storeURL, { method: 'GET', headers, timeout: 10000 });
+          const json = await storeRes.json();
+          return json;
+        })(),
+        (async () => {
+          await startPuppeteer(true, false);
+
+          const page = await puppeteerWindow.context.newPage();
+          await page.setUserAgent(
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+          );
+          await page.goto(storeURL, { waitUntil: 'networkidle2', timeout: 15000 });
+          const jsonText = await page.evaluate(() => document.querySelector('body').innerText);
+          await page.close();
+          const json = JSON.parse(jsonText);
+          return json;
+        })(),
+      ]);
+      const storeData = json[appid] && json[appid].data;
+
+      const { apps, packages, unknownApps, unknownPackages } = await client.getProductInfo([appid], [], false);
+      const appInfo = apps[appid]?.appinfo;
+
+      switch (type) {
+        case 'name':
+          return appInfo?.common?.name || storeData?.name || undefined;
+
+        case 'header':
+          return (
             appInfo.common.header_image?.[lang.api] ||
-            appInfo.common.library_assets_full?.library_header?.image?.[lang.api] ||
-            appInfo.common.header_image?.english ||
-            appInfo.common.library_assets_full?.library_header?.image?.english ||
-            storeData?.header_image,
-          portrait:
-            appInfo.common.library_assets_full?.library_capsule?.image?.[lang.api] ||
-            appInfo.common.library_assets_full?.library_capsule?.image?.english,
-          background: storeData?.background.replace(/(\?|&)t=\d+$/, ''),
-        };
+            appInfo.common.library_assets_full?.library_header?.image[lang.api] ||
+            appInfo.common.header_image.english ||
+            appInfo.common.library_assets_full?.library_header?.image?.english
+          );
+        case 'icon':
+          return appInfo.common.icon;
+        case 'portrait':
+          return (
+            appInfo.common.library_assets_full?.library_capsule?.image[lang] || appInfo.common.library_assets_full?.library_capsule?.image?.english
+          );
+        default:
+        case 'common':
+          return {
+            name: appInfo.common.name,
+            isGame: appInfo?.common?.type?.toLowerCase() === 'game',
+            translated: appInfo?.common?.languages?.[lang.api] || false,
+            icon: appInfo.common.icon,
+            header:
+              appInfo.common.header_image?.[lang.api] ||
+              appInfo.common.library_assets_full?.library_header?.image?.[lang.api] ||
+              appInfo.common.header_image?.english ||
+              appInfo.common.library_assets_full?.library_header?.image?.english ||
+              storeData?.header_image,
+            portrait:
+              appInfo.common.library_assets_full?.library_capsule?.image?.[lang.api] ||
+              appInfo.common.library_assets_full?.library_capsule?.image?.english,
+            background: storeData?.background.replace(/(\?|&)t=\d+$/, ''),
+          };
+      }
+    } finally {
+      clientunlock();
     }
 
     await delay(1000);
@@ -486,8 +511,6 @@ async function getSteamData(request) {
 }
 
 async function closePuppeteer() {
-  currentlyscraping.steamcommunity = false;
-  currentlyscraping.steamhunters = false;
   if (!puppeteerWindow) puppeteerWindow = {};
   if (puppeteerWindow.context) await puppeteerWindow.context.close();
   if (puppeteerWindow.browser) await puppeteerWindow.browser.close();
@@ -510,48 +533,54 @@ async function startEngines() {
 }
 
 async function getCachedData(info) {
+  await startEngines();
   if (!info.source) info.source = 'steam';
-  let g = await achievementsJS.getGameFromCache(info.appid, info.source, configJS);
-  switch (info.source.toLowerCase()) {
-    case 'epic':
-    case 'gog':
-    case 'luma':
-    case 'steam':
-    default:
-      if (g) {
-        info.a = g.achievement.list.find((ac) => ac.name === String(info.ach));
-        info.game = g;
-        info.description = info.a?.displayName;
-        return;
-      }
-      const [data, com] = await Promise.all([
-        getSteamData({ appid: info.appid, type: 'steamhunters' }),
-        getSteamData({ appid: info.appid, type: 'common' }),
-      ]);
-      info.game = com;
-      info.game.achievements = data.achievements;
-
-      await achievementsJS.saveGameToCache(info, configJS.achievement.lang);
-      info.a = info.game.achievements.find((ac) => ac.name === String(info.ach));
-      info.description = info.a?.displayName;
+  let game = await achievementsJS.getGameFromCache(info.appid, info.source, configJS);
+  if (!game) {
+    switch (info.source.toLowerCase()) {
+      case 'epic':
+        break;
+      case 'gog':
+        const c = await getGogData({ appid: info.appid, type: 'common' });
+        const d = await getGogData({ appid: info.appid, type: 'data' });
+        game = c;
+        game.achievement = d;
+        await achievementsJS.saveGameToCache({ appid: info.appid, source: info.source, game }, configJS.achievement.lang);
+        break;
+      case 'luma':
+        break;
+      case 'steam':
+      default:
+        const [data, com] = await Promise.all([
+          getSteamData({ appid: info.appid, type: 'steamhunters' }),
+          getSteamData({ appid: info.appid, type: 'common' }),
+        ]);
+        game = com;
+        game.achievement = data.achievements;
+        await achievementsJS.saveGameToCache({ appid: info.appid, source: info.source, game }, configJS.achievement.lang);
+    }
+    await closePuppeteer();
   }
+  info.game = game;
 }
 
 ipcMain.on('capture-screen', async (event, { image, game, name }) => {
-  function sanitizeName(name) {
-    // Remove invalid characters
-    name = name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
-    // Remove trailing spaces or dots
-    name = name.replace(/[. ]+$/, '');
-    // Trim just in case
-    return name.trim();
+  await captureScreen(game, name, image);
+});
+
+ipcMain.on('close-notification-window', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || win.isDestroyed()) return;
+  if (win.isVisible() && !app.isQuitting) {
+    win.hide();
+    await new Promise((r) => setTimeout(r, 50));
   }
-  if (!configJS.souvenir_screenshot.screenshot || manifest.config.debug) return;
-  const buffer = Buffer.from(image, 'base64');
-  const savePath = path.join(configJS.souvenir_screenshot.custom_dir || app.getPath('pictures'), sanitizeName(game), sanitizeName(name) + '.png');
-  fs.mkdirSync(path.dirname(savePath), { recursive: true });
-  if (!configJS.souvenir_screenshot.overwrite_image && fs.existsSync(savePath)) return;
-  fs.writeFileSync(savePath, buffer);
+  isNotificationShowing = false;
+  if (earnedNotificationQueue.length > 0) {
+    showNotificationWindow(earnedNotificationQueue.shift());
+    return;
+  } else if (configJS.general.closeToTray) return;
+  win.close();
 });
 
 ipcMain.on('close-puppeteer', async (event, arg) => {
@@ -559,9 +588,19 @@ ipcMain.on('close-puppeteer', async (event, arg) => {
   event.returnValue = true;
 });
 
-ipcMain.on('get-steam-data', async (event, arg) => {
+ipcMain.on('get-store-link', async (event, arg) => {
+  if (arg.source == 'gog') event.returnValue = await getGogData({ appid: arg.appid, type: 'store' });
+  event.returnValue = null;
+});
+
+ipcMain.handle('get-steam-data', async (event, arg) => {
   const appid = +arg.appid;
-  event.returnValue = await getSteamData({ appid, type: arg.type, user: arg.user, lang: arg.lang });
+  return await getSteamData({ appid, type: arg.type, user: arg.user, lang: arg.lang });
+});
+
+ipcMain.handle('get-gog-data', async (event, arg) => {
+  const appid = +arg.appid;
+  return await getGogData({ appid, type: arg.type });
 });
 
 ipcMain.on('get-steam-appid-from-title', async (event, arg) => {
@@ -650,9 +689,181 @@ ipcMain.on('get-images-for-game', async (event, arg) => {
 });
 
 ipcMain.on('stylize-background-for-appid', async (event, arg) => {
-  const imageUrl = arg.background;
+  await stylizeBackground(arg.background, arg.appid, arg.source);
+});
+
+ipcMain.on('fetch-source-img', async (event, arg) => {
+  switch (arg) {
+    case 'epic':
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'epic.svg');
+      break;
+    case 'gog':
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'gog.svg');
+      break;
+    case 'RPCS3 Emulator':
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'playstation.svg');
+      break;
+    case 'steam':
+    default:
+      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'steam.svg');
+      break;
+  }
+});
+
+ipcMain.handle('fetch-icon', async (event, url, appid, source = 'steam', asPath = false) => {
+  return await getIcon(url, appid, source, asPath);
+});
+
+ipcMain.handle('reset-notification-window', async (event, arg) => {
+  await initNotificationWindow(true);
+});
+ipcMain.on('notify-test', async (event, arg) => {
+  await showNotificationWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED', source: 'steam' });
+});
+
+ipcMain.on('playtime-test', async (event, arg) => {
+  await createPlaytimeWindow({ appid: 400, description: 'Testing notification', source: 'steam' });
+});
+ipcMain.on('progress-test', async (event, arg) => {
+  await createProgressWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED', description: 'Testing progress', count: '50/100', source: 'steam' });
+});
+
+ipcMain.handle('win-close', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  win.close();
+});
+
+ipcMain.handle('win-minimize', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  win.minimize();
+});
+
+ipcMain.handle('win-maximize', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  win.isMaximized() ? win.unmaximize() : win.maximize();
+});
+
+ipcMain.handle('win-isMinimizable', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win.minimizable;
+});
+
+ipcMain.handle('win-isMaximizable', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win.maximizable;
+});
+
+ipcMain.handle('win-isFrameless', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win.isFrameless;
+});
+
+//Sync
+
+ipcMain.on('win-isDev', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  event.returnValue = win.isDev;
+});
+
+ipcMain.on('achievement-data-ready', () => {
+  progressWindow.showInactive();
+});
+
+ipcMain.handle('get-achievements', async (event, appid) => {
+  return await getSteamData({ appid, type: 'steamhunters' });
+});
+
+ipcMain.handle('start-watchdog', async (event, arg) => {
+  event.sender.send('reset-watchdog-status');
+  startWatchdog();
+});
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function startWatchdog() {
+  const wd = spawn(
+    path.join(manifest.config.debug ? path.join(__dirname, '../../') : path.dirname(process.execPath), 'nw/nw.exe'),
+    ['-config', 'watchdog.json'],
+    {
+      cwd: path.join(manifest.config.debug ? path.join(__dirname, '../../') : path.dirname(process.execPath), 'nw/'),
+      detached: true,
+      stdio: 'ignore',
+      shell: false,
+    }
+  );
+  wd.unref(); // Let it run independently
+}
+
+async function captureScreen(game, name, image) {
+  function sanitizeName(name) {
+    // Remove invalid characters
+    name = name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
+    // Remove trailing spaces or dots
+    name = name.replace(/[. ]+$/, '');
+    // Trim just in case
+    return name.trim();
+  }
+  if (!configJS.souvenir_screenshot.screenshot || manifest.config.debug) return;
+  if (!image) {
+    const { screen, desktopCapturer } = require('electron');
+    const primary = screen.getPrimaryDisplay();
+    const { width, height } = primary.size;
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width, height },
+    });
+
+    // Use the first screen (primary display)
+    const screenshot = sources[0].thumbnail.toPNG();
+    image = screenshot.toString('base64');
+  }
+
+  const buffer = Buffer.from(image, 'base64');
+  const savePath = path.join(configJS.souvenir_screenshot.custom_dir || app.getPath('pictures'), sanitizeName(game), sanitizeName(name) + '.png');
+  fs.mkdirSync(path.dirname(savePath), { recursive: true });
+  if (!configJS.souvenir_screenshot.overwrite_image && fs.existsSync(savePath)) return;
+  fs.writeFileSync(savePath, buffer);
+}
+
+async function getIcon(url, appid, source, asPath = false) {
+  let p;
+  switch (source) {
+    case 'epic':
+      p = await fetchIconEpic(url, appid);
+      break;
+    case 'gog':
+      p = await fetchIconGog(url, appid);
+      break;
+    case 'steam':
+    default:
+      p = await fetchIconSteam(url, appid);
+      break;
+  }
+  return asPath ? p : pathToFileURL(p).href;
+}
+
+async function grayscaleIcon(imageUrl, appid, source = 'steam') {
+  const t = path.parse(imageUrl).base + '_gray';
+  const outputPath = path.join(app.getPath('userData'), `${source}_cache`, 'icon', String(appid), t);
+  const sharp = require('sharp');
+  try {
+    const i = await getIcon(imageUrl, appid, source, true);
+    const buffer = await sharp(i).grayscale().modulate({ brightness: 0.55, contrast: 0.65 }).toBuffer();
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, buffer);
+    return t;
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    return null;
+  }
+}
+
+async function stylizeBackground(imageUrl, appid, source = 'steam') {
   const t = path.parse(imageUrl).base;
-  const outputPath = path.join(app.getPath('userData'), 'steam_cache', 'icon', arg.appid, t);
+  const outputPath = path.join(app.getPath('userData'), `${source}_cache`, 'icon', String(appid), t);
   const sharp = require('sharp');
 
   try {
@@ -683,62 +894,6 @@ ipcMain.on('stylize-background-for-appid', async (event, arg) => {
   } catch (err) {
     console.error('❌ Error:', err.message);
   }
-});
-
-ipcMain.on('fetch-source-img', async (event, arg) => {
-  switch (arg) {
-    case 'epic':
-      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'epic.svg');
-      break;
-    case 'gog':
-      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'gog.svg');
-      break;
-    case 'RPCS3 Emulator':
-      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'playstation.svg');
-      break;
-    case 'steam':
-    default:
-      event.returnValue = path.join(process.env['APPDATA'], 'Achievement Watcher', 'Source', 'steam.svg');
-      break;
-  }
-});
-
-ipcMain.on('notify-test', async (event, arg) => {
-  await createNotificationWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED' });
-});
-
-ipcMain.on('playtime-test', async (event, arg) => {
-  await createPlaytimeWindow({ appid: 400, description: 'Testing notification' });
-});
-ipcMain.on('progress-test', async (event, arg) => {
-  await createProgressWindow({ appid: 400, ach: 'PORTAL_TRANSMISSION_RECEIVED', description: 'Testing progress', count: '50/100' });
-});
-
-ipcMain.on('achievement-data-ready', () => {
-  progressWindow.showInactive();
-});
-
-ipcMain.handle('get-achievements', async (event, appid) => {
-  return await getSteamData({ appid, type: 'steamhunters' });
-});
-
-ipcMain.handle('start-watchdog', async (event, arg) => {
-  event.sender.send('reset-watchdog-status');
-  const wd = spawn(
-    path.join(manifest.config.debug ? path.join(__dirname, '../../') : path.dirname(process.execPath), 'nw/nw.exe'),
-    ['-config', 'watchdog.json'],
-    {
-      cwd: path.join(manifest.config.debug ? path.join(__dirname, '../../') : path.dirname(process.execPath), 'nw/'),
-      detached: true,
-      stdio: 'ignore',
-      shell: false,
-    }
-  );
-  wd.unref(); // Let it run independently
-});
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function ensureChromium() {
@@ -751,79 +906,54 @@ async function ensureChromium() {
   return info;
 }
 
-async function startPuppeteer(headless, strip) {
-  const puppeteer = require('puppeteer-extra');
-  const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-  puppeteer.use(StealthPlugin());
-  const ChromeLauncher = require('chrome-launcher');
-  const installedChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' || ChromeLauncher.Launcher.getInstallations()[0];
-  const chromiumPath = fs.existsSync(installedChromePath) ? installedChromePath : (await ensureChromium()).executablePath;
-  if (!puppeteerWindow.browser)
-    puppeteerWindow.browser = await puppeteer.launch({
-      headless: headless ? 'new' : false,
-      executablePath: chromiumPath,
-      args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-extensions'],
-    });
-  if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
-  if (!puppeteerWindow.pagesc) {
-    puppeteerWindow.pagesc = await puppeteerWindow.context.newPage();
-  }
-  if (!puppeteerWindow.pagesh) {
-    puppeteerWindow.pagesh = await puppeteerWindow.context.newPage();
-    if (strip) {
-      const page = puppeteerWindow.pagesh;
-      await page.setRequestInterception(true);
-      page.on('request', (req) => {
-        const type = req.resourceType();
-        if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
-          req.abort();
-        } else {
-          req.continue();
-        }
+async function startPuppeteer(headless = true, strip = false) {
+  try {
+    const puppeteer = require('puppeteer-extra');
+    const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+    puppeteer.use(StealthPlugin());
+    const ChromeLauncher = require('chrome-launcher');
+    const installedChromePath = ChromeLauncher.Launcher.getInstallations()[0];
+    const chromiumPath = fs.existsSync(installedChromePath) ? installedChromePath : (await ensureChromium()).executablePath;
+    if (!puppeteerWindow.browser)
+      puppeteerWindow.browser = await puppeteer.launch({
+        headless: headless ? 'new' : false,
+        executablePath: chromiumPath,
+        args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-extensions'],
       });
+    if (!puppeteerWindow.context) puppeteerWindow.context = await puppeteerWindow.browser.createIncognitoBrowserContext();
+    if (!puppeteerWindow.pagesc) {
+      puppeteerWindow.pagesc = await puppeteerWindow.context.newPage();
     }
+    if (!puppeteerWindow.pagesh) {
+      puppeteerWindow.pagesh = await puppeteerWindow.context.newPage();
+      if (strip) {
+        const page = puppeteerWindow.pagesh;
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+          const type = req.resourceType();
+          if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
+            req.abort();
+          } else {
+            req.continue();
+          }
+        });
+      }
+    }
+  } catch (e) {
+    debug.log(e);
   }
 }
 
-async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
-  if (alternate?.steamhunters || alternate?.steamcommunity)
-    while ((currentlyscraping.steamhunters && alternate?.steamhunters) || (currentlyscraping.steamcommunity && alternate?.steamcommunity)) delay(100);
-  currentlyscraping.steamcommunity = alternate?.steamcommunity ? true : currentlyscraping.steamcommunity;
-  currentlyscraping.steamhunters = alternate?.steamhunters ? true : currentlyscraping.steamhunters;
-  await startPuppeteer(alternate, alternate?.steamhunters);
+async function scrapeWithPuppeteer(info = { appid: 269770 }, options) {
   try {
-    if (alternate) {
-      if (alternate.steamhunters) {
-        if (alternate.userlist) {
-          const url = `https://steamhunters.com/apps/${info.appid}/users?sort=completionstate`;
-          const page = puppeteerWindow.pagesh;
-          try {
-            await page.goto(url);
-            await page.waitForFunction(() => {
-              return Array.from(document.querySelectorAll('script')).some((s) => s.textContent.includes('var sh'));
-            });
-            await page.evaluate(() => {
-              const scripts = Array.from(document.querySelectorAll('script'));
-              const target = scripts.find((s) => s.textContent.includes('var sh'));
-              eval(target.textContent);
-            });
-            const users = (await page.evaluate(() => sh.model.listData.pagedList.items)) || [];
-
-            const results = [];
-            users.forEach((item) => {
-              results.push({
-                id: item.steamId,
-                isPublic: item.privacyState === 0,
-              });
-            });
-            info.users = users;
-          } catch (e) {
-            debug.log(e);
-          }
-          return;
-        }
-        let start = Date.now();
-        const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
+    await startPuppeteer(true, options?.steamhunters);
+  } catch (e) {
+    debug.log(e);
+  }
+  try {
+    if (options.steamhunters) {
+      if (options.userlist) {
+        const url = `https://steamhunters.com/apps/${info.appid}/users?sort=completionstate`;
         const page = puppeteerWindow.pagesh;
         try {
           await page.goto(url);
@@ -835,134 +965,89 @@ async function scrapeWithPuppeteer(info = { appid: 269770 }, alternate) {
             const target = scripts.find((s) => s.textContent.includes('var sh'));
             eval(target.textContent);
           });
-          const achievements = (await page.evaluate(() => sh.model.listData.pagedList.items)) || [];
+          const users = (await page.evaluate(() => sh.model.listData.pagedList.items)) || [];
 
           const results = [];
-          achievements.forEach((item) => {
+          users.forEach((item) => {
             results.push({
-              name: item.apiName,
-              default_value: 0,
-              displayName: item.name,
-              hidden: item.hidden ? 1 : 0,
-              description: item.description || ' ',
-              icon: item.icon,
-              icongray: item.iconGray,
+              id: item.steamId,
+              isPublic: item.privacyState === 0,
             });
           });
-          info.achievements = results;
-          debug.log(`[${info.appid}] steamhunters took ${(Date.now() - start) / 1000}s`);
+          info.users = users;
         } catch (e) {
           debug.log(e);
         }
         return;
       }
+      let start = Date.now();
+      const url = `https://steamhunters.com/apps/${info.appid}/achievements?group=&sort=name`;
+      const page = puppeteerWindow.pagesh;
+      try {
+        await page.goto(url, { timeout: 5000 });
+        await page.waitForFunction(() => {
+          return Array.from(document.querySelectorAll('script')).some((s) => s.textContent.includes('var sh'));
+        });
+        await page.evaluate(() => {
+          const scripts = Array.from(document.querySelectorAll('script'));
+          const target = scripts.find((s) => s.textContent.includes('var sh'));
+          eval(target.textContent);
+        });
+        const achievements = (await page.evaluate(() => sh.model.listData.pagedList.items)) || [];
 
-      if (alternate.steamcommunity) {
-        const page = puppeteerWindow.pagesc;
-        try {
-          await page.goto(alternate.url, { waitUntil: 'domcontentloaded' });
-        } catch (e) {
-          debug.log(e);
-        }
-        const achs = await page.evaluate(() => {
-          return Array.from(document.querySelectorAll('.achieveRow')).map((row) => {
-            const img = row.querySelector('.achieveImgHolder img')?.src.split('/').pop().split('.jpg')[0] || null;
-            const title = row.querySelector('.achieveTxt h3')?.innerText.trim() || null;
-            const description = row.querySelector('.achieveTxt h5')?.innerText.trim() || null;
-            return { img, title, description };
+        const results = [];
+        achievements.forEach((item) => {
+          results.push({
+            name: item.apiName,
+            default_value: 0,
+            displayName: item.name,
+            hidden: item.hidden ? 1 : 0,
+            description: item.description || ' ',
+            icon: item.icon,
+            icongray: item.iconGray,
           });
         });
-        info.achievements = achs;
-        return;
-      }
-
-      const url = `https://steamcommunity.com/profiles/${alternate.steamid}`;
-      const page = puppeteerWindow.page;
-      try {
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        info.achievements = results;
+        for (let ach of info.achievements) {
+          if (ach.icon && !ach.icongray) {
+            ach.icongray = await grayscaleIcon(ach.icon, info.appid);
+          }
+        }
+        debug.log(`[${info.appid}] steamhunters took ${(Date.now() - start) / 1000}s`);
       } catch (e) {
         debug.log(e);
       }
-      const url3 = page.url();
-      await page.goto(`${url3}/stats/${info.appid}/?tab=achievements`, { waitUntil: 'domcontentloaded' });
       return;
     }
-    const url1 = `https://steamdb.info/app/${info.appid}/info/`;
-    const url2 = `https://steamdb.info/app/${info.appid}/stats/`;
-    const page2 = puppeteerWindow.page;
 
-    await page2.goto(url2, { waitUntil: 'domcontentloaded' });
-    const pageText = await page2.evaluate(() => document.body.innerText || '');
-    if (pageText.includes('No app was found matching this AppID')) {
-      info.achievements = [];
-      return;
-    }
-    if (!page2.url().includes('/stats')) {
-      info.achievements = [];
-      return;
-    }
-    info.name = await page2.evaluate(() => {
-      const el = document.querySelector('.pagehead-title h1');
-      return el?.innerText.trim() || null;
-    });
-    await page2.waitForSelector('.achievements_list', { timeout: 5000 }).catch(() => {
-      throw new Error('Achievements list container not found');
-    });
-    // Get achievements
-    info.achievements = await page2.evaluate(() => {
-      const items = document.querySelectorAll('.achievements_list .achievement');
-      const data = [];
-
-      const appid = document.querySelector('.row.app-row table tbody tr')?.children?.[1]?.innerText.trim() || '';
-
-      items.forEach((item) => {
-        const idRaw = item.getAttribute('id') || '';
-        const id = idRaw.replace(/^achievement-/, '');
-        const name = item.querySelector('.achievement_name')?.innerText.trim() || '';
-
-        const descContainer = item.querySelector('.achievement_desc');
-        const spoiler = descContainer?.querySelector('.achievement_spoiler');
-        const hidden = !!spoiler;
-        const description = hidden ? spoiler?.innerText.trim() : descContainer?.innerText.trim() || '';
-
-        const icon = appid
-          ? 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/' +
-            appid +
-            '/' +
-            (item.querySelector('.achievement_image')?.getAttribute('data-name') || '')
-          : '';
-
-        const icongray = appid
-          ? 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/' +
-            appid +
-            '/' +
-            (item.querySelector('.achievement_image_small')?.getAttribute('data-name') || '')
-          : '';
-
-        data.push({
-          name: id,
-          default_value: 0,
-          displayName: name,
-          hidden: hidden ? 1 : 0,
-          description,
-          icon,
-          icongray,
+    if (options.steamcommunity) {
+      const page = puppeteerWindow.pagesc;
+      try {
+        await page.goto(options.url, { waitUntil: 'domcontentloaded' });
+      } catch (e) {
+        debug.log(e);
+      }
+      const achs = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('.achieveRow')).map((row) => {
+          const img = row.querySelector('.achieveImgHolder img')?.src.split('/').pop().split('.jpg')[0] || null;
+          const title = row.querySelector('.achieveTxt h3')?.innerText.trim() || null;
+          const description = row.querySelector('.achieveTxt h5')?.innerText.trim() || null;
+          return { img, title, description };
         });
       });
+      info.achievements = achs;
+      return;
+    }
 
-      return data;
-    });
-    await delay(Math.floor(Math.random() * (1500 - 800 + 1)) + 800);
-
-    await page2.goto(url1, { waitUntil: 'domcontentloaded' });
-    info.icon = await page2.evaluate(() => {
-      const el = document.querySelector('#js-assets-table');
-      const row = Array.from(el.rows).find((r) => r.cells[0].textContent.trim() === 'icon');
-
-      if (row) {
-        return row.cells[1].querySelector('a').textContent.trim();
-      }
-    });
+    const url = `https://steamcommunity.com/profiles/${options.steamid}`;
+    const page = puppeteerWindow.pagesc;
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+    } catch (e) {
+      debug.log(e);
+    }
+    const url3 = page.url();
+    await page.goto(`${url3}/stats/${info.appid}/?tab=achievements`, { waitUntil: 'domcontentloaded' });
     return;
   } catch (err) {
     debug.log(err);
@@ -1025,8 +1110,8 @@ async function searchForGameName(info = { appid: '' }) {
 
     await Promise.all(tasks);
   }
-
-  while (!info.title) {
+  const pageLimit = 30; //TODO: change this magic number
+  while (!info.title && startIndex < pageLimit) {
     await run(startIndex);
     info.title = matchResult;
     startIndex += 5;
@@ -1127,11 +1212,17 @@ function searchForSteamAppId(info = { name: '' }) {
   });
 }
 
-function createMainWindow() {
+async function createMainWindow(show = true) {
   try {
-    if (MainWin) {
+    if (MainWin && show) {
       if (MainWin.isMinimized()) MainWin.restore();
-      MainWin.focus();
+      if (!MainWin.isVisible()) {
+        MainWin.show();
+        MainWin.setOverlayIcon(getStatusTrayIcon(tray.status === 'true').circle, '');
+      }
+      setTimeout(() => {
+        MainWin.focus();
+      }, 250);
       return;
     }
     let options = manifest.config.window;
@@ -1217,8 +1308,10 @@ function createMainWindow() {
     ];
 
     Promise.all(isReady).then(() => {
-      MainWin.show();
-      MainWin.focus();
+      if (show) {
+        MainWin.show();
+        MainWin.focus();
+      }
       const net = require('net');
       const PIPE_NAME = '\\\\.\\pipe\\AchievementWatchdogPipe';
       function checkWatchdogStatus(callback) {
@@ -1234,13 +1327,19 @@ function createMainWindow() {
         });
       }
       setInterval(() => {
-        checkWatchdogStatus((running) => {
-          if (MainWin) MainWin.webContents.send('watchdog-status', running);
+        checkWatchdogStatus(async (running) => {
+          if (MainWin && MainWin.isVisible() && !MainWin.isMinimized()) MainWin.webContents.send('watchdog-status', running);
+          if (configJS.general.closeToTray) await updateTrayStatus(running);
         });
       }, 5000);
     });
 
-    MainWin.on('closed', () => {
+    MainWin.on('close', (event) => {
+      if (configJS.general.closeToTray && !app.isQuitting) {
+        event.preventDefault();
+        MainWin.hide();
+        return;
+      }
       MainWin = null;
       if (shouldQuitApp()) app.quit();
     });
@@ -1256,6 +1355,10 @@ function createMainWindow() {
 async function createOverlayWindow(info) {
   try {
     if (!info.action) info.action = 'open';
+    if (info.action === 'fetch') {
+      await getCachedData(info);
+      return;
+    }
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       if (String(info.appid) === '0' || info.action == 'close') {
         overlayWindow.close();
@@ -1270,7 +1373,6 @@ async function createOverlayWindow(info) {
     const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize;
     isOverlayShowing = true;
 
-    await startEngines();
     await getCachedData(info);
     info.game = await achievementsJS.getSavedAchievementsForAppid(configJS, { appid: info.appid });
 
@@ -1353,163 +1455,147 @@ async function createOverlayWindow(info) {
   }
 }
 
-async function createNotificationWindow(info) {
-  try {
-    if (isNotificationShowing) {
-      earnedNotificationQueue.push(info);
-      return;
-    }
-    isNotificationShowing = true;
-
-    await startEngines();
-    await getCachedData(info);
-    closePuppeteer();
-    const message = {
-      name: info.game.name,
-      displayName: info.a.displayName || '',
-      description: info.a.description || '',
-      icon: pathToFileURL(await fetchIcon(info.a.icon, info.appid)).href,
-      icon_gray: pathToFileURL(await fetchIcon(info.a.icongray, info.appid)).href,
-      preset: configJS.overlay.preset,
-      position: configJS.overlay.position,
-      scale: parseFloat(configJS.overlay.scale),
-    };
-    if (MainWin) MainWin.webContents.send('achievement-unlock', { appid: info.appid, ach_data: info.a });
-
-    const display = require('electron').screen.getPrimaryDisplay();
-    const { width, height } = display.workAreaSize;
-
-    const preset = message.preset || 'default';
-    const presetFolder = path.join(manifest.config.debug ? path.join(__dirname, '../') : userData, 'presets', preset);
-    const presetHtml = path.join(presetFolder, 'index.html');
-    const position = message.position || 'center-bot';
-    const scale = parseFloat(message.scale * 0.01 || 1);
-
-    const { width: windowWidth, height: windowHeight } = getPresetDimensions(presetFolder);
-
-    const scaledWidth = windowWidth * scale;
-    const scaledHeight = windowHeight * scale;
-
-    let x = 0,
-      y = 0;
-
-    if (position.includes('left')) {
-      x = 20;
-    } else if (position.includes('right')) {
-      x = width - scaledWidth - 20;
-    } else if (position.includes('center')) {
-      x = Math.floor(width / 2 - scaledWidth / 2);
-    }
-
-    if (position.includes('top')) {
-      y = 10;
-    } else if (position.includes('bot')) {
-      y = height - Math.round(scaledHeight) - 20;
-    } else if (position.includes('mid')) {
-      y = height / 2 - Math.round(scaledHeight / 2);
-    }
-
-    notificationWindow = new BrowserWindow({
-      width: scaledWidth,
-      height: scaledHeight,
-      x,
-      y,
-      transparent: true,
-      frame: false,
-      show: false,
-      alwaysOnTop: true,
-      focusable: true,
-      resizable: false,
-      fullscreenable: false,
-      skipTaskbar: true,
-      hasShadow: false,
-      webPreferences: {
-        preload: path.join(__dirname, '../overlayPreload.js'),
-        additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
-        contextIsolation: true,
-        nodeIntegration: false,
-        backgroundThrottling: false,
-      },
-    });
-
-    if (manifest.config.debug) {
-      notificationWindow.webContents.openDevTools({ mode: 'undocked' });
-      notificationWindow.isDev = true;
-      console.info((({ node, electron, chrome }) => ({ node, electron, chrome }))(process.versions));
+async function initNotificationWindow(reset = false) {
+  if (notificationWindow && !reset) return;
+  if (notificationWindow) {
+    const old = notificationWindow;
+    notificationWindow = null;
+    old.close();
+    await Promise.race([
+      new Promise((resolve) => old.once('closed', resolve)),
+      new Promise((resolve) => setTimeout(resolve, 250)), // fallback: 250ms
+    ]);
+    if (!old.isDestroyed()) {
       try {
-        const contextMenu = require('electron-context-menu')({
-          append: (defaultActions, params, browserWindow) => [
-            {
-              label: 'Reload',
-              visible: params,
-              click: () => {
-                notificationWindow.reload();
-              },
-            },
-          ],
-        });
+        old.destroy();
       } catch (err) {
-        dialog.showMessageBoxSync({
-          type: 'warning',
-          title: 'Context Menu',
-          message: 'Failed to initialize context menu.',
-          detail: `${err}`,
-        });
+        /* ignore */
       }
     }
-
-    notificationWindow.setAlwaysOnTop(true, 'screen-saver');
-    notificationWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    notificationWindow.setFullScreenable(false);
-    notificationWindow.setFocusable(false);
-    setTimeout(() => {
-      notificationWindow.setIgnoreMouseEvents(true, { forward: true });
-    }, 50);
-    //notificationWindow.setIgnoreMouseEvents(true, { forward: true });
-    notificationWindow.info = info;
-
-    let soundFile;
-    if (configJS.notification_toast.customToastAudio === '2' || configJS.notification_toast.customToastAudio === '1') {
-      let toastAudio = require(path.join(__dirname, '../util/toastAudio.js'));
-      soundFile =
-        configJS.notification_toast.customToastAudio === '1'
-          ? path.join(process.env.SystemRoot || process.env.WINDIR, 'media', toastAudio.getDefault())
-          : toastAudio.getCustom();
-    }
-    notificationWindow.webContents.on('did-finish-load', () => {
-      notificationWindow.showInactive();
-      notificationWindow.webContents.send('set-window-scale', scale);
-      notificationWindow.webContents.send('set-animation-scale', (configJS.overlay?.duration ?? 1) * 0.01);
-      notificationWindow.webContents.send('show-notification', {
-        game: message.name,
-        displayName: message.displayName,
-        description: message.description,
-        iconPath: message.icon,
-        scale,
-      });
-      createOverlayWindow({ appid: info.appid, action: 'refresh' });
-      player.play(soundFile);
-    });
-
-    notificationWindow.on('closed', async () => {
-      isNotificationShowing = false;
-      notificationWindow = null;
-      if (earnedNotificationQueue.length > 0) {
-        createNotificationWindow(earnedNotificationQueue.shift());
-        return;
-      }
-      if (shouldQuitApp()) app.quit();
-    });
-
-    notificationWindow.webContents.on('console-message', (e, level, message, line, sourceID) => {
-      debug.log(message, sourceID, line);
-    });
-
-    notificationWindow.loadFile(presetHtml);
-  } catch (e) {
-    debug.log(`Error creating notification window: ${e}`);
-    if (shouldQuitApp()) app.quit();
   }
+  const display = require('electron').screen.getPrimaryDisplay();
+  const { x: screenX, y: screenY, width: screenWidth, height: screenHeight } = display.workArea;
+  await startEngines();
+  const preset = configJS.overlay.preset || 'default';
+  const presetFolder = path.join(manifest.config.debug ? path.join(__dirname, '../') : userData, 'presets', preset);
+  const presetHtml = path.join(presetFolder, 'index.html');
+  const position = configJS.overlay.position || 'center-bot';
+  const scale = parseFloat(parseFloat(configJS.overlay.scale) * 0.01) || 1;
+  const duration = parseFloat(configJS.overlay.duration) * 0.01 || 1;
+
+  const { width: windowWidth, height: windowHeight } = getPresetDimensions(presetFolder);
+
+  const scaledWidth = Math.ceil(windowWidth * scale);
+  const scaledHeight = Math.ceil(windowHeight * scale);
+
+  let x = 0,
+    y = 0;
+
+  if (position.includes('left')) {
+    x = screenX + Math.round(16 * scale);
+  } else if (position.includes('right')) {
+    x = screenX + screenWidth - scaledWidth - Math.round(16 * scale);
+  } else if (position.includes('center')) {
+    x = screenX + Math.floor((screenWidth - scaledWidth) / 2);
+  }
+
+  if (position.includes('top')) {
+    y = screenY;
+  } else if (position.includes('bot')) {
+    y = screenHeight - Math.round(scaledHeight) - 20;
+  } else if (position.includes('mid')) {
+    y = Math.floor(screenHeight / 2) - Math.round(scaledHeight / 2);
+  }
+  notificationWindow = new BrowserWindow({
+    width: scaledWidth,
+    height: scaledHeight,
+    x,
+    y,
+    transparent: true,
+    frame: false,
+    show: false,
+    alwaysOnTop: true,
+    focusable: false,
+    resizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    type: 'notification',
+    webPreferences: {
+      preload: path.join(__dirname, '../overlayPreload.js'),
+      additionalArguments: [`--isDev=${app.isDev ? 'true' : 'false'}`, `--userDataPath=${userData}`],
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+    },
+  });
+  notificationWindow.isReady = false;
+  notificationWindow.setAlwaysOnTop(true, 'screen-saver');
+  notificationWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  notificationWindow.setFullScreenable(false);
+  notificationWindow.setFocusable(false);
+  setTimeout(() => {
+    notificationWindow.setIgnoreMouseEvents(true, { forward: true });
+  }, 50);
+  notificationWindow.webContents.on('console-message', (e, level, message, line, sourceID) => {
+    debug.log(message, sourceID, line);
+  });
+  notificationWindow.loadFile(presetHtml);
+  notificationWindow.scale = scale;
+  notificationWindow.duration = duration;
+  notificationWindow.webContents.once('did-finish-load', () => {
+    notificationWindow.isReady = true;
+  });
+}
+
+async function showNotificationWindow(info) {
+  if (isNotificationShowing) {
+    earnedNotificationQueue.push(info);
+    return;
+  }
+  isNotificationShowing = true;
+  await initNotificationWindow();
+  await getCachedData(info);
+  const ach = info.game.achievement.list.find((ac) => ac.name == info.ach);
+  const message = {
+    name: info.game.name,
+    displayName: ach.displayName || '',
+    description: ach.description || '',
+    icon: await getIcon(ach.icon, info.appid, info.source),
+    icon_gray: await getIcon(ach.icongray, info.appid, info.source),
+  };
+  if (MainWin && !MainWin.isMinimized() && MainWin.isVisible()) MainWin.webContents.send('achievement-unlock', { appid: info.appid, ach_data: ach });
+  let soundFile;
+  if (configJS.notification_toast.customToastAudio === '2' || configJS.notification_toast.customToastAudio === '1') {
+    let toastAudio = require(path.join(__dirname, '../util/toastAudio.js'));
+    soundFile =
+      configJS.notification_toast.customToastAudio === '1'
+        ? path.join(process.env.SystemRoot || process.env.WINDIR, 'media', toastAudio.getDefault())
+        : toastAudio.getCustom();
+  }
+
+  if (!notificationWindow.isReady) {
+    await new Promise((resolve) => {
+      notificationWindow.webContents.once('did-finish-load', resolve);
+    });
+  }
+  debug.log(`Showing chromium notification window for ${message.name}: ${message.displayName}`);
+  notificationWindow.showInactive();
+  //notificationWindow.webContents.send('set-window-scale', notificationWindow.scale);
+  notificationWindow.webContents.send('set-animation-scale', (configJS.overlay?.duration ?? 1) * 0.01);
+  setTimeout(() => captureScreen(message.name, message.displayName), 250 * (configJS.overlay?.duration * 0.01) ?? 1);
+  notificationWindow.webContents.send('show-notification', {
+    game: message.name,
+    displayName: message.displayName,
+    description: message.description,
+    iconPath: message.icon,
+    scale: notificationWindow.scale,
+    duration: notificationWindow.duration,
+    position: configJS.overlay.position || 'center-bot',
+  });
+
+  createOverlayWindow({ appid: info.appid, action: 'refresh' });
+  player.play({ path: soundFile });
 }
 
 async function createPlaytimeWindow(info) {
@@ -1557,11 +1643,9 @@ async function createPlaytimeWindow(info) {
     playtimeWindow.setFocusable(false);
 
     const desc = info.description;
-    await startEngines();
     await getCachedData(info);
-    closePuppeteer();
     info.description = desc;
-    info.headerUrl = pathToFileURL(await fetchIcon(info.game.img.header, info.appid)).href;
+    info.headerUrl = await getIcon(info.game.img.header, info.appid, info.source);
     playtimeWindow.once('ready-to-show', () => {
       if (playtimeWindow && !playtimeWindow.isDestroyed()) {
         playtimeWindow.showInactive();
@@ -1637,17 +1721,14 @@ async function createProgressWindow(info) {
     progressWindow.setVisibleOnAllWorkspaces(true);
     progressWindow.setFullScreenable(false);
     progressWindow.setFocusable(true);
-    setTimeout(() => {
-      progressWindow.setIgnoreMouseEvents(true, { forward: true });
-    }, 50);
 
-    await startEngines();
     await getCachedData(info);
-    closePuppeteer();
-    info.a.icongray = pathToFileURL(await fetchIcon(info.a.icongray, info.appid)).href;
+    info.a = info.game.achievement.list.find((ac) => ac.name == info.ach);
+    info.a.icongray = await getIcon(info.a.icongray, info.appid, info.source);
 
     progressWindow.webContents.on('did-finish-load', () => {
       progressWindow.showInactive();
+      progressWindow.setIgnoreMouseEvents(true, { forward: true });
       progressWindow.webContents.send('show-progress', info);
     });
 
@@ -1708,6 +1789,9 @@ function parseArgs(args) {
   let count = args['count'] || '0/100'; // count / max_count
   debug.log('opening ' + windowType + ' window');
   switch (windowType) {
+    case 'data':
+      getCachedData({ appid, source });
+      break;
     case 'playtime':
       createPlaytimeWindow({ appid, source, description });
       break;
@@ -1718,12 +1802,22 @@ function parseArgs(args) {
       createProgressWindow({ appid, source, ach, count });
       break;
     case 'achievement':
-      createNotificationWindow({ appid, source, ach });
+      showNotificationWindow({ appid, source, ach });
+      break;
+    case 'tray':
+      if (!configJS.general.closeToTray)
+        if (shouldQuitApp()) {
+          app.quit();
+          break;
+        }
+      initNotificationWindow();
+      createMainWindow(false);
       break;
     case 'main':
     default:
-      autoUpdater.checkForUpdatesAndNotify();
+      autoUpdater.checkForUpdates();
       checkResources();
+      initNotificationWindow();
       createMainWindow();
       break;
   }
@@ -1769,52 +1863,148 @@ function checkResources() {
   copyFolderRecursive(source, path.join(userData, 'Source'));
 
   if (!fs.existsSync(path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'))) {
-    const profile = path.join(resourcesPath, 'obs', 'AW');
+    const profile = manifest.config.debug ? path.join(resourcesPath, '..', 'obs', 'profiles', 'AW') : path.join(resourcesPath, 'obs', 'AW');
     copyFolderRecursive(profile, path.join(app.getPath('appData'), 'obs-studio', 'basic', 'profiles', 'AW'));
-    fs.copyFileSync(path.join(resourcesPath, 'obs', 'AW.json'), path.join(app.getPath('appData'), 'obs-studio', 'basic', 'scenes', 'AW.json'));
+  }
+  if (!fs.existsSync(path.join(app.getPath('appData'), 'obs-studio', 'basic', 'scenes', 'AW.json'))) {
+    fs.mkdirSync(path.join(app.getPath('appData'), 'obs-studio', 'basic', 'scenes'), { recursive: true });
+    fs.copyFileSync(
+      manifest.config.debug ? path.join(resourcesPath, '..', 'obs', 'scenes', 'AW.json') : path.join(resourcesPath, 'obs', 'AW.json'),
+      path.join(app.getPath('appData'), 'obs-studio', 'basic', 'scenes', 'AW.json')
+    );
   }
 
   app.setLoginItemSettings({
-    openAtLogin: true,
+    openAtLogin: configJS?.watchdog?.startAtLogin ?? true,
+    openAsHidden: true,
     path: path.join(manifest.config.debug ? path.join(__dirname, '../../') : path.dirname(process.execPath), 'nw/nw.exe'),
     args: ['-config', 'watchdog.json'],
   });
 }
 
+async function checkDownloadedUpdate(info) {
+  await startEngines();
+  const skippedVersion = configJS.general.skippedVersion;
+  if (skippedVersion.toLowerCase() !== 'none' && semver.gte(skippedVersion, info.version)) {
+    return;
+  }
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Ready',
+    message: `A new version (${info.version}) has been downloaded.`,
+    detail: `Would you like to install it now?`,
+    buttons: ['Yes', 'Later', 'Skip this version'],
+    defaultId: 0,
+    cancelId: 1,
+  });
+
+  if (response === 0) {
+    app.isQuitting = true;
+    autoUpdater.quitAndInstall();
+  } else if (response === 2) {
+    configJS.general.skippedVersion = info.version;
+    settingsJS.save(configJS);
+  }
+}
+
+async function traySetup() {
+  if (!configJS) await startEngines();
+  if (!configJS.general.closeToTray) return;
+  if (tray) return;
+  tray = new Tray(path.join(manifest.config.debug ? path.join(__dirname, '..', 'resources', 'icon') : path.dirname(process.execPath), 'icon.ico'));
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show App',
+      click: async () => {
+        createMainWindow();
+      },
+    },
+    {
+      label: 'Quit',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+  tray.setToolTip('Achievement Watcher');
+  tray.setContextMenu(contextMenu);
+  tray.on('click', () => {
+    if (MainWin?.isVisible()) {
+      MainWin.hide();
+      return;
+    }
+    createMainWindow();
+  });
+}
+
+function getStatusTrayIcon(isOnline) {
+  const baseIconPath = path.join(
+    path.join(manifest.config.debug ? path.join(__dirname, '..', 'resources', 'icon') : path.dirname(process.execPath)),
+    process.platform == 'win32' ? 'icon.ico' : 'icon_22.png'
+  );
+  const outputPath = path.join(
+    path.join(manifest.config.debug ? path.join(__dirname, '..', 'resources', 'icon') : path.dirname(process.execPath)),
+    process.platform == 'win32' ? `icon_${isOnline ? 'green' : 'red'}.ico` : `icon_22_${isOnline ? 'green' : 'red'}.png`
+  );
+  const circle = path.join(path.dirname(outputPath || baseIconPath), isOnline ? 'green.png' : 'red.png');
+  if (fs.existsSync(outputPath)) return { img: outputPath, circle };
+  if (fs.existsSync(baseIconPath)) return { img: baseIconPath, circle };
+  return null;
+}
+
+async function updateTrayStatus(running) {
+  if (!tray || tray.status == String(running)) return;
+  const iconPath = getStatusTrayIcon(running);
+  tray.status = String(running);
+  if (!iconPath) return;
+  tray.setImage(iconPath.img);
+  MainWin?.setIcon(iconPath.img);
+  MainWin.setOverlayIcon(nativeImage.createFromPath(iconPath.circle), '');
+}
+
 try {
   if (app.requestSingleInstanceLock() !== true) app.quit();
 
-  autoUpdater.on('update-downloaded', async (info) => {
-    await startEngines();
-    const skippedVersion = configJS.general.skippedVersion;
-    if (skippedVersion.toLowerCase() !== 'none' && semver.gte(skippedVersion, info.version)) {
-      return;
-    }
-    const { response } = await dialog.showMessageBox({
-      type: 'info',
-      title: 'Update Ready',
-      message: `A new version (${info.version}) has been downloaded.`,
-      detail: `Would you like to install it now?`,
-      buttons: ['Yes', 'Later', 'Skip this version'],
-      defaultId: 0,
-      cancelId: 1,
-    });
+  autoUpdater.on('update-available', async (info) => {
+    await checkDownloadedUpdate(info);
+  });
 
-    if (response === 0) autoUpdater.quitAndInstall();
-    else if (response === 2) {
-      configJS.general.skippedVersion = info.version;
-      settingsJS.save(configJS);
-    }
+  autoUpdater.on('update-downloaded', async (info) => {
+    await checkDownloadedUpdate(info);
   });
 
   app
     .on('ready', async function () {
-      ipc.window();
       const args = minimist(process.argv.slice(1));
+      await startEngines();
+      await traySetup();
+      if (configJS.general.closeToTray) startWatchdog();
       parseArgs(args);
     })
     .on('window-all-closed', function () {
       if (shouldQuitApp()) app.quit();
+    })
+    .on('before-quit', async (event) => {
+      await startEngines();
+      if (configJS.watchdog.keepRunning && !configJS.general.closeToTray) return;
+      try {
+        const command = `powershell -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -like '*watchdog*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"`;
+
+        exec(command, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`Error killing process: ${error.message}`);
+            return;
+          }
+          if (stderr) {
+            console.error(`PowerShell error: ${stderr}`);
+            return;
+          }
+          console.log(`Processes with description containing 'Achievement Watchdog' killed.`);
+        });
+      } catch (e) {
+        debug.log(e);
+      }
     })
     .on('web-contents-created', (event, contents) => {
       contents.on('new-window', (event, url) => {
